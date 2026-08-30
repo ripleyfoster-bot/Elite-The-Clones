@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
+<title>DRAG PAD — 002</title>
+<style>
+  :root{
+    --ink:#8fe3b0;        /* primary phosphor */
+    --ink-dim:#3f7a58;    /* structure, dead rules */
+    --ink-faint:#1d3b2b;  /* boxes, unlit */
+    --warn:#e8b23a;       /* tuning values, live numbers */
+    --bg:#000;
+    --band:#050806;
+    --console-h:140px;
+    --strip-h:28px;
+    --controls-h:200px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-user-select:none;user-select:none;}
+  html,body{
+    height:100%;width:100%;
+    background:var(--bg);color:var(--ink);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    overflow:hidden;overscroll-behavior:none;
+    position:fixed;inset:0;
+    touch-action:none;
+  }
+  #app{
+    display:flex;flex-direction:column;
+    height:100dvh;height:100vh;
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+
+  /* ---- 3D view ---- */
+  .view{flex:1 1 auto;min-height:0;position:relative;background:#000;}
+  .view canvas{display:block;width:100%;height:100%;}
+  .viewedge{position:absolute;inset:0;border-bottom:1px solid var(--ink-faint);pointer-events:none;}
+
+  /* ---- readout strip (occupies the MUNGO line slot) ---- */
+  .strip{
+    flex:0 0 var(--strip-h);height:var(--strip-h);
+    display:flex;align-items:center;gap:14px;
+    padding:0 8px;font-size:11px;letter-spacing:.06em;
+    background:var(--band);border-bottom:1px solid var(--ink-faint);
+    white-space:nowrap;overflow:hidden;
+  }
+  .strip b{color:var(--ink-dim);font-weight:400;}
+  .strip span{color:var(--warn);font-variant-numeric:tabular-nums;}
+
+  /* ---- console band placeholder ---- */
+  .console{
+    flex:0 0 var(--console-h);height:var(--console-h);
+    background:var(--band);border-bottom:1px solid var(--ink-faint);
+    padding:6px 8px;display:flex;flex-direction:column;gap:5px;
+    font-size:10px;line-height:1.35;
+  }
+  .console .hdr{color:var(--ink-dim);letter-spacing:.14em;font-size:9px;}
+  .bars{display:flex;flex-direction:column;gap:4px;}
+  .bar{display:flex;align-items:center;gap:6px;}
+  .bar .lbl{width:52px;color:var(--ink-dim);font-size:9px;letter-spacing:.08em;}
+  .bar .track{flex:1;height:8px;border:1px solid var(--ink-faint);position:relative;}
+  .bar .fillpos{position:absolute;top:0;bottom:0;background:var(--ink);opacity:.75;}
+  .bar .mid{position:absolute;top:-2px;bottom:-2px;left:50%;width:1px;background:var(--ink-faint);}
+  .bar .num{width:54px;text-align:right;color:var(--warn);font-variant-numeric:tabular-nums;font-size:10px;}
+  .tunevals{color:var(--ink-dim);font-size:9px;letter-spacing:.04em;}
+  .tunevals em{color:var(--warn);font-style:normal;}
+
+  /* ---- controls ---- */
+  .controls{
+    flex:0 0 var(--controls-h);height:var(--controls-h);
+    display:flex;position:relative;background:#000;
+  }
+  .pad{
+    position:relative;flex:0 0 46%;
+    border-right:1px dashed var(--ink-faint);
+    touch-action:none;
+  }
+  .fire{
+    flex:1 1 auto;position:relative;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink-faint);font-size:9px;letter-spacing:.16em;text-align:center;
+    touch-action:none;
+  }
+  .throttle{
+    flex:0 0 32px;position:relative;
+    border-left:1px solid var(--ink-faint);
+    touch-action:none;
+  }
+  .throttle .fill{position:absolute;left:0;right:0;bottom:0;background:var(--ink);opacity:.28;}
+  .throttle .knob{position:absolute;left:0;right:0;height:3px;background:var(--ink);}
+  .throttle .tick{position:absolute;right:0;width:7px;height:1px;background:var(--ink-faint);}
+  .throttle .cap{
+    position:absolute;bottom:3px;left:0;right:0;text-align:center;
+    font-size:8px;color:var(--ink-dim);letter-spacing:.08em;
+  }
+  .throttle .capTop{
+    position:absolute;top:3px;left:0;right:0;text-align:center;
+    font-size:8px;color:var(--ink-dim);letter-spacing:.06em;
+  }
+  /* Detent boundary: touching above this line snaps to full, below the
+     bottom one snaps to stop. Drawn so the tap zones are visible. */
+  .throttle .detent{position:absolute;left:0;right:0;height:1px;
+    background:var(--ink-dim);opacity:.55;}
+  /* Visual strip stays 32px per Control §4.3. The HIT AREA is 44px,
+     extending inward. Spec gave one number for both; they are not the same. */
+  .throttle .hit{position:absolute;top:0;bottom:0;left:-12px;right:0;
+    z-index:5;touch-action:none;}
+  .mirrored .throttle .hit{left:0;right:-12px;}
+  .mirrored .pad{order:3;border-right:none;border-left:1px dashed var(--ink-faint);}
+  .mirrored .fire{order:2;}
+  .mirrored .throttle{order:1;border-left:none;border-right:1px solid var(--ink-faint);}
+
+  /* pad visuals */
+  .ring,.dot,.stem{position:absolute;pointer-events:none;
+    opacity:0;transition:opacity .5s linear;}
+  .live .ring,.live .dot,.live .stem{opacity:1;transition:none;}
+  .ring{width:0;height:0;border:1px solid var(--ink-dim);border-radius:50%;}
+  .dot{width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;
+       background:var(--ink);opacity:0;}
+  .live .dot{opacity:.9;}
+  .stem{height:1px;background:var(--ink-dim);transform-origin:0 50%;}
+  .padhint{
+    position:absolute;left:0;right:0;top:8px;text-align:center;
+    font-size:9px;color:var(--ink-faint);letter-spacing:.14em;
+  }
+
+  /* ---- tuner ---- */
+  #tuneBtn{
+    position:fixed;top:calc(env(safe-area-inset-top) + 6px);right:8px;
+    background:rgba(0,0,0,.55);color:var(--ink-dim);
+    border:1px solid var(--ink-faint);border-radius:2px;
+    font:inherit;font-size:10px;letter-spacing:.12em;padding:5px 9px;
+    z-index:20;
+  }
+  #tuner{
+    position:fixed;inset:0;z-index:30;display:none;
+    background:rgba(0,0,0,.95);overflow-y:auto;
+    padding:calc(env(safe-area-inset-top) + 12px) 14px calc(env(safe-area-inset-bottom) + 24px);
+    -webkit-overflow-scrolling:touch;touch-action:pan-y;
+  }
+  #tuner.open{display:block;}
+  #tuner h1{font-size:11px;letter-spacing:.2em;color:var(--ink-dim);
+            font-weight:400;margin-bottom:12px;}
+  .row{margin-bottom:13px;}
+  .row label{display:flex;justify-content:space-between;font-size:11px;
+             color:var(--ink);margin-bottom:5px;}
+  .row label i{font-style:normal;color:var(--warn);font-variant-numeric:tabular-nums;}
+  .row .note{font-size:9px;color:var(--ink-faint);margin-top:3px;}
+  input[type=range]{width:100%;accent-color:#8fe3b0;height:26px;}
+  .toggles{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 14px;}
+  .toggles button{
+    background:transparent;border:1px solid var(--ink-faint);color:var(--ink-dim);
+    font:inherit;font-size:10px;padding:7px 9px;border-radius:2px;
+  }
+  .toggles button.on{border-color:var(--ink);color:var(--ink);background:rgba(143,227,176,.10);}
+  .acts{display:flex;gap:8px;margin-top:6px;}
+  .acts button{
+    flex:1;background:transparent;border:1px solid var(--ink-dim);color:var(--ink);
+    font:inherit;font-size:11px;padding:11px;border-radius:2px;letter-spacing:.08em;
+  }
+  #report{
+    width:100%;height:120px;margin-top:12px;background:#040705;color:var(--ink-dim);
+    border:1px solid var(--ink-faint);font:inherit;font-size:10px;padding:7px;
+    -webkit-user-select:text;user-select:text;
+  }
+  .sep{height:1px;background:var(--ink-faint);margin:16px 0;}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="view"><canvas id="cv"></canvas><div class="viewedge"></div></div>
+
+  <div class="strip">
+    <b>PITCH</b><span id="rPitch">+0.00</span>
+    <b>ROLL</b><span id="rRoll">+0.00</span>
+    <b>THR</b><span id="rThr">0.00</span>
+  </div>
+
+  <div class="console">
+    <div class="hdr">CONSOLE BAND — INSTRUMENTS DUE SESSION 003</div>
+    <div class="bars">
+      <div class="bar"><div class="lbl">PITCH</div>
+        <div class="track"><div class="mid"></div><div class="fillpos" id="bPitch"></div></div>
+        <div class="num" id="nPitch">0°/s</div></div>
+      <div class="bar"><div class="lbl">ROLL</div>
+        <div class="track"><div class="mid"></div><div class="fillpos" id="bRoll"></div></div>
+        <div class="num" id="nRoll">0°/s</div></div>
+      <div class="bar"><div class="lbl">SPEED</div>
+        <div class="track"><div class="fillpos" id="bSpd"></div></div>
+        <div class="num" id="nSpd">0</div></div>
+    </div>
+    <div class="tunevals" id="tv"></div>
+    <div class="tunevals">DEFLECTION <em id="nDef">0</em> px &nbsp;·&nbsp; <em id="nFps">--</em> fps</div>
+  </div>
+
+  <div class="controls" id="controls">
+    <div class="pad" id="pad">
+      <div class="padhint">TOUCH ANYWHERE — PULL BACK TO CLIMB</div>
+      <div class="ring" id="ring"></div>
+      <div class="stem" id="stem"></div>
+      <div class="dot" id="dot"></div>
+    </div>
+    <div class="fire" id="fire">FIRE ZONE<br>INACTIVE THIS SESSION</div>
+    <div class="throttle" id="thr">
+      <div class="fill" id="thrFill"></div>
+      <div class="knob" id="thrKnob"></div>
+      <div class="detent" style="top:25%"></div>
+      <div class="detent" style="bottom:8%"></div>
+      <div class="capTop">FULL</div>
+      <div class="cap">THR</div>
+      <div class="hit" id="thrHit"></div>
+    </div>
+  </div>
+</div>
+
+<button id="tuneBtn">TUNE</button>
+
+<div id="tuner">
+  <h1>TUNING — ALL VALUES [ASSUMED]</h1>
+
+  <div class="row">
+    <label>Deadzone <i><span id="vDead"></span> px</i></label>
+    <input type="range" id="sDead" min="0" max="20" step="1">
+    <div class="note">Spec §4.1 default 6. Raise if centre is twitchy, lower if it feels dead.</div>
+  </div>
+  <div class="row">
+    <label>Full deflection <i><span id="vDefl"></span> px</i></label>
+    <input type="range" id="sDefl" min="25" max="120" step="1">
+    <div class="note">Spec §4.1 default 55. Distance from origin to full rate.</div>
+  </div>
+  <div class="row">
+    <label>Curve exponent <i><span id="vExp"></span></i></label>
+    <input type="range" id="sExp" min="1" max="3" step="0.1">
+    <div class="note">Spec §4.1 default 1.6. Higher = finer near centre, vaguer overall.</div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="row">
+    <label>Max pitch rate <i><span id="vPr"></span> °/s</i></label>
+    <input type="range" id="sPr" min="15" max="180" step="5">
+    <div class="note">Session 002 setting: 60. [ASSUMED] — no spec value exists yet.</div>
+  </div>
+  <div class="row">
+    <label>Max roll rate <i><span id="vRr"></span> °/s</i></label>
+    <input type="range" id="sRr" min="30" max="360" step="10">
+    <div class="note">Session 002 setting: 250. [ASSUMED] — 4:1 over pitch.</div>
+  </div>
+  <div class="row">
+    <label>Max speed <i><span id="vSp"></span></i></label>
+    <input type="range" id="sSp" min="40" max="600" step="10">
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="row">
+    <label>Key ramp up <i><span id="vKu"></span> s</i></label>
+    <input type="range" id="sKu" min="0.05" max="1" step="0.05">
+    <div class="note">Time from tap to full deflection while a flight key is held.</div>
+  </div>
+  <div class="row">
+    <label>Key ramp down <i><span id="vKd"></span> s</i></label>
+    <input type="range" id="sKd" min="0.05" max="1" step="0.05">
+    <div class="note">Time to return to centre on release. Keyboard only.</div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="toggles">
+    <button id="tRadial">RADIAL CURVE</button>
+    <button id="tInvP">INVERT PITCH</button>
+    <button id="tInvR">INVERT ROLL</button>
+    <button id="tMirror">PAD SIDE</button>
+  </div>
+  <div class="note" style="font-size:9px;color:#1d3b2b;margin-top:-8px">
+    PAD SIDE lit = flight pad on the RIGHT, right thumb flies, throttle on the left edge.
+    Unlit = pad on the left. Nothing to do with handedness.<br><br>
+    RADIAL lit = curve applied to the stick vector, total rate capped at the maximum.
+    Unlit = per-axis curve as written in §4.1, where a 45° corner drag gives full pitch
+    AND full roll at once — about 1.41× the stated max. <b>To feel the difference: drag
+    hard into the corner of the pad and hold.</b> Straight pitch and straight roll are
+    identical either way.
+  </div>
+
+  <div class="acts">
+    <button id="bReset">RESET TO 002 BASELINE</button>
+    <button id="bClose">FLY</button>
+  </div>
+
+  <textarea id="report" readonly></textarea>
+  <div class="acts"><button id="bCopy">COPY SETTINGS FOR REPORT</button></div>
+</div>
+
+<script>
+"use strict";
+
+/* ------------------------------------------------------------------
+   CONSTRAINT 1 — NO YAW.
+   Flight input carries three fields. There is no yaw field to set, and
+   the integrator below builds its angular velocity as [wx, 0, wz] with
+   a literal zero on the y axis. Adding yaw would mean changing both.
+------------------------------------------------------------------- */
+function makeFlightInput(pitch, roll, throttle){
+  return Object.freeze({ pitch: pitch, roll: roll, throttle: throttle });
+}
+
+/* ---------- tuning ---------- */
+const SPEC = { dead:6, defl:55, exp:1.6, pitchRate:60, rollRate:250, maxSpeed:200,
+               keyUp:0.35, keyDown:0.18,
+               radial:true, invP:false, invR:false, mirror:true };
+let T = Object.assign({}, SPEC);
+try{ const s = localStorage.getItem("dragpad.tuning");
+     if(s) T = Object.assign({}, SPEC, JSON.parse(s)); }catch(e){}
+function saveT(){ try{ localStorage.setItem("dragpad.tuning", JSON.stringify(T)); }catch(e){} }
+
+/* ---------- seeded RNG (World Model Spec §3.1) ---------- */
+function hash32(){ let h=2166136261>>>0;
+  for(const v of arguments){ for(let s=0;s<32;s+=8){ h^=(v>>>s)&0xff; h=Math.imul(h,16777619)>>>0; } }
+  return h>>>0; }
+function rng(seed){ let a=seed>>>0; return function(){
+  a=(a+0x6D2B79F5)|0; let t=Math.imul(a^(a>>>15),1|a);
+  t=(t+Math.imul(t^(t>>>7),61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; }; }
+const WORLD_SEED = 3141592653;
+
+/* ---------- quaternions ---------- */
+function qmul(a,b){ return [
+  a[0]*b[0]-a[1]*b[1]-a[2]*b[2]-a[3]*b[3],
+  a[0]*b[1]+a[1]*b[0]+a[2]*b[3]-a[3]*b[2],
+  a[0]*b[2]-a[1]*b[3]+a[2]*b[0]+a[3]*b[1],
+  a[0]*b[3]+a[1]*b[2]-a[2]*b[1]+a[3]*b[0]]; }
+function qnorm(q){ const l=Math.hypot(q[0],q[1],q[2],q[3])||1;
+  return [q[0]/l,q[1]/l,q[2]/l,q[3]/l]; }
+function qconj(q){ return [q[0],-q[1],-q[2],-q[3]]; }
+function qrot(q,v){
+  const [w,x,y,z]=q, [a,b,c]=v;
+  const tx=2*(y*c-z*b), ty=2*(z*a-x*c), tz=2*(x*b-y*a);
+  return [a+w*tx+(y*tz-z*ty), b+w*ty+(z*tx-x*tz), c+w*tz+(x*ty-y*tx)];
+}
+
+/* ---------- ship state ---------- */
+let q=[1,0,0,0];
+let pos=[0,0,0];
+let speed=0, throttle=0;
+
+/* ---------- object field ---------- */
+const CELL = 2000;
+function shapeCube(){ const v=[],e=[];
+  for(let i=0;i<8;i++) v.push([(i&1?1:-1),(i&2?1:-1),(i&4?1:-1)]);
+  const p=[[0,1],[1,3],[3,2],[2,0],[4,5],[5,7],[7,6],[6,4],[0,4],[1,5],[2,6],[3,7]];
+  for(const x of p) e.push(x); return {v,e}; }
+function shapeOcta(){ const v=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+  const e=[[0,2],[2,1],[1,3],[3,0],[0,4],[2,4],[1,4],[3,4],[0,5],[2,5],[1,5],[3,5]];
+  return {v,e}; }
+function shapeRing(){ const v=[],e=[],n=12;
+  for(let i=0;i<n;i++){ const a=i/n*Math.PI*2; v.push([Math.cos(a),Math.sin(a),0]); }
+  for(let i=0;i<n;i++) e.push([i,(i+1)%n]);
+  v.push([0,0,0.5]); v.push([0,0,-0.5]);
+  e.push([0,n],[n/2,n],[0,n+1],[n/2,n+1]);
+  return {v,e}; }
+const SHAPES=[shapeCube(),shapeOcta(),shapeRing()];
+
+const objects=[];
+(function buildField(){
+  const r = rng(hash32(WORLD_SEED,0,0));
+  for(let i=0;i<44;i++){
+    const s = SHAPES[Math.floor(r()*SHAPES.length)];
+    const sc = 40 + r()*100;
+    const ax=r()*6.283, ay=r()*6.283, az=r()*6.283;
+    const ca=Math.cos(ax),sa=Math.sin(ax),cb=Math.cos(ay),sb=Math.sin(ay),cc=Math.cos(az),sc2=Math.sin(az);
+    const verts = s.v.map(function(p){
+      let [x,y,z]=p;
+      let y1=y*ca-z*sa, z1=y*sa+z*ca;
+      let x2=x*cb+z1*sb, z2=-x*sb+z1*cb;
+      let x3=x2*cc-y1*sc2, y3=x2*sc2+y1*cc;
+      return [x3*sc, y3*sc, z2*sc];
+    });
+    objects.push({ p:[(r()-.5)*2*CELL,(r()-.5)*2*CELL,(r()-.5)*2*CELL], v:verts, e:s.e, r:sc });
+  }
+})();
+
+const stars=[];
+(function buildStars(){
+  const r = rng(hash32(WORLD_SEED,1,0));
+  for(let i=0;i<260;i++){
+    const u=r()*2-1, th=r()*6.283, s=Math.sqrt(1-u*u);
+    stars.push([s*Math.cos(th), s*Math.sin(th), u, 0.25+r()*0.7]);
+  }
+})();
+
+/* ---------- canvas ---------- */
+const cv=document.getElementById("cv"), ctx=cv.getContext("2d",{alpha:false});
+let W=0,H=0,F=0,DPR=1;
+function resize(){
+  const r=cv.parentElement.getBoundingClientRect();
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=Math.max(1,Math.round(r.width)); H=Math.max(1,Math.round(r.height));
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+  cv.style.width=W+"px"; cv.style.height=H+"px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  F = (H/2)/Math.tan(30*Math.PI/180);   // 60° vertical field of view
+}
+window.addEventListener("resize",resize);
+window.addEventListener("orientationchange",()=>setTimeout(resize,250));
+
+/* ---------- drag pad ---------- */
+const pad=document.getElementById("pad"), ring=document.getElementById("ring"),
+      dot=document.getElementById("dot"), stem=document.getElementById("stem");
+let padId=null, ox=0, oy=0, cx=0, cy=0, defPx=0;
+let pitchIn=0, rollIn=0;
+
+function curve(v){ return Math.sign(v)*Math.pow(Math.abs(v), T.exp); }
+
+function computeAxes(){
+  const dx=cx-ox, dy=cy-oy;
+  const dist=Math.hypot(dx,dy); defPx=dist;
+  if(dist<=T.dead){ pitchIn=0; rollIn=0; return; }
+  const span=Math.max(1,T.defl-T.dead);
+  if(T.radial){
+    const mag=Math.min(1,(dist-T.dead)/span);
+    const m=Math.pow(mag,T.exp);
+    pitchIn = (dy/dist)*m;      // drag DOWN = pull back = climb
+    rollIn  = (dx/dist)*m;
+  }else{
+    const sh=Math.max(0,Math.abs(dx)-T.dead)*Math.sign(dx)/span;
+    const sv=Math.max(0,Math.abs(dy)-T.dead)*Math.sign(dy)/span;
+    rollIn  = curve(Math.max(-1,Math.min(1,sh)));
+    pitchIn = curve(Math.max(-1,Math.min(1,sv)));
+  }
+}
+
+function drawPad(){
+  const r=pad.getBoundingClientRect();
+  const lx=ox-r.left, ly=oy-r.top, px=cx-r.left, py=cy-r.top;
+  const d=T.defl;
+  ring.style.left=(lx-d)+"px"; ring.style.top=(ly-d)+"px";
+  ring.style.width=(d*2)+"px"; ring.style.height=(d*2)+"px";
+  dot.style.left=px+"px"; dot.style.top=py+"px";
+  const dx=px-lx, dy=py-ly, len=Math.hypot(dx,dy);
+  stem.style.left=lx+"px"; stem.style.top=ly+"px";
+  stem.style.width=len+"px";
+  stem.style.transform="rotate("+Math.atan2(dy,dx)+"rad)";
+}
+
+pad.addEventListener("touchstart",function(e){
+  e.preventDefault();
+  if(padId!==null) return;
+  const t=e.changedTouches[0];
+  padId=t.identifier; ox=cx=t.clientX; oy=cy=t.clientY;
+  pad.classList.add("live"); computeAxes(); drawPad(); wake();
+},{passive:false});
+
+pad.addEventListener("touchmove",function(e){
+  e.preventDefault();
+  for(const t of e.changedTouches){
+    if(t.identifier===padId){ cx=t.clientX; cy=t.clientY; computeAxes(); drawPad(); }
+  }
+},{passive:false});
+
+function padEnd(e){
+  e.preventDefault();
+  for(const t of e.changedTouches){
+    if(t.identifier===padId){
+      padId=null; pitchIn=0; rollIn=0; defPx=0;      // re-centre on release only
+      pad.classList.remove("live");
+    }
+  }
+}
+pad.addEventListener("touchend",padEnd,{passive:false});
+pad.addEventListener("touchcancel",padEnd,{passive:false});
+
+/* mouse, for desktop checking only */
+pad.addEventListener("mousedown",function(e){
+  if(padId!==null) return;
+  padId="m"; ox=cx=e.clientX; oy=cy=e.clientY;
+  pad.classList.add("live"); computeAxes(); drawPad();
+});
+window.addEventListener("mousemove",function(e){
+  if(padId==="m"){ cx=e.clientX; cy=e.clientY; computeAxes(); drawPad(); }
+});
+window.addEventListener("mouseup",function(){
+  if(padId==="m"){ padId=null; pitchIn=0; rollIn=0; defPx=0; pad.classList.remove("live"); }
+});
+
+/* ---------- throttle: sticky edge strip ---------- */
+const thr=document.getElementById("thr"), thrFill=document.getElementById("thrFill"),
+      thrKnob=document.getElementById("thrKnob");
+let thrId=null;
+(function ticks(){
+  for(let i=0;i<=4;i++){
+    const d=document.createElement("div"); d.className="tick";
+    d.style.bottom="calc("+(i*25)+"% - 0.5px)"; thr.appendChild(d);
+  }
+})();
+// snap=true only on touch-down. Detents make the two values you want most —
+// full and stop — a single tap at the near end of the strip, while a drag
+// still sets anything in between.
+function setThrottleFromY(clientY, snap){
+  const r=thr.getBoundingClientRect();
+  let v=(r.bottom-clientY)/r.height;
+  v=Math.max(0,Math.min(1,v));
+  if(snap){ if(v>=0.75) v=1; else if(v<=0.08) v=0; }
+  throttle=v;
+  paintThrottle();
+}
+function paintThrottle(){
+  thrFill.style.height=(throttle*100)+"%";
+  thrKnob.style.bottom="calc("+(throttle*100)+"% - 1.5px)";
+}
+const thrHit=document.getElementById("thrHit");
+thrHit.addEventListener("touchstart",function(e){
+  e.preventDefault(); if(thrId!==null) return;
+  const t=e.changedTouches[0]; thrId=t.identifier; setThrottleFromY(t.clientY,true); wake();
+},{passive:false});
+thrHit.addEventListener("touchmove",function(e){
+  e.preventDefault();
+  for(const t of e.changedTouches) if(t.identifier===thrId) setThrottleFromY(t.clientY,false);
+},{passive:false});
+function thrEnd(e){ e.preventDefault();
+  for(const t of e.changedTouches) if(t.identifier===thrId) thrId=null; }
+thrHit.addEventListener("touchend",thrEnd,{passive:false});
+thrHit.addEventListener("touchcancel",thrEnd,{passive:false});
+thrHit.addEventListener("mousedown",function(e){ thrId="m"; setThrottleFromY(e.clientY,true); });
+window.addEventListener("mousemove",function(e){ if(thrId==="m") setThrottleFromY(e.clientY,false); });
+window.addEventListener("mouseup",function(){ if(thrId==="m") thrId=null; });
+
+/* fire zone swallows touches so the page never scrolls */
+document.getElementById("fire").addEventListener("touchstart",e=>e.preventDefault(),{passive:false});
+
+/* ---------- keyboard (Hybrid preset, flight keys only) ----------
+   Control §2: rate is set by "the original's key-held ramp". A held key
+   builds deflection over keyUp seconds and decays over keyDown on release,
+   then goes through the same response curve as the drag pad. Binary keys
+   were a build error, corrected session 002.                            */
+const keys={};
+let kRawP=0, kRawR=0;     // ramped deflection, -1..1, before the curve
+window.addEventListener("keydown",function(e){
+  const k=e.key.toLowerCase();
+  keys[k]=true;
+  if(k==="a"){ throttle=1; paintThrottle(); }   // detent: full
+  if(k==="z"){ throttle=0; paintThrottle(); }   // detent: stop
+  if([" ","arrowup","arrowdown"].includes(k)) e.preventDefault();
+});
+window.addEventListener("keyup",function(e){ keys[e.key.toLowerCase()]=false; });
+
+function ramp(cur, target, dt){
+  const rate = (target===0 ? 1/Math.max(0.02,T.keyDown) : 1/Math.max(0.02,T.keyUp));
+  const step = rate*dt;
+  if(cur < target) return Math.min(target, cur+step);
+  if(cur > target) return Math.max(target, cur-step);
+  return cur;
+}
+
+function keyAxes(dt){
+  let tp=0, tr=0;
+  if(keys["x"]) tp+=1;          // climb
+  if(keys["s"]) tp-=1;          // dive
+  if(keys[","]) tr-=1;
+  if(keys["."]) tr+=1;
+  kRawP = ramp(kRawP, tp, dt);
+  kRawR = ramp(kRawR, tr, dt);
+  if(keys["shift"]){ throttle=Math.min(1,throttle+dt*0.6); paintThrottle(); }
+  if(keys["control"]){ throttle=Math.max(0,throttle-dt*0.6); paintThrottle(); }
+  // same shaping as the pad, so the toggle applies to both input methods
+  if(T.radial){
+    const mag=Math.min(1,Math.hypot(kRawR,kRawP));
+    if(mag<1e-6) return [0,0];
+    const m=Math.pow(mag,T.exp);
+    return [ (kRawP/Math.hypot(kRawR,kRawP))*m, (kRawR/Math.hypot(kRawR,kRawP))*m ];
+  }
+  return [ curve(kRawP), curve(kRawR) ];
+}
+
+/* ---------- flight model ---------- */
+function integrate(input, dt){
+  const pr = T.pitchRate*Math.PI/180, rr = T.rollRate*Math.PI/180;
+  const sp = T.invP?-1:1, sr = T.invR?-1:1;
+  // body-frame angular velocity: pitch about x, roll about z, YAW ABOUT Y IS ZERO
+  const wx = -input.pitch*pr*sp;
+  const wy = 0;
+  const wz = -input.roll*rr*sr;
+  const ang = Math.hypot(wx,wy,wz)*dt;
+  if(ang>1e-7){
+    const ax=wx/Math.hypot(wx,wy,wz), az=wz/Math.hypot(wx,wy,wz);
+    const s=Math.sin(ang/2);
+    q = qnorm(qmul(q,[Math.cos(ang/2), ax*s, 0, az*s]));
+  }
+  const target = input.throttle*T.maxSpeed;
+  speed += (target-speed)*Math.min(1, dt*1.6);
+  const fwd = qrot(q,[0,0,1]);
+  pos[0]+=fwd[0]*speed*dt; pos[1]+=fwd[1]*speed*dt; pos[2]+=fwd[2]*speed*dt;
+  return { wx:-wx, wz:-wz };
+}
+
+/* ---------- render ---------- */
+const NEAR=1.2;
+function wrap(v){ const m=((v+CELL)%(2*CELL)+2*CELL)%(2*CELL)-CELL; return m; }
+
+function render(){
+  ctx.fillStyle="#000"; ctx.fillRect(0,0,W,H);
+  const cq=qconj(q), hw=W/2, hh=H/2;
+
+  // stars — direction only, infinite distance
+  for(const s of stars){
+    const v=qrot(cq,[s[0],s[1],s[2]]);
+    if(v[2]<=0.02) continue;
+    const x=hw+F*v[0]/v[2], y=hh-F*v[1]/v[2];
+    if(x<0||y<0||x>W||y>H) continue;
+    ctx.fillStyle="rgba(180,230,200,"+(s[3]*0.75).toFixed(2)+")";
+    ctx.fillRect(x,y,1,1);
+  }
+
+  // wireframe field
+  ctx.lineWidth=1;
+  for(const o of objects){
+    const rel=[wrap(o.p[0]-pos[0]), wrap(o.p[1]-pos[1]), wrap(o.p[2]-pos[2])];
+    const c=qrot(cq,rel);
+    const d=Math.hypot(c[0],c[1],c[2]);
+    if(d>CELL*1.35) continue;
+    if(c[2] < -o.r*2) continue;
+    const a=Math.max(0.10, Math.min(1, 1-d/(CELL*1.2)));
+    ctx.strokeStyle="rgba(143,227,176,"+a.toFixed(2)+")";
+    ctx.beginPath();
+    const pts=o.v.map(function(vv){
+      return qrot(cq,[rel[0]+vv[0], rel[1]+vv[1], rel[2]+vv[2]]);
+    });
+    for(const e of o.e){
+      let A=pts[e[0]], B=pts[e[1]];
+      if(A[2]<NEAR && B[2]<NEAR) continue;
+      if(A[2]<NEAR||B[2]<NEAR){
+        const t=(NEAR-A[2])/(B[2]-A[2]);
+        const M=[A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t, NEAR];
+        if(A[2]<NEAR) A=M; else B=M;
+      }
+      ctx.moveTo(hw+F*A[0]/A[2], hh-F*A[1]/A[2]);
+      ctx.lineTo(hw+F*B[0]/B[2], hh-F*B[1]/B[2]);
+    }
+    ctx.stroke();
+  }
+
+  // centre reticle
+  ctx.strokeStyle="rgba(143,227,176,0.35)";
+  ctx.beginPath();
+  ctx.moveTo(hw-9,hh); ctx.lineTo(hw-3,hh);
+  ctx.moveTo(hw+3,hh); ctx.lineTo(hw+9,hh);
+  ctx.moveTo(hw,hh-9); ctx.lineTo(hw,hh-3);
+  ctx.moveTo(hw,hh+3); ctx.lineTo(hw,hh+9);
+  ctx.stroke();
+}
+
+/* ---------- readouts ---------- */
+const rPitch=document.getElementById("rPitch"), rRoll=document.getElementById("rRoll"),
+      rThr=document.getElementById("rThr"), bPitch=document.getElementById("bPitch"),
+      bRoll=document.getElementById("bRoll"), bSpd=document.getElementById("bSpd"),
+      nPitch=document.getElementById("nPitch"), nRoll=document.getElementById("nRoll"),
+      nSpd=document.getElementById("nSpd"), nDef=document.getElementById("nDef"),
+      nFps=document.getElementById("nFps"), tv=document.getElementById("tv");
+function sgn(v){ return (v<0?"":"+")+v.toFixed(2); }
+function bipolar(el,v){
+  const p=Math.max(-1,Math.min(1,v));
+  if(p>=0){ el.style.left="50%"; el.style.right=(50-p*50)+"%"; }
+  else{ el.style.right="50%"; el.style.left=(50+p*50)+"%"; }
+}
+function paintTuneVals(){
+  tv.innerHTML = "DEAD <em>"+T.dead+"</em> · DEFL <em>"+T.defl+"</em> · EXP <em>"+
+    T.exp.toFixed(1)+"</em> · P <em>"+T.pitchRate+"</em>°/s · R <em>"+T.rollRate+
+    "</em>°/s"+(T.radial?" · RADIAL":" · PER-AXIS");
+}
+
+/* ---------- loop ---------- */
+let last=performance.now(), fpsAcc=0, fpsN=0, fpsShow=0;
+function frame(now){
+  let dt=(now-last)/1000; last=now;
+  if(dt>0.1) dt=0.1;
+
+  const kb=keyAxes(dt);
+  const p = padId!==null ? pitchIn : kb[0];
+  const r = padId!==null ? rollIn  : kb[1];
+
+  const input = makeFlightInput(p, r, throttle);
+  const rates = integrate(input, dt);
+  render();
+
+  rPitch.textContent=sgn(input.pitch);
+  rRoll.textContent=sgn(input.roll);
+  rThr.textContent=throttle.toFixed(2);
+  bipolar(bPitch,input.pitch); bipolar(bRoll,input.roll);
+  bSpd.style.left="0"; bSpd.style.right=(100-(speed/T.maxSpeed)*100)+"%";
+  nPitch.textContent=(rates.wx*180/Math.PI).toFixed(0)+"°/s";
+  nRoll.textContent=(rates.wz*180/Math.PI).toFixed(0)+"°/s";
+  nSpd.textContent=speed.toFixed(0);
+  nDef.textContent=defPx.toFixed(0);
+
+  fpsAcc+=dt; fpsN++;
+  if(fpsAcc>=0.5){ fpsShow=fpsN/fpsAcc; fpsAcc=0; fpsN=0; nFps.textContent=fpsShow.toFixed(0); }
+
+  requestAnimationFrame(frame);
+}
+
+/* ---------- tuner wiring ---------- */
+const tuner=document.getElementById("tuner");
+const map=[["sDead","vDead","dead",0],["sDefl","vDefl","defl",0],["sExp","vExp","exp",1],
+           ["sPr","vPr","pitchRate",0],["sRr","vRr","rollRate",0],["sSp","vSp","maxSpeed",0],
+           ["sKu","vKu","keyUp",2],["sKd","vKd","keyDown",2]];
+function syncUI(){
+  for(const [sid,vid,key,dp] of map){
+    document.getElementById(sid).value=T[key];
+    document.getElementById(vid).textContent=Number(T[key]).toFixed(dp);
+  }
+  document.getElementById("tRadial").classList.toggle("on",T.radial);
+  document.getElementById("tInvP").classList.toggle("on",T.invP);
+  document.getElementById("tInvR").classList.toggle("on",T.invR);
+  document.getElementById("tMirror").classList.toggle("on",T.mirror);
+  document.getElementById("controls").classList.toggle("mirrored",T.mirror);
+  paintTuneVals(); writeReport();
+}
+for(const [sid,vid,key,dp] of map){
+  document.getElementById(sid).addEventListener("input",function(){
+    T[key]=parseFloat(this.value);
+    document.getElementById(vid).textContent=T[key].toFixed(dp);
+    paintTuneVals(); saveT(); writeReport();
+  });
+}
+function toggle(id,key){
+  document.getElementById(id).addEventListener("click",function(){
+    T[key]=!T[key]; saveT(); syncUI();
+  });
+}
+toggle("tRadial","radial"); toggle("tInvP","invP");
+toggle("tInvR","invR");     toggle("tMirror","mirror");
+
+document.getElementById("tuneBtn").addEventListener("click",function(){
+  tuner.classList.add("open"); writeReport();
+});
+document.getElementById("bClose").addEventListener("click",function(){
+  tuner.classList.remove("open");
+});
+document.getElementById("bReset").addEventListener("click",function(){
+  T=Object.assign({},SPEC); saveT(); syncUI();
+});
+function writeReport(){
+  document.getElementById("report").value =
+    "DRAG PAD 002 — settings\n"+
+    "deadzone      "+T.dead+" px  (spec 6)\n"+
+    "deflection    "+T.defl+" px  (spec 55)\n"+
+    "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
+    "pitch rate    "+T.pitchRate+" deg/s\n"+
+    "roll rate     "+T.rollRate+" deg/s\n"+
+    "max speed     "+T.maxSpeed+"\n"+
+    "key ramp up   "+T.keyUp.toFixed(2)+" s\n"+
+    "key ramp down "+T.keyDown.toFixed(2)+" s\n"+
+    "curve         "+(T.radial?"radial":"per-axis")+"\n"+
+    "invert pitch  "+T.invP+"\n"+
+    "invert roll   "+T.invR+"\n"+
+    "pad side      "+(T.mirror?"right":"left")+"\n"+
+    "fps           "+fpsShow.toFixed(0)+"\n"+
+    "viewport      "+window.innerWidth+"x"+window.innerHeight;
+}
+document.getElementById("bCopy").addEventListener("click",function(){
+  const el=document.getElementById("report");
+  writeReport(); el.select(); el.setSelectionRange(0,99999);
+  try{ navigator.clipboard.writeText(el.value); this.textContent="COPIED"; 
+       setTimeout(()=>this.textContent="COPY SETTINGS FOR REPORT",1400); }catch(e){}
+});
+
+/* ---------- wake lock ---------- */
+let wl=null;
+async function wake(){
+  try{ if("wakeLock" in navigator && !wl){ wl=await navigator.wakeLock.request("screen");
+       wl.addEventListener("release",()=>{wl=null;}); } }catch(e){}
+}
+document.addEventListener("visibilitychange",function(){
+  if(document.visibilityState==="visible") wake();
+});
+
+/* ---------- go ---------- */
+document.addEventListener("gesturestart",e=>e.preventDefault());
+document.addEventListener("dblclick",e=>e.preventDefault());
+resize(); syncUI(); paintThrottle();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
