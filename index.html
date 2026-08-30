@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>DRAG PAD — 002</title>
+<title>CONSOLE BAND — 003</title>
 <style>
   :root{
     --ink:#8fe3b0;        /* primary phosphor */
@@ -46,30 +46,39 @@
   /* ---- readout strip (occupies the MUNGO line slot) ---- */
   .strip{
     flex:0 0 var(--strip-h);height:var(--strip-h);
-    display:flex;align-items:center;gap:14px;
-    padding:0 8px;font-size:11px;letter-spacing:.06em;
+    display:flex;align-items:center;gap:9px;
+    padding:0 7px;font-size:11px;letter-spacing:.04em;
     background:var(--band);border-bottom:1px solid var(--ink-faint);
     white-space:nowrap;overflow:hidden;
   }
   .strip b{color:var(--ink-dim);font-weight:400;}
   .strip span{color:var(--warn);font-variant-numeric:tabular-nums;}
 
-  /* ---- console band placeholder ---- */
+  /* ---- console band — instruments 1-5, Control 3.4 ---- */
   .console{
     flex:0 0 var(--console-h);height:var(--console-h);
     background:var(--band);border-bottom:1px solid var(--ink-faint);
-    padding:6px 8px;display:flex;flex-direction:column;gap:5px;
-    font-size:10px;line-height:1.35;
+    padding:5px 8px;display:flex;gap:9px;font-size:10px;
   }
-  .console .hdr{color:var(--ink-dim);letter-spacing:.14em;font-size:9px;}
-  .bars{display:flex;flex-direction:column;gap:4px;}
-  .bar{display:flex;align-items:center;gap:6px;}
-  .bar .lbl{width:52px;color:var(--ink-dim);font-size:9px;letter-spacing:.08em;}
-  .bar .track{flex:1;height:8px;border:1px solid var(--ink-faint);position:relative;}
-  .bar .fillpos{position:absolute;top:0;bottom:0;background:var(--ink);opacity:.75;}
-  .bar .mid{position:absolute;top:-2px;bottom:-2px;left:50%;width:1px;background:var(--ink-faint);}
-  .bar .num{width:54px;text-align:right;color:var(--warn);font-variant-numeric:tabular-nums;font-size:10px;}
-  .tunevals{color:var(--ink-dim);font-size:9px;letter-spacing:.04em;}
+  .radarbox{flex:0 0 126px;display:flex;flex-direction:column;min-width:0;}
+  .radarbox canvas{display:block;width:100%;flex:1 1 auto;min-height:0;}
+  .ilbl{color:var(--ink-dim);letter-spacing:.16em;font-size:8px;
+        flex:0 0 auto;padding-bottom:2px;}
+  .gauges{flex:1 1 auto;display:flex;flex-direction:column;
+          justify-content:center;gap:4px;min-width:0;}
+  .g{display:flex;align-items:center;gap:6px;height:18px;}
+  .g .lbl{flex:0 0 44px;color:var(--ink-dim);font-size:8px;letter-spacing:.08em;}
+  .g .track{flex:1 1 auto;height:9px;border:1px solid var(--ink-faint);
+            position:relative;min-width:0;}
+  .g .fillpos{position:absolute;top:0;bottom:0;left:0;background:var(--ink);opacity:.78;}
+  .g .num{flex:0 0 48px;text-align:right;color:var(--warn);
+          font-variant-numeric:tabular-nums;font-size:9px;}
+  .banks{flex:1 1 auto;display:flex;gap:3px;min-width:0;}
+  .banks .bk{flex:1 1 auto;height:9px;border:1px solid var(--ink-faint);
+             position:relative;min-width:0;}
+  .banks .bk span{position:absolute;left:0;top:0;bottom:0;
+                  background:var(--ink);opacity:.78;}
+  .tunevals{color:var(--ink-dim);font-size:9px;letter-spacing:.04em;margin-bottom:10px;}
   .tunevals em{color:var(--warn);font-style:normal;}
 
   /* ---- controls ---- */
@@ -179,26 +188,41 @@
   <div class="view"><canvas id="cv"></canvas><div class="viewedge"></div></div>
 
   <div class="strip">
-    <b>PITCH</b><span id="rPitch">+0.00</span>
-    <b>ROLL</b><span id="rRoll">+0.00</span>
-    <b>THR</b><span id="rThr">0.00</span>
+    <b>P</b><span id="rPitch">+0.00</span>
+    <b>R</b><span id="rRoll">+0.00</span>
+    <b>T</b><span id="rThr">0.00</span>
+    <b>&deg;/s</b><span id="nRates">0/0</span>
+    <b>DEF</b><span id="nDef">0</span>
+    <b>FPS</b><span id="nFps">--</span>
   </div>
 
   <div class="console">
-    <div class="hdr">CONSOLE BAND — INSTRUMENTS DUE SESSION 003</div>
-    <div class="bars">
-      <div class="bar"><div class="lbl">PITCH</div>
-        <div class="track"><div class="mid"></div><div class="fillpos" id="bPitch"></div></div>
-        <div class="num" id="nPitch">0°/s</div></div>
-      <div class="bar"><div class="lbl">ROLL</div>
-        <div class="track"><div class="mid"></div><div class="fillpos" id="bRoll"></div></div>
-        <div class="num" id="nRoll">0°/s</div></div>
-      <div class="bar"><div class="lbl">SPEED</div>
-        <div class="track"><div class="fillpos" id="bSpd"></div></div>
-        <div class="num" id="nSpd">0</div></div>
+    <div class="radarbox">
+      <div class="ilbl">RADAR</div>
+      <canvas id="radar"></canvas>
     </div>
-    <div class="tunevals" id="tv"></div>
-    <div class="tunevals">DEFLECTION <em id="nDef">0</em> px &nbsp;·&nbsp; <em id="nFps">--</em> fps</div>
+    <div class="gauges">
+      <div class="g"><div class="lbl">SPEED</div>
+        <div class="track"><div class="fillpos" id="gSpd"></div></div>
+        <div class="num" id="nSpd">0</div></div>
+      <div class="g"><div class="lbl">SH FORE</div>
+        <div class="track"><div class="fillpos" id="gFore"></div></div>
+        <div class="num" id="nFore">100%</div></div>
+      <div class="g"><div class="lbl">SH AFT</div>
+        <div class="track"><div class="fillpos" id="gAft"></div></div>
+        <div class="num" id="nAft">100%</div></div>
+      <div class="g"><div class="lbl">ENERGY</div>
+        <div class="banks">
+          <div class="bk"><span id="bk0"></span></div>
+          <div class="bk"><span id="bk1"></span></div>
+          <div class="bk"><span id="bk2"></span></div>
+          <div class="bk"><span id="bk3"></span></div>
+        </div>
+        <div class="num" id="nEne">4.0</div></div>
+      <div class="g"><div class="lbl">FUEL</div>
+        <div class="track"><div class="fillpos" id="gFuel"></div></div>
+        <div class="num" id="nFuel">7.0 LY</div></div>
+    </div>
   </div>
 
   <div class="controls" id="controls">
@@ -274,6 +298,47 @@
 
   <div class="sep"></div>
 
+  <div class="sep"></div>
+  <h1>CONSOLE BAND — SESSION 003 [ASSUMED]</h1>
+
+  <div class="row">
+    <label>Radar range <i><span id="vRad"></span> units</i></label>
+    <input type="range" id="sRad" min="300" max="3000" step="50">
+    <div class="note">How far the radar sees. Field cell is 2000 units. At max speed
+      200/s, 1200 is six seconds from rim to centre. Guess.</div>
+  </div>
+
+  <div class="row">
+    <label>Blip size <i><span id="vBlip"></span> px</i></label>
+    <input type="range" id="sBlip" min="2" max="7" step="1">
+    <div class="note">Readable at arm's length?</div>
+  </div>
+
+  <div class="sep"></div>
+  <h1>DEV STATE — DRIVES THE GAUGES, NOT A GAME MECHANIC</h1>
+
+  <div class="row">
+    <label>Shield fore <i><span id="vSf"></span></i></label>
+    <input type="range" id="sSf" min="0" max="100" step="1">
+  </div>
+  <div class="row">
+    <label>Shield aft <i><span id="vSa"></span></i></label>
+    <input type="range" id="sSa" min="0" max="100" step="1">
+  </div>
+  <div class="row">
+    <label>Energy <i><span id="vEn"></span></i></label>
+    <input type="range" id="sEn" min="0" max="100" step="1">
+  </div>
+  <div class="row">
+    <label>Fuel <i><span id="vFu"></span> tenths LY</i></label>
+    <input type="range" id="sFu" min="0" max="70" step="1">
+    <div class="note">These four write to state. The instruments only ever read it —
+      there is no second copy of the number. Nothing recharges: no recharge rate
+      has been designed yet and inventing one here would be a lie.</div>
+  </div>
+
+  <div class="tunevals" id="tv"></div>
+
   <div class="toggles">
     <button id="tRadial">RADIAL CURVE</button>
     <button id="tInvP">INVERT PITCH</button>
@@ -315,6 +380,7 @@ function makeFlightInput(pitch, roll, throttle){
 /* ---------- tuning ---------- */
 const SPEC = { dead:6, defl:55, exp:1.6, pitchRate:60, rollRate:250, maxSpeed:200,
                keyUp:0.35, keyDown:0.18,
+               radarRange:1200, blip:3,
                radial:true, invP:false, invR:false, mirror:true };
 let T = Object.assign({}, SPEC);
 try{ const s = localStorage.getItem("dragpad.tuning");
@@ -349,6 +415,26 @@ function qrot(q,v){
 let q=[1,0,0,0];
 let pos=[0,0,0];
 let speed=0, throttle=0;
+
+/* ------------------------------------------------------------------
+   CONSTRAINT 2 — INSTRUMENTS ARE NEVER WRONG.
+   This is the single source of truth for every number the console
+   shows. Paths mirror CORE API SURFACE 3.1 so the real state model
+   drops in without renaming anything. The painter below reads from
+   here and from nowhere else; there is no second copy of a value for
+   display. Speed is written once per frame from the integrator.
+   Maxima: fuel 70 tenths is WORLD MODEL 2. The other three are
+   [ASSUMED] - the ship module spec does not exist yet.
+------------------------------------------------------------------- */
+const SHIELD_MAX = 100;   // [ASSUMED]
+const ENERGY_MAX = 100;   // [ASSUMED] displayed as four banks of 25
+const FUEL_MAX   = 70;    // World Model 2 - tenths of a light year
+
+const state = {
+  commander: { credits:1000, legalStatus:0, fuel:70, gameDay:0, kills:0 },
+  ship: { hull:100, shieldFore:100, shieldAft:100, energy:100,
+          cargoUsed:0, speed:0, docked:false }
+};
 
 /* ---------- object field ---------- */
 const CELL = 2000;
@@ -406,9 +492,21 @@ function resize(){
   cv.style.width=W+"px"; cv.style.height=H+"px";
   ctx.setTransform(DPR,0,0,DPR,0,0);
   F = (H/2)/Math.tan(30*Math.PI/180);   // 60° vertical field of view
+  resizeRadar();
 }
 window.addEventListener("resize",resize);
 window.addEventListener("orientationchange",()=>setTimeout(resize,250));
+
+/* ---------- radar canvas ---------- */
+const rcv=document.getElementById("radar"), rctx=rcv.getContext("2d",{alpha:false});
+let RW=0,RH=0;
+function resizeRadar(){
+  const r=rcv.getBoundingClientRect();
+  RW=Math.max(1,Math.round(r.width)); RH=Math.max(1,Math.round(r.height));
+  rcv.width=Math.round(RW*DPR); rcv.height=Math.round(RH*DPR);
+  rcv.style.width=RW+"px"; rcv.style.height=RH+"px";
+  rctx.setTransform(DPR,0,0,DPR,0,0);
+}
 
 /* ---------- drag pad ---------- */
 const pad=document.getElementById("pad"), ring=document.getElementById("ring"),
@@ -655,19 +753,78 @@ function render(){
   ctx.stroke();
 }
 
+/* ---------- radar ----------
+   The original's ellipse, and it is still the right answer: bearing and
+   range on the ellipse, height above or below the plane on a vertical
+   stalk. Three dimensions in a box 126px wide.
+
+   Contacts are the wireframe objects themselves, not separate dummies.
+   That is deliberate - it makes the instrument checkable by eye. A blip
+   to starboard means a shape out of the right of the window, or the
+   instrument is lying, which constraint 2 forbids.
+
+   Range and blip size are [ASSUMED] and on sliders.                   */
+function drawRadar(){
+  rctx.fillStyle="#050806"; rctx.fillRect(0,0,RW,RH);
+  const ox2=RW/2, oy2=RH/2;
+  const ea=Math.max(8, RW/2-4);
+  const eb=Math.max(6, Math.min(RH/2-22, 26));
+  const sMax=Math.max(4, oy2-eb-2);
+
+  rctx.lineWidth=1;
+  rctx.strokeStyle="#1d3b2b";
+  rctx.beginPath(); rctx.ellipse(ox2,oy2,ea,eb,0,0,Math.PI*2); rctx.stroke();
+  rctx.beginPath();
+  rctx.moveTo(ox2-ea,oy2); rctx.lineTo(ox2+ea,oy2);
+  rctx.moveTo(ox2,oy2-eb); rctx.lineTo(ox2,oy2+eb);
+  rctx.stroke();
+
+  const cq=qconj(q), R=Math.max(1,T.radarRange), b=T.blip;
+  for(const o of objects){
+    const rel=[wrap(o.p[0]-pos[0]), wrap(o.p[1]-pos[1]), wrap(o.p[2]-pos[2])];
+    const d=Math.hypot(rel[0],rel[1],rel[2]);
+    if(d>R) continue;
+    const c=qrot(cq,rel);
+    const x=ox2 + (c[0]/R)*ea;
+    const y=oy2 - (c[2]/R)*eb;
+    const st=Math.max(-sMax, Math.min(sMax, -(c[1]/R)*sMax*2));
+    rctx.strokeStyle="rgba(143,227,176,0.45)";
+    rctx.beginPath(); rctx.moveTo(x,y); rctx.lineTo(x,y+st); rctx.stroke();
+    rctx.fillStyle="#8fe3b0";
+    rctx.fillRect(x-b/2, y+st-b/2, b, b);
+  }
+}
+
+/* ---------- console band: instruments 1-5 ----------
+   Reads state and only state. No argument, no cached copy.           */
+const gSpd=document.getElementById("gSpd"), gFore=document.getElementById("gFore"),
+      gAft=document.getElementById("gAft"), gFuel=document.getElementById("gFuel"),
+      nSpd=document.getElementById("nSpd"), nFore=document.getElementById("nFore"),
+      nAft=document.getElementById("nAft"), nEne=document.getElementById("nEne"),
+      nFuel=document.getElementById("nFuel"),
+      bk=[0,1,2,3].map(i=>document.getElementById("bk"+i));
+function fillBar(el,frac){
+  el.style.width=(Math.max(0,Math.min(1,frac))*100)+"%";
+}
+function paintConsole(){
+  const sh=state.ship, cm=state.commander;
+  fillBar(gSpd, sh.speed/Math.max(1,T.maxSpeed));
+  nSpd.textContent=sh.speed.toFixed(0);
+  fillBar(gFore, sh.shieldFore/SHIELD_MAX); nFore.textContent=sh.shieldFore.toFixed(0)+"%";
+  fillBar(gAft,  sh.shieldAft/SHIELD_MAX);  nAft.textContent=sh.shieldAft.toFixed(0)+"%";
+  const per=ENERGY_MAX/4;
+  for(let i=0;i<4;i++) fillBar(bk[i], (sh.energy-i*per)/per);
+  nEne.textContent=(sh.energy/per).toFixed(1);
+  fillBar(gFuel, cm.fuel/FUEL_MAX);
+  nFuel.textContent=(cm.fuel/10).toFixed(1)+" LY";
+}
+
 /* ---------- readouts ---------- */
 const rPitch=document.getElementById("rPitch"), rRoll=document.getElementById("rRoll"),
-      rThr=document.getElementById("rThr"), bPitch=document.getElementById("bPitch"),
-      bRoll=document.getElementById("bRoll"), bSpd=document.getElementById("bSpd"),
-      nPitch=document.getElementById("nPitch"), nRoll=document.getElementById("nRoll"),
-      nSpd=document.getElementById("nSpd"), nDef=document.getElementById("nDef"),
+      rThr=document.getElementById("rThr"), nRates=document.getElementById("nRates"),
+      nDef=document.getElementById("nDef"),
       nFps=document.getElementById("nFps"), tv=document.getElementById("tv");
 function sgn(v){ return (v<0?"":"+")+v.toFixed(2); }
-function bipolar(el,v){
-  const p=Math.max(-1,Math.min(1,v));
-  if(p>=0){ el.style.left="50%"; el.style.right=(50-p*50)+"%"; }
-  else{ el.style.right="50%"; el.style.left=(50+p*50)+"%"; }
-}
 function paintTuneVals(){
   tv.innerHTML = "DEAD <em>"+T.dead+"</em> · DEFL <em>"+T.defl+"</em> · EXP <em>"+
     T.exp.toFixed(1)+"</em> · P <em>"+T.pitchRate+"</em>°/s · R <em>"+T.rollRate+
@@ -686,16 +843,20 @@ function frame(now){
 
   const input = makeFlightInput(p, r, throttle);
   const rates = integrate(input, dt);
+
+  // the one write: the integrator's speed becomes the state's speed,
+  // and the speed instrument reads it back from there.
+  state.ship.speed = speed;
+
   render();
+  drawRadar();
+  paintConsole();
 
   rPitch.textContent=sgn(input.pitch);
   rRoll.textContent=sgn(input.roll);
   rThr.textContent=throttle.toFixed(2);
-  bipolar(bPitch,input.pitch); bipolar(bRoll,input.roll);
-  bSpd.style.left="0"; bSpd.style.right=(100-(speed/T.maxSpeed)*100)+"%";
-  nPitch.textContent=(rates.wx*180/Math.PI).toFixed(0)+"°/s";
-  nRoll.textContent=(rates.wz*180/Math.PI).toFixed(0)+"°/s";
-  nSpd.textContent=speed.toFixed(0);
+  nRates.textContent=(rates.wx*180/Math.PI).toFixed(0)+"/"+
+                     (rates.wz*180/Math.PI).toFixed(0);
   nDef.textContent=defPx.toFixed(0);
 
   fpsAcc+=dt; fpsN++;
@@ -708,7 +869,25 @@ function frame(now){
 const tuner=document.getElementById("tuner");
 const map=[["sDead","vDead","dead",0],["sDefl","vDefl","defl",0],["sExp","vExp","exp",1],
            ["sPr","vPr","pitchRate",0],["sRr","vRr","rollRate",0],["sSp","vSp","maxSpeed",0],
-           ["sKu","vKu","keyUp",2],["sKd","vKd","keyDown",2]];
+           ["sKu","vKu","keyUp",2],["sKd","vKd","keyDown",2],
+           ["sRad","vRad","radarRange",0],["sBlip","vBlip","blip",0]];
+
+/* Dev state sliders. These write to `state`, which the instruments read.
+   Not saved with the tuning, because they are not tuning. */
+const devMap=[["sSf","vSf","ship","shieldFore"],["sSa","vSa","ship","shieldAft"],
+              ["sEn","vEn","ship","energy"],["sFu","vFu","commander","fuel"]];
+function syncDev(){
+  for(const [sid,vid,grp,key] of devMap){
+    document.getElementById(sid).value=state[grp][key];
+    document.getElementById(vid).textContent=state[grp][key];
+  }
+}
+for(const [sid,vid,grp,key] of devMap){
+  document.getElementById(sid).addEventListener("input",function(){
+    state[grp][key]=parseFloat(this.value);
+    document.getElementById(vid).textContent=state[grp][key];
+  });
+}
 function syncUI(){
   for(const [sid,vid,key,dp] of map){
     document.getElementById(sid).value=T[key];
@@ -719,7 +898,7 @@ function syncUI(){
   document.getElementById("tInvR").classList.toggle("on",T.invR);
   document.getElementById("tMirror").classList.toggle("on",T.mirror);
   document.getElementById("controls").classList.toggle("mirrored",T.mirror);
-  paintTuneVals(); writeReport();
+  syncDev(); paintTuneVals(); writeReport();
 }
 for(const [sid,vid,key,dp] of map){
   document.getElementById(sid).addEventListener("input",function(){
@@ -747,7 +926,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 });
 function writeReport(){
   document.getElementById("report").value =
-    "DRAG PAD 002 — settings\n"+
+    "CONSOLE BAND 003 — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -760,6 +939,9 @@ function writeReport(){
     "invert pitch  "+T.invP+"\n"+
     "invert roll   "+T.invR+"\n"+
     "pad side      "+(T.mirror?"right":"left")+"\n"+
+    "radar range   "+T.radarRange+" units\n"+
+    "blip size     "+T.blip+" px\n"+
+    "console h     "+document.querySelector(".console").getBoundingClientRect().height.toFixed(0)+" px\n"+
     "fps           "+fpsShow.toFixed(0)+"\n"+
     "viewport      "+window.innerWidth+"x"+window.innerHeight;
 }
