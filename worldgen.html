@@ -429,6 +429,83 @@ function distLY(a, b){
   const dx = a.x - b.x, dy = (a.y - b.y) / 2;
   return Math.sqrt(dx*dx + dy*dy) * 0.4;
 }
+
+/* ------------------------------------------------------------
+   CONNECTIVITY REPAIR — session 004, [BUILT]
+   Found by building: at the canonical seed, five of the eight
+   galaxies contain systems no ship can reach. Galaxy 0 strands
+   one; galaxy 5 strands three across two pockets. Counting
+   isolated systems misses this — a pocket of four is mutually
+   reachable and still cut off from the galaxy.
+
+   Max fuel is 7.0 LY and is specified (World Spec §2, leaned on
+   by Control §4), so the fix moves systems, not the fuel.
+
+   This is a galaxy-level step. Design principle 2 says a system
+   is derived directly from (worldSeed, galaxy, system); after
+   this pass, position is a property of the assembled galaxy.
+   Everything else about a system stays independently derivable,
+   and the §3.4 field draw order is untouched.
+
+   Deterministic, and the ordering rules are the whole point:
+     - main body = largest component, ties to lowest member index
+     - pockets processed in order of lowest member index
+     - the moved system is the pocket member nearest the main
+       body, ties to lowest index
+     - it moves along the straight line toward that neighbour
+       until within TARGET_LY, on integer coordinates
+   ------------------------------------------------------------ */
+const TARGET_LY = 6.9;
+function components(S){
+  const unseen = new Set(S.map(s => s.index));
+  const out = [];
+  while (unseen.size){
+    const start = Math.min.apply(null, Array.from(unseen));
+    const comp = [start]; unseen.delete(start);
+    const stack = [S[start]];
+    while (stack.length){
+      const c = stack.pop();
+      for (const o of S){
+        if (unseen.has(o.index) && distLY(c, o) <= MAX_FUEL_LY){
+          unseen.delete(o.index); comp.push(o.index); stack.push(o);
+        }
+      }
+    }
+    comp.sort((a,b) => a-b);
+    out.push(comp);
+  }
+  out.sort((a,b) => b.length - a.length || a[0] - b[0]);
+  return out;
+}
+function repair(S){
+  const log = [];
+  for (let pass = 0; pass < 32; pass++){
+    const comps = components(S);
+    if (comps.length <= 1) break;
+    const main = comps[0];
+    const pocket = comps.slice(1).sort((a,b) => a[0]-b[0])[0];
+    let bp = null, bm = null, bd = Infinity;
+    for (const pi of pocket) for (const mi of main){
+      const d = distLY(S[pi], S[mi]);
+      if (d < bd - 1e-9){ bd = d; bp = pi; bm = mi; }
+    }
+    const p = S[bp], m = S[bm], from = p.x + "," + p.y;
+    const ox = p.x, oy = p.y;
+    /* step along the line, integer coordinates, nearest occupied cell skipped */
+    for (let t = 0.01; t <= 1.0; t += 0.01){
+      p.x = Math.round(ox + (m.x - ox) * t);
+      p.y = Math.round(oy + (m.y - oy) * t);
+      if (distLY(p, m) > TARGET_LY) continue;
+      if (S.some(o => o !== p && o.x === p.x && o.y === p.y)) continue;
+      break;
+    }
+    log.push({index: bp, name: p.name, from: from, to: p.x + "," + p.y,
+              was: bd, now: distLY(p, m), pocket: pocket.length});
+  }
+  return log;
+}
+const REPAIRS = repair(SYSTEMS);
+const COMPONENTS = components(SYSTEMS);
 for (const s of SYSTEMS){
   let n = 0, nearest = Infinity;
   for (const o of SYSTEMS){
@@ -441,18 +518,20 @@ for (const s of SYSTEMS){
   s.nearest = nearest;
 }
 
-/* determinism check — regenerate and compare */
+/* determinism check — regenerate, repair, and compare */
 const rejectsFirstPass = rejectCount;
 rejectCount = 0;
-let identical = true;
-for (let i = 0; i < COUNT; i++){
-  const again = deriveSystem(WORLD_SEED, GALAXY, i);
-  const a = SYSTEMS[i];
-  if (again.name !== a.name || again.description !== a.description ||
-      again.species !== a.species || again.x !== a.x || again.y !== a.y ||
-      again.techLevel !== a.techLevel){ identical = false; break; }
+const AGAIN = [];
+for (let i = 0; i < COUNT; i++) AGAIN.push(deriveSystem(WORLD_SEED, GALAXY, i));
+const againLog = repair(AGAIN);
+let identical = (againLog.length === REPAIRS.length);
+if (identical) for (let i = 0; i < COUNT; i++){
+  const b = AGAIN[i], a = SYSTEMS[i];
+  if (b.name !== a.name || b.description !== a.description || b.species !== a.species ||
+      b.x !== a.x || b.y !== a.y || b.techLevel !== a.techLevel){ identical = false; break; }
 }
 const rejectsSecondPass = rejectCount;
+for (const r of REPAIRS) SYSTEMS[r.index].repaired = r;
 
 /* ============================================================
    RENDER
@@ -523,7 +602,9 @@ function renderCard(){
     row("Station type", s.stationTypeRaw + " <span class=assumed>(undefined)</span>") +
     '</dl>' +
     '<div class="reach"><b>' + s.reach + '</b> systems within one 7.0 LY jump · ' +
-    'nearest neighbour ' + s.nearest.toFixed(1) + ' LY</div>';
+    'nearest neighbour ' + s.nearest.toFixed(1) + ' LY' +
+    (s.repaired ? '<br><span class="assumed">Moved by the connectivity repair: ' +
+      s.repaired.from + ' → ' + s.repaired.to + '</span>' : '') + '</div>';
 }
 function row(k, v){ return '<dt>' + k + '</dt><dd>' + v + '</dd>'; }
 
@@ -536,8 +617,7 @@ function select(i){
 }
 $("bPrev").onclick = () => select(sel - 1);
 $("bNext").onclick = () => select(sel + 1);
-$("bRand").onclick = () => { const i = Math.floor(Math.random()*COUNT); select(i);
-  document.getElementById("r"+i).scrollIntoView({block:"center"}); };
+$("bRand").onclick = () => select(Math.floor(Math.random()*COUNT));
 
 /* --- list --- */
 $("list").innerHTML = SYSTEMS.map(s =>
@@ -555,6 +635,7 @@ function checkRow(k, v, cls){ return '<tr><td class="k">' + k + '</td><td class=
 const uniqueNames = new Set(SYSTEMS.map(s => s.name)).size;
 const uniqueCoords = new Set(SYSTEMS.map(s => s.x + "," + s.y)).size;
 const unreachable = SYSTEMS.filter(s => s.reach === 0).length;
+const biggest = COMPONENTS[0].length;
 $("tCheck").innerHTML =
   checkRow("Systems generated", COUNT, "ok") +
   checkRow("Generation time", genMs.toFixed(1) + " ms", genMs < 50 ? "ok" : "assumed") +
@@ -563,6 +644,10 @@ $("tCheck").innerHTML =
   checkRow("Unique names", uniqueNames + " / 256", uniqueNames === COUNT ? "ok" : "assumed") +
   checkRow("Unique coordinates", uniqueCoords + " / 256", uniqueCoords === COUNT ? "ok" : "assumed") +
   checkRow("Blocklist rejections", rejectsFirstPass) +
+  checkRow("Reachable from any system", biggest + " / 256", biggest === COUNT ? "ok" : "bad") +
+  checkRow("Systems moved by repair", REPAIRS.length, REPAIRS.length ? "assumed" : "ok") +
+  REPAIRS.map(r => checkRow("&nbsp;&nbsp;" + r.index + " " + r.name,
+      r.from + " → " + r.to + " · " + r.was.toFixed(2) + " → " + r.now.toFixed(2) + " LY")).join("") +
   checkRow("Stranded systems (0 in range)", unreachable, unreachable === 0 ? "ok" : "bad");
 
 /* --- distributions --- */
@@ -612,7 +697,8 @@ $("foot").innerHTML =
   "Seed expansion for nameSeed / speciesSeed / descSeed is <span class='assumed'>[ASSUMED]</span>, session 004. " +
   "Draw order in World Spec §3.4 is unchanged.<br>" +
   "Blocklist is a starter list and <span class='assumed'>[ASSUMED]</span> incomplete — Word Banks §9 item 3.<br>" +
-  "starClass and stationTypeRaw are drawn by §3.4 and defined by no section in any document.";
+  "starClass and stationTypeRaw are drawn by §3.4 and defined by no section in any document.<br>" +
+  "Connectivity repair is <span class=assumed>[BUILT]</span>, session 004 — a galaxy-level step not yet in any spec.";
 
 select(7);
 drawChart();
