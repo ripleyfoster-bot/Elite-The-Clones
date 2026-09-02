@@ -1302,7 +1302,10 @@ for(const [sid,vid,key,dp] of map){
   document.getElementById(sid).addEventListener("input",function(){
     T[key]=parseFloat(this.value);
     document.getElementById(vid).textContent=T[key].toFixed(dp);
-    paintTuneVals(); saveT(); writeReport();
+    paintTuneVals(); saveT();
+    /* writeReport removed here, session 009. The report is regenerated when the
+       panel opens and when COPY is pressed; rebuilding it per drag frame is what
+       froze the panel. */
   });
 }
 function toggle(id,key){
@@ -1357,13 +1360,38 @@ function chk(label,got,want){
          (String(want)+"          ").slice(0,10)+
          (ok?"OK":"FAIL")+"\n";
 }
+/* Memoised. The world never changes once built, so these are computed once.
+   Session 009: they were recomputed on every slider input event, which froze
+   the panel after BUILD ALL 8. [TESTED] fault, [BUILT] fix. */
+let G0_STATS = null, UNI_STATS = null;
+function g0Stats(){
+  if(G0_STATS) return G0_STATS;
+  const G0 = World.galaxy(0).systems;
+  return G0_STATS = {
+    six:   G0.filter(x=>x.name.length===6).length,
+    eight: G0.filter(x=>x.name.length===8).length,
+    hc:    G0.filter(x=>x.species==="Human Colonials").length,
+    dull:  G0.filter(x=>x.dull).length
+  };
+}
+function uniStats(){
+  if(UNI_STATS) return UNI_STATS;
+  const A = World.all();
+  const L = A.map(x=>x.description.length).sort((a,b)=>a-b);
+  const nc = {}; for(const x of A) (nc[x.name]=nc[x.name]||[]).push(x.galaxy+"/"+x.index);
+  const dupes = Object.keys(nc).filter(n=>nc[n].length>1);
+  let moves=0, comps=0, uniq=true, ms=0;
+  for(let g=0;g<8;g++){ const gg=World.galaxy(g);
+    moves+=gg.repairs.length; comps+=gg.after.length; ms+=World.ms[g];
+    if(new Set(gg.systems.map(x=>x.name)).size!==256) uniq=false; }
+  return UNI_STATS = { n:A.length, dull:A.filter(x=>x.dull).length,
+    lo:L[0], mid:L[L.length>>1], hi:L[L.length-1],
+    dupes, nc, moves, comps, uniq, ms };
+}
 function worldReport(){
   const s = state.system, p = state.position;
-  const G0 = World.galaxy(0).systems;
-  const six = G0.filter(x=>x.name.length===6).length;
-  const eight = G0.filter(x=>x.name.length===8).length;
-  const hc = G0.filter(x=>x.species==="Human Colonials").length;
-  const dull = G0.filter(x=>x.dull).length;
+  const g0 = g0Stats();
+  const six = g0.six, eight = g0.eight, hc = g0.hc, dull = g0.dull;
 
   let out = "WORLD — generator wired in, session 009\n"+
     "seed          "+World.WORLD_SEED+"\n"+
@@ -1392,25 +1420,19 @@ function worldReport(){
     out += "\nUniverse rows need all eight galaxies. Press BUILD ALL 8.\n";
     return out;
   }
-  const A = World.all();
-  const L = A.map(x=>x.description.length).sort((a,b)=>a-b);
-  const nc = {}; for(const x of A) (nc[x.name]=nc[x.name]||[]).push(x.galaxy+"/"+x.index);
-  const dupes = Object.keys(nc).filter(n=>nc[n].length>1);
-  let moves=0, comps=0, uniq=true, ms=0;
-  for(let g=0;g<8;g++){ const gg=World.galaxy(g);
-    moves+=gg.repairs.length; comps+=gg.after.length; ms+=World.ms[g];
-    if(new Set(gg.systems.map(x=>x.name)).size!==256) uniq=false; }
+  const U = uniStats();
+  const nc = U.nc, dupes = U.dupes, moves = U.moves, comps = U.comps, ms = U.ms;
 
   out += "\nSELF-CHECK — universe   got       want\n";
-  out += chk("systems", A.length, 2048);
+  out += chk("systems", U.n, 2048);
   out += chk("name rejections", World.tally.name.total, 14);
   out += chk("  profanity", World.tally.name.profanity, 11);
   out += chk("  whole-name", World.tally.name.whole, 3);
-  out += chk("dull", pct(A.filter(x=>x.dull).length, A.length), "28.0%");
-  out += chk("desc min/med/max", L[0]+"/"+L[L.length>>1]+"/"+L[L.length-1], "23/62/129");
+  out += chk("dull", pct(U.dull, U.n), "28.0%");
+  out += chk("desc min/med/max", U.lo+"/"+U.mid+"/"+U.hi, "23/62/129");
   out += chk("duplicate names", dupes.length, 1);
   out += chk("  which", dupes.length?dupes[0]:"none", "Adlune");
-  out += chk("unique in galaxy", uniq?"yes":"no", "yes");
+  out += chk("unique in galaxy", U.uniq?"yes":"no", "yes");
   out += chk("§3.6 moves", moves, 6);
   out += chk("components", comps, 8);
   out += "\n  whole universe "+ms.toFixed(0)+" ms · "+
