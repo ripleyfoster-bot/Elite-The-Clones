@@ -180,12 +180,82 @@
     -webkit-user-select:text;user-select:text;
   }
   .sep{height:1px;background:var(--ink-faint);margin:16px 0;}
+
+  /* ---- panels — PANEL LAYOUT SPEC.
+     IN-FLIGHT MODE (§1): the panel takes the 3D view region ONLY. The
+     console band and both thumb zones stay live and the ship keeps
+     flying. Docked mode (full screen) is not built — there is no
+     docking. Nav strip sits at the bottom edge of the panel region
+     (§2), which in flight is directly above the readout strip. ---- */
+  #panel{
+    position:absolute;inset:0;z-index:10;display:none;
+    flex-direction:column;background:var(--band);
+  }
+  #panel.open{display:flex;}
+  .pbody{
+    flex:1 1 auto;min-height:0;overflow-y:auto;
+    -webkit-overflow-scrolling:touch;touch-action:pan-y;
+    padding:12px 14px 16px;
+  }
+  .pname{font-size:20px;letter-spacing:.18em;color:var(--ink);}
+  .psub{font-size:11px;letter-spacing:.10em;color:var(--ink-dim);margin-top:5px;}
+  .pdata{margin-top:14px;}
+  .prow{display:flex;justify-content:space-between;align-items:baseline;
+        gap:12px;font-size:12px;line-height:1.6;}
+  .prow b{flex:0 0 auto;font-weight:400;color:var(--ink-dim);letter-spacing:.05em;}
+  .prow i{flex:1 1 auto;min-width:0;text-align:right;font-style:normal;
+          color:var(--warn);font-variant-numeric:tabular-nums;}
+  .pnote{font-size:9px;color:var(--ink-faint);letter-spacing:.04em;
+         text-align:right;margin-top:-2px;}
+  .pdesc{
+    margin-top:16px;font-size:12px;line-height:1.65;color:var(--ink);
+    border-left:1px solid var(--ink-faint);padding-left:10px;
+    -webkit-user-select:text;user-select:text;
+  }
+  /* §6: the assessment is opinion and must be tellable from the data
+     above it at a glance. Rule + heading + a colder colour. */
+  .phead{
+    margin-top:20px;padding-top:11px;border-top:1px solid var(--ink-faint);
+    font-size:9px;letter-spacing:.20em;color:var(--ink-dim);
+  }
+  .pmungo{margin-top:7px;font-size:11px;line-height:1.55;color:var(--ink-faint);}
+  .pnav{
+    flex:0 0 44px;height:44px;display:flex;align-items:stretch;
+    border-top:1px solid var(--ink-faint);background:var(--band);
+  }
+  .pnav button{
+    min-width:60px;background:transparent;border:0;
+    border-right:1px solid var(--ink-faint);
+    color:var(--ink-dim);font:inherit;font-size:10px;letter-spacing:.14em;
+  }
+  .pnav button.on{color:var(--ink);background:rgba(143,227,176,.10);}
+  .pnav .spacer{flex:1 1 auto;}
+  .pnav .fly{min-width:74px;color:var(--ink);
+             border-right:0;border-left:1px solid var(--ink-faint);}
+  #sysBtn{
+    position:fixed;top:calc(env(safe-area-inset-top) + 6px);right:70px;
+    background:rgba(0,0,0,.55);color:var(--ink-dim);
+    border:1px solid var(--ink-faint);border-radius:2px;
+    font:inherit;font-size:10px;letter-spacing:.12em;padding:5px 9px;
+    z-index:20;
+  }
 </style>
 </head>
 <body>
 
 <div id="app">
-  <div class="view"><canvas id="cv"></canvas><div class="viewedge"></div></div>
+  <div class="view"><canvas id="cv"></canvas><div class="viewedge"></div>
+    <div id="panel">
+      <div class="pbody" id="panelBody"></div>
+      <!-- §2: unavailable panels are not shown rather than greyed. SYS is
+           the only panel that exists, so the strip has one entry. -->
+      <div class="pnav">
+        <button id="navSys" class="on">SYS</button>
+        <div class="spacer"></div>
+        <button class="fly" id="navFly">FLY</button>
+      </div>
+    </div>
+  </div>
 
   <div class="strip">
     <b>P</b><span id="rPitch">+0.00</span>
@@ -245,6 +315,7 @@
   </div>
 </div>
 
+<button id="sysBtn">SYS</button>
 <button id="tuneBtn">TUNE</button>
 
 <div id="tuner">
@@ -1454,6 +1525,83 @@ document.getElementById("bCopy").addEventListener("click",function(){
   try{ navigator.clipboard.writeText(el.value); this.textContent="COPIED"; 
        setTimeout(()=>this.textContent="COPY SETTINGS FOR REPORT",1400); }catch(e){}
 });
+
+/* ==================================================================
+   SYSTEM DATA PANEL — PANEL LAYOUT SPEC §6, in-flight mode (§1).
+
+   CONSTRAINT 2. Every value below is read from `state.system` on the
+   CORE API §3.1 path at render time. Nothing is cached for display,
+   and the panel holds no copy of any number. It is rendered on open,
+   not per frame — the system cannot change while docked or cruising,
+   only on a jump, and there are no jumps yet.
+
+   BUILT TO THE SPEC AS WRITTEN, INCLUDING WHERE IT IS SHORT:
+   - No star class row. Panel §6 has no field for it and one has not
+     been invented here. Open loop 11.
+   - Distance (§6) is the distance from the current system to the one
+     being shown. This panel can only show the current system, so the
+     value is a dash rather than 0.0. It needs a chart to mean
+     anything.
+   - MUNGO's assessment gets its heading and its separation, because
+     §6 requires the player to tell opinion from instrument at a
+     glance. The line states that `ai.mungo` is absent. No dialogue is
+     invented.
+================================================================== */
+const panelEl   = document.getElementById("panel");
+const panelBody = document.getElementById("panelBody");
+
+function grp(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+function esc(s){ return String(s).replace(/[&<>]/g,
+  function(c){ return c==="&"?"&amp;":(c==="<"?"&lt;":"&gt;"); }); }
+
+function prow(label, value){
+  return '<div class="prow"><b>'+esc(label)+'</b><i>'+esc(value)+'</i></div>';
+}
+
+function renderSystemData(){
+  const s = state.system;                         /* CORE API §3.1 */
+  if(!s){ panelBody.innerHTML =
+    '<div class="pname">NO SYSTEM</div>'; return; }
+
+  /* World Model §6: population is tenths of a billion, productivity is
+     millions of credits. */
+  const pop = (s.population/10).toFixed(1);
+
+  let h = '';
+  h += '<div class="pname">'+esc(s.name.toUpperCase())+'</div>';
+  h += '<div class="psub">'+esc(s.ecoName)+' &middot; '+esc(s.govName)+'</div>';
+
+  h += '<div class="pdata">';
+  h += prow("Tech Level",         String(s.techLevel));
+  h += prow("Population",         pop+" Billion ("+s.species+")");
+  h += prow("Gross Productivity", grp(s.productivity)+" M CR");
+  h += prow("Radius",             grp(s.radiusKm)+" km");
+  h += prow("Distance",           "\u2014");
+  h += '<div class="pnote">current system</div>';
+  h += '</div>';
+
+  h += '<div class="pdesc">&ldquo;'+esc(s.description)+'&rdquo;</div>';
+
+  h += '<div class="phead">MUNGO\u2019S ASSESSMENT</div>';
+  h += '<div class="pmungo">ai.mungo not installed \u2014 no assessment '+
+       'available. The figures above are read from the world model and '+
+       'are not opinions.</div>';
+
+  panelBody.innerHTML = h;
+}
+
+function openPanel(){ renderSystemData(); panelEl.classList.add("open"); }
+function closePanel(){ panelEl.classList.remove("open"); }
+
+/* Access route. Control §4.4's radial menu is specified for guarded,
+   infrequent actions and a panel is neither; nothing in Control names
+   a control that opens one. This button is a stand-in so the panel can
+   be flown, not a control-spec decision. Open loop. */
+document.getElementById("sysBtn").addEventListener("click", function(){
+  if(panelEl.classList.contains("open")) closePanel(); else openPanel();
+});
+document.getElementById("navFly").addEventListener("click", closePanel);
+document.getElementById("navSys").addEventListener("click", renderSystemData);
 
 /* ---------- wake lock ---------- */
 let wl=null;
