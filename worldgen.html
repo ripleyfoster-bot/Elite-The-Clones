@@ -5,18 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>World generator — galaxy 0</title>
+<title>World generator — 8 galaxies</title>
 <style>
 :root{
-  --void:#05070b;
-  --panel:#0c1219;
-  --rule:#1b2836;
-  --ink:#c3d0da;
-  --dim:#6a7d8c;
-  --amber:#e0a03c;
-  --green:#63c98d;
-  --red:#d1614f;
-  --pad:14px;
+  --void:#05070b; --panel:#0c1219; --rule:#1b2836; --ink:#c3d0da; --dim:#6a7d8c;
+  --amber:#e0a03c; --green:#63c98d; --red:#d1614f; --pad:14px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;background:var(--void);color:var(--ink)}
@@ -26,18 +19,19 @@ body{
   -webkit-text-size-adjust:100%;
 }
 .wrap{max-width:640px;margin:0 auto;padding:var(--pad)}
-
-header{border-bottom:1px solid var(--rule);padding-bottom:12px;margin-bottom:16px}
+header{border-bottom:1px solid var(--rule);padding-bottom:12px;margin-bottom:14px}
 h1{font-size:15px;font-weight:600;margin:0 0 6px;letter-spacing:.02em;color:var(--amber)}
 .seedline{color:var(--dim);font-size:12px}
 .seedline b{color:var(--ink);font-weight:600}
 
-/* ---- the chart: the hero ---- */
+.gtabs{display:flex;gap:4px;margin:0 0 12px;flex-wrap:wrap}
+.gtabs button{flex:1 1 auto;min-width:34px;min-height:38px;font-size:12px;padding:0}
+.gtabs button.on{background:#22303d;color:var(--amber);border-color:#33475a}
+
 .chartbox{position:relative;border:1px solid var(--rule);background:#080d13;margin-bottom:4px;touch-action:manipulation}
 canvas{display:block;width:100%;height:auto}
 .charthint{font-size:11px;color:var(--dim);margin:0 0 18px;text-align:right}
 
-/* ---- selected system ---- */
 .card{border:1px solid var(--rule);background:var(--panel);padding:var(--pad);margin-bottom:18px}
 .card h2{font-size:19px;margin:0;letter-spacing:.06em;color:var(--amber);font-weight:600}
 .card .idx{font-size:12px;color:var(--dim);margin:2px 0 12px}
@@ -48,7 +42,6 @@ dd{margin:0;text-align:right}
 .reach{margin-top:12px;padding-top:10px;border-top:1px solid var(--rule);font-size:12px;color:var(--dim)}
 .reach b{color:var(--green)}
 
-/* ---- nav ---- */
 .nav{display:flex;gap:8px;margin-bottom:18px}
 button{
   flex:1;min-height:44px;background:#111a23;color:var(--ink);border:1px solid var(--rule);
@@ -57,7 +50,6 @@ button{
 button:active{background:#182430}
 button:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
 
-/* ---- sections ---- */
 section{margin-bottom:22px}
 section > h3{
   font-size:12px;color:var(--dim);font-weight:600;margin:0 0 8px;
@@ -69,7 +61,6 @@ td.k{color:var(--dim);white-space:nowrap;padding-right:12px}
 td.v{text-align:right}
 .bar{display:inline-block;height:8px;background:var(--amber);opacity:.75;vertical-align:middle;margin-right:6px}
 
-/* ---- list ---- */
 .list{border-top:1px solid var(--rule)}
 .row{
   display:flex;gap:10px;align-items:baseline;padding:9px 2px;
@@ -81,6 +72,15 @@ td.v{text-align:right}
 .row .nm{color:var(--amber);width:88px;flex:none;letter-spacing:.04em}
 .row .ec{color:var(--ink);font-size:11.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row .tl{color:var(--dim);font-size:11px;flex:none}
+
+/* ---- the 2,048-name read ---- */
+.namehead{display:flex;gap:8px;margin-bottom:10px}
+.gname{font-size:11px;color:var(--amber);border-bottom:1px solid var(--rule);padding:10px 0 4px;margin:0 0 6px}
+.names{display:grid;grid-template-columns:repeat(3,1fr);gap:2px 8px;font-size:12px;letter-spacing:.03em}
+.names span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.names span.dup{color:var(--amber)}
+.names span.flag{color:var(--red)}
+.progress{font-size:11.5px;color:var(--dim);margin:8px 0 0}
 
 .note{font-size:11.5px;color:var(--dim);line-height:1.6;margin:10px 0 0}
 .ok{color:var(--green)}
@@ -94,8 +94,10 @@ footer{border-top:1px solid var(--rule);padding-top:12px;margin-top:8px}
 
 <header>
   <h1>World generator — standalone test rig</h1>
-  <div class="seedline">seed <b id="hSeed"></b> · galaxy <b>0</b> · <b>256</b> systems · <span id="hTime"></span></div>
+  <div class="seedline">seed <b id="hSeed"></b> · <b>8</b> galaxies · <b>2,048</b> systems · <span id="hTime"></span></div>
 </header>
+
+<div class="gtabs" id="gtabs"></div>
 
 <div class="chartbox"><canvas id="chart"></canvas></div>
 <p class="charthint">tap a star</p>
@@ -109,12 +111,17 @@ footer{border-top:1px solid var(--rule);padding-top:12px;margin-top:8px}
 </div>
 
 <section>
-  <h3>Generator self-check</h3>
+  <h3>Generator self-check — whole universe</h3>
   <table id="tCheck"></table>
 </section>
 
 <section>
-  <h3>Distributions</h3>
+  <h3>Starting system — World Model §2.1</h3>
+  <table id="tStart"></table>
+</section>
+
+<section>
+  <h3>Distributions — galaxy <span id="dg">0</span></h3>
   <table id="tDist"></table>
 </section>
 
@@ -125,81 +132,90 @@ footer{border-top:1px solid var(--rule);padding-top:12px;margin-top:8px}
 </section>
 
 <section>
-  <h3>All 256 systems</h3>
+  <h3>All 2,048 names — the constraint 4 read</h3>
+  <div class="namehead">
+    <button id="bOrder">A–Z</button>
+    <button id="bCopy">copy all</button>
+  </div>
+  <div id="nameOut"></div>
+  <p class="progress" id="nameNote"></p>
+</section>
+
+<section>
+  <h3>Systems — galaxy <span id="lg">0</span></h3>
   <div class="list" id="list"></div>
 </section>
 
-<footer>
-  <p class="note" id="foot"></p>
-</footer>
+<footer><p class="note" id="foot"></p></footer>
 
 </div>
 <script>
-"use strict";
-
 /* ============================================================
-   WORLD MODEL SPEC §3.1 — the two functions. Verbatim.
+   ELITE THE CLONES — world generator core
+   Rebuilt session 006 against WORLD MODEL SPEC v1.3 and
+   WORD BANKS v1.1. Shared by node harness and worldgen.html.
    ============================================================ */
-function hash32(){
+
+/* World Spec §3.1 */
+function hash32(...vals) {
   let h = 2166136261 >>> 0;
-  for (let i=0;i<arguments.length;i++){
-    const v = arguments[i];
-    for (let s = 0; s < 32; s += 8){
+  for (const v of vals) {
+    for (let s = 0; s < 32; s += 8) {
       h ^= (v >>> s) & 0xff;
       h = Math.imul(h, 16777619) >>> 0;
     }
   }
   return h >>> 0;
 }
-function rng(seed){
+function rng(seed) {
   let a = seed >>> 0;
-  return function(){
+  return function () {
     a = (a + 0x6D2B79F5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-const ri = (r,n) => Math.floor(r()*n);
-const clamp = (v,lo,hi) => v<lo?lo:(v>hi?hi:v);
+const ri = (r, n) => Math.floor(r() * n);
+const clamp = (v, lo, hi) => (v < lo ? lo : (v > hi ? hi : v));
 
 /* §3.2 */
-function systemSeed(worldSeed, galaxy, system){ return hash32(worldSeed, galaxy, system); }
+function systemSeed(worldSeed, galaxy, system) { return hash32(worldSeed, galaxy, system); }
 
-/* ------------------------------------------------------------
-   SEED EXPANSION — [ASSUMED], session 004.
-   World Spec §3.4 draws nameSeed / speciesSeed / descSeed as
-   ri(r,65536) — 16 bits each. Word Banks needs far more than 16
-   bits (80 syllables x 4 pairs ~= 25 bits; the description
-   grammar needs a dozen weighted draws) and §2.2 requires
-   "advance the draw and retry", which a fixed integer cannot do.
-   So each of the three is treated as the seed of a sub-stream,
-   not as a value to bit-slice. The LOCKED draw order in §3.4 is
-   untouched, and nothing extra is pulled from the core stream.
-   Tags keep the three streams from correlating with each other.
-   ------------------------------------------------------------ */
+/* §3.5 — sub-streams carry the coordinates. CHANGED in v1.3. */
 const TAG_NAME = 0x4E414D45, TAG_SPEC = 0x53504543, TAG_DESC = 0x44455343;
-const sub = (seedVal, tag) => rng(hash32(seedVal, tag));
+const sub = (seedValue, tag, galaxy, system) => rng(hash32(seedValue, tag, galaxy, system));
 
 /* ============================================================
-   CONTENT — WORD BANKS v1.0
+   CONTENT — WORD BANKS v1.1
    ============================================================ */
-const SYL = ("AB AC AD AE AG AL AN AR AT AV BE BI BO BR BY CE CO CU DI DO "+
-"DR EN ER ES ET EX GE GI HI IN IS KA KE LA LE LO MA ME MI NA "+
-"NE NI OL OR OS PA PE QU RA RE RI RO SA SE SO SU TA TE TI TO "+
+const SYL = ("AB AC AD AE AG AL AN AR AT AV BE BI BO BR BY CE CO CU DI DO " +
+"DR EN ER ES ET EX GE GI HI IN IS KA KE LA LE LO MA ME MI NA " +
+"NE NI OL OR OS PA PE QU RA RE RI RO SA SE SO SU TA TE TI TO " +
 "TU US VA VE VI XA XE YA ZA ZE ZO ZU BA CA DA GA LU MO NU RU").split(" ");
 
-/* Word Banks §2.2 — blocklist. STARTER LIST, [ASSUMED] and incomplete.
-   Three categories, all matched as substrings of the raw uppercase name. */
-const BLOCK_PROFANITY = ["ARSE","ANUS","ANAL","RAPE","COCK","CUNT","DICK","SHIT","FUCK","PISS","TURD","SLUT","WANK","TITS","SEMEN","VAGIN","PENIS"];
-/* real Elite system names — §2.2 names twelve, "and the rest" */
-const BLOCK_ELITE = ["LAVE","ZAONCE","DISO","RIEDQUAT","LEESTI","ORERVE","REORTE","TIONISLA","ISINOR","BIARGE","XEXEDI","QUTIRI",
-"CEERDI","ERRIUS","INERA","ARexE","ANISOR","AONAR","TEORGE","BEMAERA","USZAA","TIBEDIED","QUDIRA","ENONLA","ORRERE","USLERIA",
-"BEENRI","MAESIN","XEER","ESBIZA","TIRAOR","ZAALELA","AERA","SOTIQU","LERELACE","EDEDLEEN","ATBEVETE","RIBIISSO","ONUSORLE"];
-/* constraint 4 — real-world proper nouns. These are all reachable from the
-   80-pair table and would otherwise appear. [ASSUMED] and incomplete. */
-const BLOCK_REALWORLD = ["CANADA","TOLEDO","VIENNA","GENEVA","VERONA","MALAGA","PANAMA","ANKARA","MANILA","NEVADA","CAESAR","BAVARIA","SIENA","RIVIERA"];
-const BLOCKLIST = BLOCK_PROFANITY.concat(BLOCK_ELITE, BLOCK_REALWORLD).map(s=>s.toUpperCase());
+/* Word Banks §2.2 — three categories, two matching modes.
+   1. profanity  — substring, anywhere in the assembled name
+   2. real Elite — whole name
+   3. real-world — whole name
+   Every entry is producible from §2.1: the §2.2 producibility rule. */
+/* Category 1 amended session 006, by the 2,048-name read:
+   + ANAL — AN and AL are both §2.1 pairs, so it is producible. §2.2's claim that
+     the other twenty candidates cannot be formed at any offset was wrong.
+   + SEX  — replaces the narrower SEXO. Catches six names, one of them leading. */
+const BLOCK_PROFANITY = "ANAL ARSE ANUS CRAP RAPE SCUM SEX SHIT SLUT".split(" ");
+const BLOCK_ELITE = ("BIARGE ISINOR LEESTI ORERVE QUTIRI REORTE XEXEDI " +
+  "ANISOR CEERDI CEESXE CEMAVE ENSOREUS ERLAGE LERELACE TEORGE TIRAOR VETITICE").split(" ");
+/* Category 3 amended session 006, by the read: ARANDA, DAYANA, NEBIRU. */
+const BLOCK_REALWORLD = ("ANANKE ANCONA ANKARA ARANDA DAYANA NEBIRU BIANCA CAMILA CANADA CORONA ESTELA " +
+"GENEVA KARINA LATINA LORENA LUSAKA MACAPA MALAGA MANAUS " +
+"MANILA MARIETTA MARINA MATERA MERIDA MONICA MOTOROLA NEVADA " +
+"OSTUNI PADOVA PALOMA PANAMA PARANA RAMONA REALME REBECA " +
+"REGINA REVERE RIMINI SABINA SAMARA SARASOTA SARATOGA SEDONA " +
+"SELENA SELENE SERENA SUBARU SURINAME SUSANA TACOMA TERESA " +
+"TOLEDO TOLUCA TOPEKA VANESA VENICE VERONA VERONICA VIENNA " +
+"ZULEMA").split(" ");
+const BLOCK_WHOLE = new Set(BLOCK_ELITE.concat(BLOCK_REALWORLD));
 
 const GOVERNMENT = ["Anarchy","Feudal","Multi-Government","Dictatorship","Communist","Confederacy","Democracy","Corporate State"];
 const ECONOMY = ["Rich Industrial","Average Industrial","Poor Industrial","Mainly Industrial",
@@ -220,7 +236,9 @@ const B = {
   creature_adj:"carnivorous|edible|three-legged|armoured|singing|luminous|migratory|poisonous|domesticated|giant|miniature|silent|burrowing|parasitic|spitting|bad-tempered|flightless|translucent".split("|"),
   creature_noun:"tree grubs|mud crabs|sand eels|rock lice|cliff apes|marsh hens|bell spiders|plough beetles|night rats|sun moths|glass slugs|thorn cats|wire worms|drum frogs|stilt birds|fog whales|ash bats|kettle fish|pit hounds|reed goats|bark lizards|salt hares".split("|"),
   dish:"soup|stew|pie|wine|brandy|cheese|biscuits|jelly|porridge|sausage|syrup|vinegar|broth|pastries|liqueur".split("|"),
-  institution:"unusual casinos|hopeless bureaucracy|weekly public arguments|competitive silence|an unregulated exchange|hereditary plumbing|mandatory hats|a very large clock|three competing calendars|a museum of small errors|a famously unhelpful tourist board|obligatory poetry|its parking regulations|an inexplicable statue|a lottery nobody has won|its queueing|a permanent public inquiry|compulsory apologies".split("|"),
+  /* §5.7 — seven entries carry their own article; §4.3 rule 2 strips it in the
+     possessive frame. NO entry carries a possessive: §4.3 rule 3. */
+  institution:"unusual casinos|hopeless bureaucracy|weekly public arguments|competitive silence|an unregulated exchange|hereditary plumbing|mandatory hats|a very large clock|three competing calendars|a museum of small errors|a famously unhelpful tourist board|obligatory poetry|parking regulations|an inexplicable statue|a lottery nobody has won|queueing|a permanent public inquiry|compulsory apologies".split("|"),
   artform:"tuneless folk songs|competitive shouting|mud sculpture|six-hour operas|silent theatre|wire music|epic poetry|shadow puppetry|monumental knitting|funereal brass|recreational weeping|improvised architecture".split("|"),
   trait:"ancient loathing of music|refusal to acknowledge the sky|exceptional rudeness|unusual hats|fear of doors|devotion to paperwork|inability to whisper|enthusiasm for arguments|distrust of numbers|love of very long meals".split("|"),
   epithet:"Poisoner|Cartographer|Unlucky|Reformer|Deposed|Tedious|Persistent|Absent|Second|Optimist|Incomplete|Well-Meaning|Loud".split("|"),
@@ -229,20 +247,21 @@ const B = {
 const PROBLEM = ["{creature_the}","its unpredictable weather","occasional civil war","the smell","its inhabitants' terrible manners","frequent earthquakes","a persistent fog","crippling import duties","seasonal flooding","the noise","a total lack of anything to do","an ongoing dispute about the calendar","its climate","{creature_again}"];
 const PROBLEM_SENTENCE = ["The {creature} are not the worst of it.","Nobody has explained the smell.","The dispute is still ongoing.","Three surveys have gone missing.","The weather is a matter of local pride."];
 
-/* Word Banks §4.1 — templates. dull / prob / avoid flags carry §6 weighting. */
+/* Word Banks §4.1. {A} is the article placeholder — §4.3 rule 1 forbids a
+   hard-coded article inside a template. It is resolved after assembly. */
 const TEMPLATES = [
-  {w:12,dull:1,t:"{S} is a dull world."},
-  {w: 8,dull:1,t:"{S} is a {flat_adjective} planet."},
+  {w:12,dull:1,t:"{S} is {A} dull world."},
+  {w: 8,dull:1,t:"{S} is {A} {flat_adjective} planet."},
   {w:10,t:"{S} is {fame} for {subject}."},
   {w: 8,t:"{S} is {fame} for {subject} and {subject}."},
   {w: 7,prob:1,t:"{S} is {fame} for {subject} but ruined by {problem}."},
   {w: 6,prob:1,t:"{S} would be {fame} for {subject} were it not for {problem}."},
   {w: 5,t:"The world {S} is {fame} for {subject}."},
-  {w: 5,t:"{S} is a {flat_adjective} world, notable only for {subject}."},
+  {w: 5,t:"{S} is {A} {flat_adjective} world, notable only for {subject}."},
   {w: 4,oddity:1,t:"Little is known about {S} except {oddity}."},
   {w: 3,avoid:1,prob:1,t:"{S} is best avoided. {problem_sentence}"}
 ];
-/* Word Banks §4.2 — subject expansions, tagged by which bank they lean on. */
+/* Word Banks §4.2 */
 const SUBJECTS = [
   {w:10,k:"feature",    t:"its {feature_adj} {feature}"},
   {w: 9,k:"creature",   t:"its {creature}"},
@@ -254,42 +273,50 @@ const SUBJECTS = [
   {w: 3,k:"person",     t:"{person}, the {epithet}"}
 ];
 
+/* [ASSUMED], session 006. Word Banks §5.6 says the dish "combines with the
+   demonym and often a creature", and the §7 worked example prints "Bivoran
+   plough beetle soup". No rule says how often. 0.5 is the dial. The 004 rig
+   implemented "{D} {dish}" only, so that example was unproducible. */
+const DISH_CREATURE_P = 0.5;
+
 /* ============================================================
    GENERATION
    ============================================================ */
-function pickWeighted(r, items, weightOf){
+function pickWeighted(r, items, weightOf) {
   let total = 0;
   for (const it of items) total += weightOf(it);
   let x = r() * total;
-  for (const it of items){ x -= weightOf(it); if (x < 0) return it; }
-  return items[items.length-1];
+  for (const it of items) { x -= weightOf(it); if (x < 0) return it; }
+  return items[items.length - 1];
 }
-function blocked(raw){
-  for (const b of BLOCKLIST) if (raw.indexOf(b) !== -1) return true;
-  return false;
+function blockedBy(raw) {
+  for (const b of BLOCK_PROFANITY) if (raw.indexOf(b) !== -1) return "profanity";
+  if (BLOCK_WHOLE.has(raw)) return "whole";
+  return null;
 }
-let rejectCount = 0;
-/* §8.1 + Word Banks §2.1/§2.2. Rejection advances the draw; the seed is never mutated. */
-function drawName(r, pairCount){
-  for (let attempt = 0; attempt < 64; attempt++){
+/* §8.1 + Word Banks §2.1/§2.2. Rejection advances the draw on the sub-stream;
+   the seed is never mutated. */
+function drawName(r, pairCount, tally) {
+  for (let attempt = 0; attempt < 64; attempt++) {
     let raw = "";
     for (let i = 0; i < pairCount; i++) raw += SYL[ri(r, SYL.length)];
-    if (!blocked(raw)) return raw.charAt(0) + raw.slice(1).toLowerCase();
-    rejectCount++;
+    const hit = blockedBy(raw);
+    if (!hit) return raw.charAt(0) + raw.slice(1).toLowerCase();
+    if (tally) { tally.total++; tally[hit]++; tally.hits.push(raw); }
   }
   return "Unnamed";
 }
 /* Word Banks §2.3 */
-function demonym(name){
-  const last = name.charAt(name.length-1).toLowerCase();
+function demonym(name) {
+  const last = name.charAt(name.length - 1).toLowerCase();
   if ("aeiou".indexOf(last) !== -1) return name + "n";
-  if (last === "s" || last === "z")  return name + "ian";
-  if (last === "r" || last === "n")  return name + "ese";
+  if (last === "s" || last === "z") return name + "ian";
+  if (last === "r" || last === "n") return name + "ese";
   return name + "ite";
 }
 
-function deriveSystem(worldSeed, galaxy, index){
-  /* §3.4 core field draw order — LOCKED. Order is not to be touched. */
+function deriveSystem(worldSeed, galaxy, index, tally) {
+  /* §3.4 core field draw order — LOCKED. Fields 1–10 frozen. */
   const r = rng(systemSeed(worldSeed, galaxy, index));
   const x             = ri(r, 256);
   const y             = ri(r, 256);
@@ -301,68 +328,68 @@ function deriveSystem(worldSeed, galaxy, index){
   const nameSeed      = ri(r, 65536);
   const speciesSeed   = ri(r, 65536);
   const descSeed      = ri(r, 65536);
-  const starClass     = ri(r, 8);
+  const starClassRaw  = ri(r, 8);
   const stationTypeRaw= ri(r, 4);
 
-  /* §4 */
-  const government = governmentRaw;
-  /* §5 — anarchies and feudal states cannot be rich */
-  let economy = economyRaw;
+  const government = governmentRaw;                       /* §4 */
+  let economy = economyRaw;                               /* §5 */
   if (government <= 1) economy |= 0b010;
-  /* §6 */
-  const flipped      = (~economy) & 0b111;
+  const flipped      = (~economy) & 0b111;                /* §6 */
   const techLevel    = clamp(flipped + techNoise + (government >> 1), 0, 14) + 1;
   const population   = techLevel * 4 + economy + government + 1;
   const productivity = (flipped + 3) * (government + 4) * population * 8;
   const radiusKm     = (radiusRaw + 11) * 256 + radiusFine;
+  const starClass    = starClassRaw + 1;                  /* §3.7 — 1..8 */
+  const scoopable    = starClass >= 4;
 
-  /* §8.1 — name */
-  const nr = sub(nameSeed, TAG_NAME);
-  const pairCount = (nameSeed & 0x40) ? 4 : 3;
-  const name = drawName(nr, pairCount);
+  /* §8.1 — name. Sub-stream carries the coordinates (§3.5). */
+  const nr = sub(nameSeed, TAG_NAME, galaxy, index);
+  const pairCount = (nameSeed & 0x40) ? 4 : 3;            /* reads the raw field */
+  const name = drawName(nr, pairCount, tally && tally.name);
   const dem  = demonym(name);
 
   /* §8.2 — species */
-  const sr = sub(speciesSeed, TAG_SPEC);
+  const sr = sub(speciesSeed, TAG_SPEC, galaxy, index);
   let species;
-  if ((speciesSeed & 0x8000) === 0){
-    species = "Human Colonials";
+  if ((speciesSeed & 0x8000) === 0) {
+    species = "Human Colonials";                          /* reads the raw field */
   } else {
     const size = SP_SIZE[ri(sr, SP_SIZE.length)];
     const col  = SP_COLOUR[ri(sr, SP_COLOUR.length)];
     const texI = ri(sr, SP_TEXTURE.length);
     const tex  = SP_TEXTURE[texI];
-    /* slot 4 constrained to slot3 + (0..3) */
+    /* slot 4 constrained to slot3 + (0..3). The wrap is [ASSUMED] — §3 does
+       not say what happens past the end of the form list. Modulo, as in 004. */
     const form = SP_FORM[(texI + ri(sr, 4)) % SP_FORM.length];
     species = [size, col, tex, form].filter(Boolean).join(" ");
   }
 
-  const sys = {index, x, y, government, economy, techLevel, population, productivity,
-               radiusKm, starClass, stationTypeRaw, name, dem, species,
-               govName: GOVERNMENT[government], ecoName: ECONOMY[economy]};
+  const sys = { galaxy, index, x, y, government, economy, techLevel, population,
+    productivity, radiusKm, starClass, scoopable, stationTypeRaw, name, dem, species,
+    govName: GOVERNMENT[government], ecoName: ECONOMY[economy] };
 
-  /* §8.3 + Word Banks §4–§6 — description */
-  const d = describe(sys, sub(descSeed, TAG_DESC));
+  /* §8.3 + Word Banks §4–§6 */
+  const d = describe(sys, sub(descSeed, TAG_DESC, galaxy, index), tally);
   sys.description = d.text;
   sys.dull = d.dull;
   sys.tpl = d.tpl;
   return sys;
 }
 
-function describe(sys, r){
-  const agri = sys.economy >= 4;
-  const rich = (sys.economy === 0 || sys.economy === 5);
-  const poor = (sys.economy === 2 || sys.economy === 7);
-  const loose = sys.government <= 1;
-  const corp  = sys.government === 7;
+function describe(sys, r, tally) {
+  const agri   = sys.economy >= 4;
+  const rich   = (sys.economy === 0 || sys.economy === 5);
+  const poor   = (sys.economy === 2 || sys.economy === 7);
+  const loose  = sys.government <= 1;
+  const corp   = sys.government === 7;
   const hiTech = sys.techLevel >= 12;
   const loTech = sys.techLevel <= 3;
 
   /* Word Banks §6 — weight, do not gate */
   const tw = (t) => {
     let w = t.w;
-    if (t.dull)   w *= poor ? 1.5 : (rich ? 0.6 : 1);
-    if (t.prob)   w *= (poor ? 1.5 : 1) * (loose ? 2 : 1);
+    if (t.dull) w *= poor ? 1.5 : (rich ? 0.6 : 1);
+    if (t.prob) w *= (poor ? 1.5 : 1) * (loose ? 2 : 1);
     if (t.avoid && loose) w *= 2;
     if (t.oddity && hiTech) w *= 1.5;
     return w;
@@ -380,171 +407,202 @@ function describe(sys, r){
   let lastCreature = null;
   const pick = (arr) => arr[ri(r, arr.length)];
   const creature = () => { lastCreature = pick(B.creature_adj) + " " + pick(B.creature_noun); return lastCreature; };
+  /* "plough beetles" -> "plough beetle" for the dish frame */
+  const singular = (n) => (/ss$/.test(n) || !/s$/.test(n)) ? n : n.slice(0, -1);
+  /* §4.3 rule 2 — the frame supplies the possessive, so strip a leading article */
+  const stripArticle = (s) => s.replace(/^(an|a|the) /, "");
 
-  function fill(str){
+  function fill(str, possessive) {
     return str.replace(/\{(\w+)\}/g, (m, k) => {
-      switch(k){
+      switch (k) {
         case "S": return sys.name;
         case "D": return sys.dem;
+        case "A": return "a";                      /* resolved after assembly */
         case "subject": return fill(pickWeighted(r, SUBJECTS, sw).t);
         case "problem": return fill(pick(PROBLEM));
         case "problem_sentence": return fill(pick(PROBLEM_SENTENCE));
-        /* FOUND BY BUILDING, session 004. Word Banks §5.7 stores institutions
-           with their own article ("an unregulated exchange"), but §4.2 frames
-           them as "its {institution}". The §7 worked example silently drops the
-           article — "its unregulated exchange" — so that is the rule. */
-        case "institution": return pick(B.institution).replace(/^an? /, "");
+        case "institution": return possessive ? stripArticle(pick(B.institution)) : pick(B.institution);
         case "creature": return creature();
         case "creature_the": return "the " + creature();
         case "creature_again": return "the " + (lastCreature || creature()) + " again";
-        case "person": return drawName(r, 2);
+        case "person": return drawName(r, 2, tally && tally.person);
+        case "dish": return (r() < DISH_CREATURE_P)
+          ? singular(pick(B.creature_noun)) + " " + pick(B.dish)
+          : pick(B.dish);
         default: return B[k] ? pick(B[k]) : m;
       }
     });
   }
+  /* §4.2 frames beginning with a possessive get rule 2 applied */
+  function fillSubject(t) { return fill(t, /^its /.test(t)); }
+  const origFill = fill;
+  /* subject expansions route through fillSubject */
   const tpl = pickWeighted(r, TEMPLATES, tw);
-  /* FOUND BY BUILDING, session 004. Word Banks §4.1 hard-codes "a" before
-     {flat_adjective}, and three entries in §5.2 start with a vowel. "a
-     unexceptional planet" shipped on the first run. Article agreement is
-     applied after assembly so it covers every template. */
-  const text = fill(tpl.t).replace(/\ba (?=[aeiouAEIOU])/g, "an ");
-  return {text: text, dull: !!tpl.dull, tpl: TEMPLATES.indexOf(tpl)};
+  let text = tpl.t.replace(/\{(\w+)\}/g, (m, k) => {
+    if (k === "subject") { const s = pickWeighted(r, SUBJECTS, sw); return fillSubject(s.t); }
+    return origFill(m);
+  });
+  /* §4.3 rule 1 — article agreement, after assembly, over the whole string */
+  text = text.replace(/\ba (?=[aeiouAEIOU])/g, "an ");
+  return { text, dull: !!tpl.dull, tpl: TEMPLATES.indexOf(tpl) };
 }
 
 /* ============================================================
-   BUILD THE GALAXY
+   GALAXY ASSEMBLY — World Spec §3.6
    ============================================================ */
-const WORLD_SEED = 3141592653;
-const GALAXY = 0;
-const COUNT = 256;
-const MAX_FUEL_LY = 7.0;
-
-const t0 = performance.now();
-const SYSTEMS = [];
-for (let i = 0; i < COUNT; i++) SYSTEMS.push(deriveSystem(WORLD_SEED, GALAXY, i));
-const genMs = performance.now() - t0;
-
-/* §2 — dist = sqrt(dx^2 + (dy/2)^2) * 0.4 */
-function distLY(a, b){
+const MAX_FUEL_LY = 7.0, TARGET_LY = 6.9;
+function distLY(a, b) {
   const dx = a.x - b.x, dy = (a.y - b.y) / 2;
-  return Math.sqrt(dx*dx + dy*dy) * 0.4;
+  return Math.sqrt(dx * dx + dy * dy) * 0.4;
 }
-
-/* ------------------------------------------------------------
-   CONNECTIVITY REPAIR — session 004, [BUILT]
-   Found by building: at the canonical seed, five of the eight
-   galaxies contain systems no ship can reach. Galaxy 0 strands
-   one; galaxy 5 strands three across two pockets. Counting
-   isolated systems misses this — a pocket of four is mutually
-   reachable and still cut off from the galaxy.
-
-   Max fuel is 7.0 LY and is specified (World Spec §2, leaned on
-   by Control §4), so the fix moves systems, not the fuel.
-
-   This is a galaxy-level step. Design principle 2 says a system
-   is derived directly from (worldSeed, galaxy, system); after
-   this pass, position is a property of the assembled galaxy.
-   Everything else about a system stays independently derivable,
-   and the §3.4 field draw order is untouched.
-
-   Deterministic, and the ordering rules are the whole point:
-     - main body = largest component, ties to lowest member index
-     - pockets processed in order of lowest member index
-     - the moved system is the pocket member nearest the main
-       body, ties to lowest index
-     - it moves along the straight line toward that neighbour
-       until within TARGET_LY, on integer coordinates
-   ------------------------------------------------------------ */
-const TARGET_LY = 6.9;
-function components(S){
+function components(S) {
   const unseen = new Set(S.map(s => s.index));
   const out = [];
-  while (unseen.size){
+  while (unseen.size) {
     const start = Math.min.apply(null, Array.from(unseen));
     const comp = [start]; unseen.delete(start);
     const stack = [S[start]];
-    while (stack.length){
+    while (stack.length) {
       const c = stack.pop();
-      for (const o of S){
-        if (unseen.has(o.index) && distLY(c, o) <= MAX_FUEL_LY){
+      for (const o of S) {
+        if (unseen.has(o.index) && distLY(c, o) <= MAX_FUEL_LY) {
           unseen.delete(o.index); comp.push(o.index); stack.push(o);
         }
       }
     }
-    comp.sort((a,b) => a-b);
+    comp.sort((a, b) => a - b);
     out.push(comp);
   }
-  out.sort((a,b) => b.length - a.length || a[0] - b[0]);
+  out.sort((a, b) => b.length - a.length || a[0] - b[0]);
   return out;
 }
-function repair(S){
+function repair(S) {
   const log = [];
-  for (let pass = 0; pass < 32; pass++){
+  for (let pass = 0; pass < 32; pass++) {
     const comps = components(S);
     if (comps.length <= 1) break;
     const main = comps[0];
-    const pocket = comps.slice(1).sort((a,b) => a[0]-b[0])[0];
+    const pocket = comps.slice(1).sort((a, b) => a[0] - b[0])[0];
     let bp = null, bm = null, bd = Infinity;
-    for (const pi of pocket) for (const mi of main){
+    for (const pi of pocket) for (const mi of main) {
       const d = distLY(S[pi], S[mi]);
-      if (d < bd - 1e-9){ bd = d; bp = pi; bm = mi; }
+      if (d < bd - 1e-9) { bd = d; bp = pi; bm = mi; }
     }
     const p = S[bp], m = S[bm], from = p.x + "," + p.y;
     const ox = p.x, oy = p.y;
-    /* step along the line, integer coordinates, nearest occupied cell skipped */
-    for (let t = 0.01; t <= 1.0; t += 0.01){
+    for (let t = 0.01; t <= 1.0; t += 0.01) {
       p.x = Math.round(ox + (m.x - ox) * t);
       p.y = Math.round(oy + (m.y - oy) * t);
       if (distLY(p, m) > TARGET_LY) continue;
       if (S.some(o => o !== p && o.x === p.x && o.y === p.y)) continue;
       break;
     }
-    log.push({index: bp, name: p.name, from: from, to: p.x + "," + p.y,
-              was: bd, now: distLY(p, m), pocket: pocket.length});
+    log.push({ index: bp, name: p.name, from, to: p.x + "," + p.y,
+               was: bd, now: distLY(p, m), pocket: pocket.length });
   }
   return log;
 }
-const REPAIRS = repair(SYSTEMS);
-const COMPONENTS = components(SYSTEMS);
-for (const s of SYSTEMS){
-  let n = 0, nearest = Infinity;
-  for (const o of SYSTEMS){
-    if (o === s) continue;
-    const d = distLY(s, o);
-    if (d < nearest) nearest = d;
-    if (d <= MAX_FUEL_LY) n++;
+function buildGalaxy(worldSeed, galaxy, tally) {
+  const S = [];
+  for (let i = 0; i < 256; i++) S.push(deriveSystem(worldSeed, galaxy, i, tally));
+  const before = components(S);
+  const repairs = repair(S);
+  const after = components(S);
+  for (const s of S) {
+    let n = 0, nearest = Infinity;
+    for (const o of S) {
+      if (o === s) continue;
+      const d = distLY(s, o);
+      if (d < nearest) nearest = d;
+      if (d <= MAX_FUEL_LY) n++;
+    }
+    s.reach = n; s.nearest = nearest;
   }
-  s.reach = n;
-  s.nearest = nearest;
+  for (const rp of repairs) S[rp.index].repaired = rp;
+  return { galaxy, systems: S, repairs, before, after };
+}
+function newTally() {
+  return { name: { total: 0, profanity: 0, whole: 0, hits: [] },
+           person: { total: 0, profanity: 0, whole: 0, hits: [] } };
 }
 
-/* determinism check — regenerate, repair, and compare */
-const rejectsFirstPass = rejectCount;
-rejectCount = 0;
-const AGAIN = [];
-for (let i = 0; i < COUNT; i++) AGAIN.push(deriveSystem(WORLD_SEED, GALAXY, i));
-const againLog = repair(AGAIN);
-let identical = (againLog.length === REPAIRS.length);
-if (identical) for (let i = 0; i < COUNT; i++){
-  const b = AGAIN[i], a = SYSTEMS[i];
-  if (b.name !== a.name || b.description !== a.description || b.species !== a.species ||
-      b.x !== a.x || b.y !== a.y || b.techLevel !== a.techLevel){ identical = false; break; }
+/* ============================================================
+   BUILD THE UNIVERSE
+   ============================================================ */
+const WORLD_SEED = 3141592653;
+const COUNT = 256, GALAXIES = 8;
+
+const tally = newTally();
+const tDerive0 = performance.now();
+for (let i = 0; i < COUNT; i++) deriveSystem(WORLD_SEED, 0, i, null);
+const deriveMs = performance.now() - tDerive0;   /* comparable to the 2.0 ms of 004 */
+
+const tAll = performance.now();
+const G = [];
+for (let g = 0; g < GALAXIES; g++) G.push(buildGalaxy(WORLD_SEED, g, tally));
+const buildMs = performance.now() - tAll;
+
+/* determinism — regenerate the whole universe and compare */
+const rejectsFirst = tally.name.total;
+const tally2 = newTally();
+const G2 = [];
+for (let g = 0; g < GALAXIES; g++) G2.push(buildGalaxy(WORLD_SEED, g, tally2));
+let identical = true;
+outer:
+for (let g = 0; g < GALAXIES; g++) {
+  if (G2[g].repairs.length !== G[g].repairs.length) { identical = false; break; }
+  for (let i = 0; i < COUNT; i++) {
+    const a = G[g].systems[i], b = G2[g].systems[i];
+    if (a.name !== b.name || a.description !== b.description || a.species !== b.species ||
+        a.x !== b.x || a.y !== b.y || a.techLevel !== b.techLevel || a.starClass !== b.starClass) {
+      identical = false; break outer;
+    }
+  }
 }
-const rejectsSecondPass = rejectCount;
-for (const r of REPAIRS) SYSTEMS[r.index].repaired = r;
+const rejectsSecond = tally2.name.total;
+
+const ALL = [];
+for (const g of G) for (const s of g.systems) ALL.push(s);
+
+/* universe-level facts */
+const nameCount = {};
+for (const s of ALL) (nameCount[s.name] = nameCount[s.name] || []).push(s);
+const DUPES = Object.keys(nameCount).filter(n => nameCount[n].length > 1);
+const DUP_SET = new Set(DUPES);
+const perGalaxyUnique = G.every(g => new Set(g.systems.map(s => s.name)).size === COUNT);
+const allConnected = G.every(g => g.after.length === 1);
+const movedTotal = G.reduce((a, g) => a + g.repairs.length, 0);
+const descDupes = (() => { const m = {}; let n = 0; for (const s of ALL) { m[s.description] = (m[s.description]||0)+1; if (m[s.description] === 2) n++; } return n; })();
+const articleFaults = ALL.filter(s => /its its|its an |its a |\ba [aeiou]/i.test(s.description));
+const g0 = G[0].systems;
+const split6 = g0.filter(s => s.name.length === 6).length;
+const split8 = g0.filter(s => s.name.length === 8).length;
+const humanG0 = g0.filter(s => s.species === "Human Colonials").length;
+const scoopPct = ALL.filter(s => s.scoopable).length / ALL.length * 100;
+const nonHuman = ALL.filter(s => s.species !== "Human Colonials");
+const distinctSpecies = new Set(nonHuman.map(s => s.species)).size;
 
 /* ============================================================
    RENDER
    ============================================================ */
 const $ = (id) => document.getElementById(id);
 $("hSeed").textContent = WORLD_SEED;
-$("hTime").textContent = genMs.toFixed(1) + " ms";
+$("hTime").textContent = deriveMs.toFixed(1) + " ms / galaxy";
 
-let sel = 0;
+let gal = 0, sel = 51;
+const SYS = () => G[gal].systems;
+
+/* --- galaxy tabs --- */
+$("gtabs").innerHTML = G.map(g => '<button data-g="' + g.galaxy + '">G' + g.galaxy + '</button>').join("");
+$("gtabs").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  gal = +b.dataset.g; sel = 0; renderGalaxy();
+});
 
 /* --- chart --- */
 const cv = $("chart"), cx = cv.getContext("2d");
-function drawChart(){
+function drawChart() {
+  const S = SYS();
   const w = cv.clientWidth || 340;
   const h = Math.round(w / 2);
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
@@ -554,61 +612,63 @@ function drawChart(){
   cx.clearRect(0, 0, w, h);
   const px = (s) => 3 + (s.x / 255) * (w - 6);
   const py = (s) => 3 + (s.y / 255) * (h - 6);
-
-  const cur = SYSTEMS[sel];
-  /* fuel range ring, in chart units: 7 LY / 0.4 = 17.5 x-units */
+  const cur = S[sel];
   const rx = (17.5 / 255) * (w - 6);
   cx.strokeStyle = "rgba(99,201,141,.35)"; cx.lineWidth = 1;
-  cx.beginPath(); cx.ellipse(px(cur), py(cur), rx, rx/2, 0, 0, Math.PI*2); cx.stroke();
-
-  for (const s of SYSTEMS){
+  cx.beginPath(); cx.ellipse(px(cur), py(cur), rx, rx / 2, 0, 0, Math.PI * 2); cx.stroke();
+  for (const s of S) {
     const size = 1 + s.techLevel / 9;
     cx.fillStyle = s === cur ? "#e0a03c" : (s.government <= 1 ? "#8a5f56" : "#5d7280");
-    cx.beginPath(); cx.arc(px(s), py(s), s === cur ? 4 : size, 0, Math.PI*2); cx.fill();
+    cx.beginPath(); cx.arc(px(s), py(s), s === cur ? 4 : size, 0, Math.PI * 2); cx.fill();
   }
   cx.fillStyle = "#e0a03c";
   cx.font = "11px ui-monospace,Menlo,monospace";
   cx.fillText(cur.name, Math.min(px(cur) + 8, w - 70), Math.max(py(cur) - 6, 12));
 }
 cv.addEventListener("click", (e) => {
+  const S = SYS();
   const rect = cv.getBoundingClientRect();
   const mx = (e.clientX - rect.left - 3) / (rect.width - 6) * 255;
-  const my = (e.clientY - rect.top  - 3) / (rect.height - 6) * 255;
+  const my = (e.clientY - rect.top - 3) / (rect.height - 6) * 255;
   let best = 0, bd = Infinity;
-  for (const s of SYSTEMS){
-    const d = (s.x-mx)*(s.x-mx) + (s.y-my)*(s.y-my);
-    if (d < bd){ bd = d; best = s.index; }
+  for (const s of S) {
+    const d = (s.x - mx) * (s.x - mx) + (s.y - my) * (s.y - my);
+    if (d < bd) { bd = d; best = s.index; }
   }
   select(best);
 });
 window.addEventListener("resize", drawChart);
 
 /* --- card --- */
-function renderCard(){
-  const s = SYSTEMS[sel];
+function row(k, v) { return '<dt>' + k + '</dt><dd>' + v + '</dd>'; }
+function renderCard() {
+  const s = SYS()[sel];
   $("card").innerHTML =
     '<h2>' + s.name + '</h2>' +
-    '<div class="idx">system ' + s.index + ' · galaxy 0 · ' + s.x + ',' + s.y + '</div>' +
+    '<div class="idx">system ' + s.index + ' · galaxy ' + gal + ' · ' + s.x + ',' + s.y +
+      ' · ' + s.dem + '</div>' +
     '<p class="desc">' + s.description + '</p>' +
     '<dl>' +
     row("Government", s.govName) +
     row("Economy", s.ecoName) +
     row("Tech level", s.techLevel) +
-    row("Population", (s.population/10).toFixed(1) + " billion") +
+    row("Population", (s.population / 10).toFixed(1) + " billion") +
     row("Species", s.species) +
     row("Productivity", s.productivity.toLocaleString() + " M CR") +
     row("Radius", s.radiusKm.toLocaleString() + " km") +
-    row("Star class", s.starClass + " <span class=assumed>(undefined)</span>") +
-    row("Station type", s.stationTypeRaw + " <span class=assumed>(undefined)</span>") +
+    row("Star class", s.starClass + " · " + (s.scoopable ?
+        '<span class="ok">scoopable</span>' : '<span class="dim">not scoopable</span>')) +
+    row("Station type", s.stationTypeRaw + ' <span class="assumed">(reserved)</span>') +
     '</dl>' +
     '<div class="reach"><b>' + s.reach + '</b> systems within one 7.0 LY jump · ' +
-    'nearest neighbour ' + s.nearest.toFixed(1) + ' LY' +
-    (s.repaired ? '<br><span class="assumed">Moved by the connectivity repair: ' +
-      s.repaired.from + ' → ' + s.repaired.to + '</span>' : '') + '</div>';
+    'nearest neighbour ' + s.nearest.toFixed(2) + ' LY' +
+    (s.repaired ? '<br><span class="assumed">Moved by the §3.6 repair: ' +
+      s.repaired.from + ' → ' + s.repaired.to + '</span>' : '') +
+    (DUP_SET.has(s.name) ? '<br><span class="assumed">Name shared with ' +
+      nameCount[s.name].filter(o => o !== s).map(o => "galaxy " + o.galaxy + " system " + o.index).join(", ") +
+      '</span>' : '') + '</div>';
 }
-function row(k, v){ return '<dt>' + k + '</dt><dd>' + v + '</dd>'; }
-
-function select(i){
+function select(i) {
   sel = (i + COUNT) % COUNT;
   renderCard(); drawChart();
   const prev = document.querySelector(".row.on"); if (prev) prev.classList.remove("on");
@@ -617,90 +677,191 @@ function select(i){
 }
 $("bPrev").onclick = () => select(sel - 1);
 $("bNext").onclick = () => select(sel + 1);
-$("bRand").onclick = () => select(Math.floor(Math.random()*COUNT));
-
-/* --- list --- */
-$("list").innerHTML = SYSTEMS.map(s =>
-  '<div class="row" id="r' + s.index + '" data-i="' + s.index + '">' +
-  '<span class="n">' + s.index + '</span>' +
-  '<span class="nm">' + s.name + '</span>' +
-  '<span class="ec">' + s.ecoName + ' · ' + s.govName + '</span>' +
-  '<span class="tl">TL' + s.techLevel + '</span></div>').join("");
-$("list").addEventListener("click", (e) => {
-  const r = e.target.closest(".row"); if (r) select(+r.dataset.i);
-});
+$("bRand").onclick = () => select(Math.floor(Math.random() * COUNT));
 
 /* --- self-check --- */
-function checkRow(k, v, cls){ return '<tr><td class="k">' + k + '</td><td class="v ' + (cls||"") + '">' + v + '</td></tr>'; }
-const uniqueNames = new Set(SYSTEMS.map(s => s.name)).size;
-const uniqueCoords = new Set(SYSTEMS.map(s => s.x + "," + s.y)).size;
-const unreachable = SYSTEMS.filter(s => s.reach === 0).length;
-const biggest = COMPONENTS[0].length;
+function checkRow(k, v, cls) { return '<tr><td class="k">' + k + '</td><td class="v ' + (cls || "") + '">' + v + '</td></tr>'; }
+const COINCIDENT = [];
+for (const g of G) {
+  const m = {};
+  for (const s of g.systems) (m[s.x + "," + s.y] = m[s.x + "," + s.y] || []).push(s);
+  for (const k of Object.keys(m)) if (m[k].length > 1)
+    COINCIDENT.push("g" + g.galaxy + " " + k + " · " + m[k].map(s => s.index).join(" and "));
+}
+const starClassesSeen = new Set(ALL.map(s => s.starClass)).size;
 $("tCheck").innerHTML =
-  checkRow("Systems generated", COUNT, "ok") +
-  checkRow("Generation time", genMs.toFixed(1) + " ms", genMs < 50 ? "ok" : "assumed") +
+  checkRow("Systems generated", "2,048 in 8 galaxies", ALL.length === 2048 ? "ok" : "bad") +
+  checkRow("Derive time, one galaxy", deriveMs.toFixed(1) + " ms", deriveMs < 50 ? "ok" : "assumed") +
+  checkRow("Whole universe, with §3.6 repair", buildMs.toFixed(0) + " ms", buildMs < 2000 ? "ok" : "assumed") +
   checkRow("Second pass identical", identical ? "yes" : "NO", identical ? "ok" : "bad") +
-  checkRow("Reject counts match", rejectsFirstPass === rejectsSecondPass ? "yes ("+rejectsFirstPass+")" : "NO", rejectsFirstPass === rejectsSecondPass ? "ok" : "bad") +
-  checkRow("Unique names", uniqueNames + " / 256", uniqueNames === COUNT ? "ok" : "assumed") +
-  checkRow("Unique coordinates", uniqueCoords + " / 256", uniqueCoords === COUNT ? "ok" : "assumed") +
-  checkRow("Blocklist rejections", rejectsFirstPass) +
-  checkRow("Reachable from any system", biggest + " / 256", biggest === COUNT ? "ok" : "bad") +
-  checkRow("Systems moved by repair", REPAIRS.length, REPAIRS.length ? "assumed" : "ok") +
-  REPAIRS.map(r => checkRow("&nbsp;&nbsp;" + r.index + " " + r.name,
-      r.from + " → " + r.to + " · " + r.was.toFixed(2) + " → " + r.now.toFixed(2) + " LY")).join("") +
-  checkRow("Stranded systems (0 in range)", unreachable, unreachable === 0 ? "ok" : "bad");
+  checkRow("Reject counts match", (rejectsFirst === rejectsSecond ? "yes" : "NO") + " (" + rejectsFirst + ")", rejectsFirst === rejectsSecond ? "ok" : "bad") +
+  checkRow("Blocklist rejections, universe", tally.name.total + " · profanity " + tally.name.profanity + " · whole-name " + tally.name.whole,
+           "") +
+  checkRow("&nbsp;&nbsp;expected, Word Banks §2.2.1", "3.25 · 3.25 · 0.12", "") +
+  checkRow("&nbsp;&nbsp;rejected strings", tally.name.hits.join(" ") || "none", "") +
+  checkRow("Coincident systems, same cell", COINCIDENT.length + " pairs (3.98 expected)", COINCIDENT.length ? "assumed" : "ok") +
+  COINCIDENT.map(c => checkRow("&nbsp;&nbsp;" + c, "0.00 LY apart", "assumed")).join("") +
+  checkRow("Unique names within a galaxy", perGalaxyUnique ? "256 / 256 ×8" : "NO", perGalaxyUnique ? "ok" : "bad") +
+  checkRow("Unique names across the universe", (2048 - DUPES.length) + " / 2048", DUPES.length ? "assumed" : "ok") +
+  (DUPES.length ? DUPES.map(n => checkRow("&nbsp;&nbsp;" + n,
+      nameCount[n].map(s => "g" + s.galaxy + "/" + s.index).join(" · "), "assumed")).join("") : "") +
+  checkRow("Duplicate descriptions", descDupes, descDupes === 0 ? "ok" : "assumed") +
+  checkRow("Distinct species strings", distinctSpecies + " / " + nonHuman.length + " non-human", "assumed") +
+  checkRow("Every system reachable", allConnected ? "8 / 8 galaxies" : "NO", allConnected ? "ok" : "bad") +
+  checkRow("Systems moved by §3.6 repair", movedTotal + " (spec says 6)", movedTotal === 6 ? "ok" : "assumed") +
+  G.map(g => g.repairs.map(r => checkRow("&nbsp;&nbsp;g" + g.galaxy + " · " + r.index + " " + r.name,
+      r.from + " → " + r.to + " · " + r.was.toFixed(2) + " → " + r.now.toFixed(2) + " LY")).join("")).join("") +
+  checkRow("Galaxy 0 name lengths", split6 + " six / " + split8 + " eight",
+           (split6 === 137 && split8 === 119) ? "ok" : "bad") +
+  checkRow("&nbsp;&nbsp;must be 137 / 119 — reads the raw field", "§3.5", "") +
+  checkRow("Galaxy 0 Human Colonials", humanG0 + " · " + (humanG0 / 2.56).toFixed(1) + "%",
+           (humanG0 === 121) ? "ok" : "bad") +
+  checkRow("&nbsp;&nbsp;must be 47% — reads the raw field", "§3.5", "") +
+  checkRow("Star classes present", starClassesSeen + " / 8", starClassesSeen === 8 ? "ok" : "bad") +
+  checkRow("Scoopable, class ≥ 4", scoopPct.toFixed(1) + "% (62.5% expected)", Math.abs(scoopPct - 62.5) < 3 ? "ok" : "assumed") +
+  checkRow("Article and possessive faults", articleFaults.length, articleFaults.length === 0 ? "ok" : "bad") +
+  checkRow("&nbsp;&nbsp;\"a\" + vowel · \"its its\" · \"its a\"", "Word Banks §4.3", "");
+
+/* --- starting system, against World Model §2.1 --- */
+const S51 = G[0].systems[51];
+let n51 = null, d51 = Infinity;
+for (const o of G[0].systems) { if (o === S51) continue; const d = distLY(S51, o); if (d < d51) { d51 = d; n51 = o; } }
+function spot(k, got, want) {
+  const ok = String(got) === String(want);
+  return '<tr><td class="k">' + k + '</td><td class="v ' + (ok ? "ok" : "bad") + '">' +
+    got + (ok ? "" : " — spec says " + want) + '</td></tr>';
+}
+$("tStart").innerHTML =
+  spot("Coordinates", S51.x + "," + S51.y, "120,129") +
+  spot("Government", S51.govName, "Confederacy") +
+  spot("Economy", S51.ecoName, "Poor Agricultural") +
+  spot("Tech level", S51.techLevel, 4) +
+  spot("Population", (S51.population / 10).toFixed(1) + " billion", "2.9 billion") +
+  spot("Productivity", S51.productivity, 6264) +
+  spot("Radius", S51.radiusKm, 4812) +
+  spot("Species", S51.species, "Human Colonials") +
+  spot("Systems within one jump", S51.reach, 5) +
+  spot("Nearest neighbour", d51.toFixed(2) + " LY", "3.22 LY") +
+  spot("Moved by the repair", S51.repaired ? "yes" : "no", "no") +
+  '<tr><td class="k">Name — regenerated in v1.3</td><td class="v assumed">' + S51.name + " · " + S51.dem + '</td></tr>' +
+  '<tr><td class="k">Description</td><td class="v assumed">' + S51.description + '</td></tr>' +
+  '<tr><td class="k">Star class</td><td class="v assumed">' + S51.starClass + (S51.scoopable ? " · scoopable" : " · not scoopable") + '</td></tr>' +
+  '<tr><td class="k">Nearest neighbour is</td><td class="v assumed">' + n51.name + " · TL" + n51.techLevel + " · " + n51.ecoName + '</td></tr>';
 
 /* --- distributions --- */
-function histRow(label, n, max){
+function histRow(label, n, max) {
   const pct = (n / COUNT * 100);
   const w = Math.round((n / max) * 90);
   return '<tr><td class="k">' + label + '</td><td class="v">' +
     '<span class="bar" style="width:' + w + 'px"></span>' + n + ' · ' + pct.toFixed(0) + '%</td></tr>';
 }
-function hist(arr, labels){
+function hist(arr, labels) {
   const counts = labels.map((_, i) => arr.filter(v => v === i).length);
   const max = Math.max.apply(null, counts);
   return labels.map((l, i) => histRow(l, counts[i], max)).join("");
 }
-const tlCounts = {};
-for (const s of SYSTEMS) tlCounts[s.techLevel] = (tlCounts[s.techLevel]||0) + 1;
-const tlKeys = Object.keys(tlCounts).map(Number).sort((a,b)=>a-b);
-const tlMax = Math.max.apply(null, tlKeys.map(k => tlCounts[k]));
-$("tDist").innerHTML =
-  '<tr><td class="k" colspan="2" style="color:#e0a03c;padding-top:6px">Government</td></tr>' +
-  hist(SYSTEMS.map(s => s.government), GOVERNMENT) +
-  '<tr><td class="k" colspan="2" style="color:#e0a03c;padding-top:10px">Economy</td></tr>' +
-  hist(SYSTEMS.map(s => s.economy), ECONOMY) +
-  '<tr><td class="k" colspan="2" style="color:#e0a03c;padding-top:10px">Tech level</td></tr>' +
-  tlKeys.map(k => histRow("TL " + k, tlCounts[k], tlMax)).join("");
+function renderDist() {
+  const S = SYS();
+  const tlCounts = {};
+  for (const s of S) tlCounts[s.techLevel] = (tlCounts[s.techLevel] || 0) + 1;
+  const tlKeys = Object.keys(tlCounts).map(Number).sort((a, b) => a - b);
+  const tlMax = Math.max.apply(null, tlKeys.map(k => tlCounts[k]));
+  const scCounts = {};
+  for (const s of S) scCounts[s.starClass] = (scCounts[s.starClass] || 0) + 1;
+  const scMax = Math.max.apply(null, Object.keys(scCounts).map(k => scCounts[k]));
+  $("tDist").innerHTML =
+    '<tr><td class="k" colspan="2" style="color:#e0a03c;padding-top:6px">Government</td></tr>' +
+    hist(S.map(s => s.government), GOVERNMENT) +
+    '<tr><td class="k" colspan="2" style="color:#e0a03c;padding-top:10px">Economy</td></tr>' +
+    hist(S.map(s => s.economy), ECONOMY) +
+    '<tr><td class="k" colspan="2" style="color:#e0a03c;padding-top:10px">Tech level</td></tr>' +
+    tlKeys.map(k => histRow("TL " + k, tlCounts[k], tlMax)).join("") +
+    '<tr><td class="k" colspan="2" style="color:#e0a03c;padding-top:10px">Star class — §3.7</td></tr>' +
+    [1,2,3,4,5,6,7,8].map(k => histRow("class " + k + (k >= 4 ? " ·" : ""), scCounts[k] || 0, scMax)).join("");
+}
 
 /* --- text measurements --- */
-const dullN = SYSTEMS.filter(s => s.dull).length;
-const lens = SYSTEMS.map(s => s.description.length).sort((a,b) => a-b);
-const nameLens = {};
-for (const s of SYSTEMS) nameLens[s.name.length] = (nameLens[s.name.length]||0) + 1;
-const median = lens[Math.floor(lens.length/2)];
-const mean = Math.round(lens.reduce((a,b)=>a+b,0) / lens.length);
-const longest = SYSTEMS.reduce((a,b) => b.description.length > a.description.length ? b : a);
+function textRow(k, v, cls) { return checkRow(k, v, cls); }
+const dullU = ALL.filter(s => s.dull).length;
+const lensU = ALL.map(s => s.description.length).sort((a, b) => a - b);
+const lens0 = g0.map(s => s.description.length).sort((a, b) => a - b);
+const dull0 = g0.filter(s => s.dull).length;
+const longest = ALL.reduce((a, b) => b.description.length > a.description.length ? b : a);
 $("tText").innerHTML =
-  checkRow("Dull quota (target 30%)", dullN + " · " + (dullN/COUNT*100).toFixed(0) + "%",
-           Math.abs(dullN/COUNT - 0.30) < 0.06 ? "ok" : "assumed") +
-  checkRow("Description length min", lens[0] + " chars") +
-  checkRow("median", median + " chars") +
-  checkRow("mean", mean + " chars") +
-  checkRow("max", lens[lens.length-1] + " chars", lens[lens.length-1] > 160 ? "assumed" : "ok") +
-  Object.keys(nameLens).sort().map(k => checkRow("Names of " + k + " letters", nameLens[k])).join("");
-$("nText").innerHTML = "Longest description, system " + longest.index + ":<br>" + longest.description;
+  textRow("Dull quota, universe (target 30%)", dullU + " · " + (dullU / ALL.length * 100).toFixed(1) + "%",
+          Math.abs(dullU / ALL.length - 0.30) < 0.06 ? "ok" : "assumed") +
+  textRow("Dull quota, galaxy 0", dull0 + " · " + (dull0 / COUNT * 100).toFixed(1) + "%", "") +
+  textRow("&nbsp;&nbsp;pre-v1.3 galaxy 0 was", "27.7%", "") +
+  textRow("Description length, universe", lensU[0] + " / " + lensU[Math.floor(lensU.length / 2)] + " / " + lensU[lensU.length - 1] + " chars", "") +
+  textRow("Description length, galaxy 0", lens0[0] + " / " + lens0[128] + " / " + lens0[255] + " chars", "") +
+  textRow("&nbsp;&nbsp;pre-v1.3 galaxy 0 was", "23 / 61 / 117", "") +
+  textRow("Names of 6 letters, universe", ALL.filter(s => s.name.length === 6).length, "") +
+  textRow("Names of 8 letters, universe", ALL.filter(s => s.name.length === 8).length, "") +
+  textRow("Person names drawn in descriptions", "rejections " + tally.person.total, "");
+$("nText").innerHTML = "Longest description, galaxy " + longest.galaxy + " system " + longest.index + ":<br>" + longest.description;
+
+/* --- the 2,048-name read --- */
+let azOrder = false;
+function renderNames() {
+  let html = "";
+  if (azOrder) {
+    const sorted = ALL.slice().sort((a, b) => a.name.localeCompare(b.name));
+    html = '<div class="names">' + sorted.map(s => nameSpan(s)).join("") + '</div>';
+  } else {
+    html = G.map(g => '<p class="gname">GALAXY ' + g.galaxy + '</p><div class="names">' +
+      g.systems.map(s => nameSpan(s)).join("") + '</div>').join("");
+  }
+  $("nameOut").innerHTML = html;
+  $("bOrder").textContent = azOrder ? "by galaxy" : "A–Z";
+}
+function nameSpan(s) {
+  return '<span class="' + (DUP_SET.has(s.name) ? "dup" : "") + '" title="galaxy ' + s.galaxy + ' system ' + s.index + '">' + s.name + '</span>';
+}
+$("bOrder").onclick = () => { azOrder = !azOrder; renderNames(); };
+$("bCopy").onclick = () => {
+  const txt = G.map(g => "GALAXY " + g.galaxy + "\n" +
+    g.systems.map(s => s.index + "\t" + s.name).join("\n")).join("\n\n");
+  navigator.clipboard.writeText(txt).then(
+    () => { $("bCopy").textContent = "copied"; setTimeout(() => $("bCopy").textContent = "copy all", 1500); },
+    () => { $("bCopy").textContent = "copy failed"; });
+};
+$("nameNote").innerHTML = "Read for real-world proper nouns — hard constraint 4. " +
+  "A–Z order groups near-misses together and is the easier read. " +
+  (DUPES.length ? "Amber: the same name in two galaxies." : "");
+renderNames();
+
+/* --- list --- */
+function renderList() {
+  $("list").innerHTML = SYS().map(s =>
+    '<div class="row" id="r' + s.index + '" data-i="' + s.index + '">' +
+    '<span class="n">' + s.index + '</span>' +
+    '<span class="nm">' + s.name + '</span>' +
+    '<span class="ec">' + s.ecoName + ' · ' + s.govName + '</span>' +
+    '<span class="tl">TL' + s.techLevel + '</span></div>').join("");
+}
+$("list").addEventListener("click", (e) => {
+  const r = e.target.closest(".row"); if (r) select(+r.dataset.i);
+});
+
+function renderGalaxy() {
+  Array.from($("gtabs").children).forEach(b => b.classList.toggle("on", +b.dataset.g === gal));
+  $("dg").textContent = gal; $("lg").textContent = gal;
+  renderList(); renderDist(); select(sel);
+}
 
 $("foot").innerHTML =
-  "Standalone rig. Not wired into <b>index.html</b> — that is session 005.<br>" +
-  "Seed expansion for nameSeed / speciesSeed / descSeed is <span class='assumed'>[ASSUMED]</span>, session 004. " +
-  "Draw order in World Spec §3.4 is unchanged.<br>" +
-  "Blocklist is a starter list and <span class='assumed'>[ASSUMED]</span> incomplete — Word Banks §9 item 3.<br>" +
-  "starClass and stationTypeRaw are drawn by §3.4 and defined by no section in any document.<br>" +
-  "Connectivity repair is <span class=assumed>[BUILT]</span>, session 004 — a galaxy-level step not yet in any spec.";
+  "Standalone rig, rebuilt session 006 against <b>WORLD MODEL SPEC v1.3</b> and <b>WORD BANKS v1.1</b>. " +
+  "Not wired into <b>index.html</b> — that is session 007.<br>" +
+  "§3.5 sub-streams carry <b>(seedValue, tag, galaxy, system)</b>. §3.7 star class is drawn, named and read. " +
+  "§2.2 blocklist is the three-category list: profanity by substring, Elite and real-world by whole name.<br>" +
+  "<span class='assumed'>[ASSUMED]</span> the dish frame inserts a creature about half the time — Word Banks §5.6 " +
+  "says \"often\" and gives no rate. The 004 rig never inserted one, so the §7 worked example was unproducible.<br>" +
+  "<span class='assumed'>[ASSUMED]</span> species slot 4 wraps modulo the form list, as in 004. §3 does not say.<br>" +
+  "<span class='bad'>Collisions are not impossible by construction.</span> §3.5 removed <i>seed</i> collisions. " +
+  "Two systems with different sub-streams can still draw the same 6-letter name: one pair does, and the " +
+  "birthday arithmetic on 80³ predicts 1.04. Species repeat far more often — the string space is 9,240.";
 
-select(7);
+renderGalaxy();
 drawChart();
 </script>
 </body>
