@@ -192,10 +192,18 @@
     flex-direction:column;background:var(--band);
   }
   #panel.open{display:flex;}
+  /* Measure cap. Panel §10 item 6 — the `console` profile was described
+     in principle and never laid out, and on an iPad the label/value rows
+     stretched the full width with the value marooned at the far edge.
+     560px is about 73 monospace characters at 12px. Below that it does
+     not bind, so the [TESTED] 402px iPhone layout is unchanged. Centred
+     rather than left-pinned: left-pinned leaves the whole right half of
+     an iPad empty, which reads as a bug rather than a choice. */
   .pbody{
     flex:1 1 auto;min-height:0;overflow-y:auto;
     -webkit-overflow-scrolling:touch;touch-action:pan-y;
     padding:12px 14px 16px;
+    width:100%;max-width:560px;margin:0 auto;
   }
   .pname{font-size:20px;letter-spacing:.18em;color:var(--ink);}
   .psub{font-size:11px;letter-spacing:.10em;color:var(--ink-dim);margin-top:5px;}
