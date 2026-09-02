@@ -361,7 +361,7 @@
   </div>
 
   <textarea id="report" readonly></textarea>
-  <div class="acts"><button id="bCopy">COPY SETTINGS FOR REPORT</button></div>
+  <div class="acts"><button id="bWorld">BUILD ALL 8 GALAXIES</button><button id="bCopy">COPY SETTINGS FOR REPORT</button></div>
 </div>
 
 <script>
@@ -395,6 +395,393 @@ function rng(seed){ let a=seed>>>0; return function(){
   a=(a+0x6D2B79F5)|0; let t=Math.imul(a^(a>>>15),1|a);
   t=(t+Math.imul(t^(t>>>7),61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; }; }
 const WORLD_SEED = 3141592653;
+
+/* ==================================================================
+   WORLD GENERATOR — wired in, session 009.
+   Ported verbatim from worldgen.html (the session 006 rig, [TESTED]).
+   Rig-only code — galaxy tabs, chart, system card, self-check panel,
+   distributions — is deliberately NOT here. This is generation only.
+   hash32 and rng are the ones already above: byte-identical to the
+   rig's, so the universe cannot move.
+   Galaxy 0 is built at boot. Galaxies 1-7 are built on first ask.
+   ================================================================== */
+const World = (function(){
+const ri = (r, n) => Math.floor(r() * n);
+const clamp = (v, lo, hi) => (v < lo ? lo : (v > hi ? hi : v));
+
+/* §3.2 */
+function systemSeed(worldSeed, galaxy, system) { return hash32(worldSeed, galaxy, system); }
+
+/* §3.5 — sub-streams carry the coordinates. CHANGED in v1.3. */
+const TAG_NAME = 0x4E414D45, TAG_SPEC = 0x53504543, TAG_DESC = 0x44455343;
+const sub = (seedValue, tag, galaxy, system) => rng(hash32(seedValue, tag, galaxy, system));
+
+/* ============================================================
+   CONTENT — WORD BANKS v1.1
+   ============================================================ */
+const SYL = ("AB AC AD AE AG AL AN AR AT AV BE BI BO BR BY CE CO CU DI DO " +
+"DR EN ER ES ET EX GE GI HI IN IS KA KE LA LE LO MA ME MI NA " +
+"NE NI OL OR OS PA PE QU RA RE RI RO SA SE SO SU TA TE TI TO " +
+"TU US VA VE VI XA XE YA ZA ZE ZO ZU BA CA DA GA LU MO NU RU").split(" ");
+
+/* Word Banks §2.2 — three categories, two matching modes.
+   1. profanity  — substring, anywhere in the assembled name
+   2. real Elite — whole name
+   3. real-world — whole name
+   Every entry is producible from §2.1: the §2.2 producibility rule. */
+/* Category 1 amended session 006, by the 2,048-name read:
+   + ANAL — AN and AL are both §2.1 pairs, so it is producible. §2.2's claim that
+     the other twenty candidates cannot be formed at any offset was wrong.
+   + SEX  — replaces the narrower SEXO. Catches six names, one of them leading. */
+const BLOCK_PROFANITY = "ANAL ARSE ANUS CRAP RAPE SCUM SEX SHIT SLUT".split(" ");
+const BLOCK_ELITE = ("BIARGE ISINOR LEESTI ORERVE QUTIRI REORTE XEXEDI " +
+  "ANISOR CEERDI CEESXE CEMAVE ENSOREUS ERLAGE LERELACE TEORGE TIRAOR VETITICE").split(" ");
+/* Category 3 amended session 006, by the read: ARANDA, DAYANA, NEBIRU. */
+const BLOCK_REALWORLD = ("ANANKE ANCONA ANKARA ARANDA DAYANA NEBIRU BIANCA CAMILA CANADA CORONA ESTELA " +
+"GENEVA KARINA LATINA LORENA LUSAKA MACAPA MALAGA MANAUS " +
+"MANILA MARIETTA MARINA MATERA MERIDA MONICA MOTOROLA NEVADA " +
+"OSTUNI PADOVA PALOMA PANAMA PARANA RAMONA REALME REBECA " +
+"REGINA REVERE RIMINI SABINA SAMARA SARASOTA SARATOGA SEDONA " +
+"SELENA SELENE SERENA SUBARU SURINAME SUSANA TACOMA TERESA " +
+"TOLEDO TOLUCA TOPEKA VANESA VENICE VERONA VERONICA VIENNA " +
+"ZULEMA").split(" ");
+const BLOCK_WHOLE = new Set(BLOCK_ELITE.concat(BLOCK_REALWORLD));
+
+const GOVERNMENT = ["Anarchy","Feudal","Multi-Government","Dictatorship","Communist","Confederacy","Democracy","Corporate State"];
+const ECONOMY = ["Rich Industrial","Average Industrial","Poor Industrial","Mainly Industrial",
+                 "Mainly Agricultural","Rich Agricultural","Average Agricultural","Poor Agricultural"];
+
+/* Word Banks §3 */
+const SP_SIZE   = ["Large","Small","Fierce","Slender","Squat","Ponderous",null];
+const SP_COLOUR = ["Green","Red","Yellow","Blue","Black","White","Pale","Grey","Mottled",null];
+const SP_TEXTURE= ["Slimy","Bug-Eyed","Horned","Bony","Fat","Furry","Feathered","Scaled","Plated","Tufted",null];
+const SP_FORM   = ["Rodents","Frogs","Lizards","Crustaceans","Birds","Humanoids","Felines","Insects","Cephalopods","Ungulates","Serpents","Amphibians"];
+
+/* Word Banks §5 */
+const B = {
+  fame:"notable|famous|well known|reasonably famous|most famous|mildly notorious|best known|celebrated|remembered|feared|quietly renowned|ridiculed|revered|of some repute".split("|"),
+  flat_adjective:"dull|quiet|unremarkable|boring|cold|tedious|fairly dull|unexceptional|grey|damp|uneventful|forgettable".split("|"),
+  feature_adj:"vast|sunken|frozen|burning|wandering|hollow|silent|endless|unstable|glittering|collapsing|disputed|overgrown|shifting".split("|"),
+  feature:"rain forests|ice deserts|salt flats|mud plains|tidal cities|hollow mountains|floating markets|sunken cathedrals|glass canyons|methane seas|volcanic beaches|tree cities|crystal caverns|black lakes|wandering dunes|sky reefs|spore forests|mirror lakes|bone reefs|weather towers|sulphur gardens|drowned valleys".split("|"),
+  creature_adj:"carnivorous|edible|three-legged|armoured|singing|luminous|migratory|poisonous|domesticated|giant|miniature|silent|burrowing|parasitic|spitting|bad-tempered|flightless|translucent".split("|"),
+  creature_noun:"tree grubs|mud crabs|sand eels|rock lice|cliff apes|marsh hens|bell spiders|plough beetles|night rats|sun moths|glass slugs|thorn cats|wire worms|drum frogs|stilt birds|fog whales|ash bats|kettle fish|pit hounds|reed goats|bark lizards|salt hares".split("|"),
+  dish:"soup|stew|pie|wine|brandy|cheese|biscuits|jelly|porridge|sausage|syrup|vinegar|broth|pastries|liqueur".split("|"),
+  /* §5.7 — seven entries carry their own article; §4.3 rule 2 strips it in the
+     possessive frame. NO entry carries a possessive: §4.3 rule 3. */
+  institution:"unusual casinos|hopeless bureaucracy|weekly public arguments|competitive silence|an unregulated exchange|hereditary plumbing|mandatory hats|a very large clock|three competing calendars|a museum of small errors|a famously unhelpful tourist board|obligatory poetry|parking regulations|an inexplicable statue|a lottery nobody has won|queueing|a permanent public inquiry|compulsory apologies".split("|"),
+  artform:"tuneless folk songs|competitive shouting|mud sculpture|six-hour operas|silent theatre|wire music|epic poetry|shadow puppetry|monumental knitting|funereal brass|recreational weeping|improvised architecture".split("|"),
+  trait:"ancient loathing of music|refusal to acknowledge the sky|exceptional rudeness|unusual hats|fear of doors|devotion to paperwork|inability to whisper|enthusiasm for arguments|distrust of numbers|love of very long meals".split("|"),
+  epithet:"Poisoner|Cartographer|Unlucky|Reformer|Deposed|Tedious|Persistent|Absent|Second|Optimist|Incomplete|Well-Meaning|Loud".split("|"),
+  oddity:"that it exists|that nobody returns|that the maps disagree|that it was named twice|that it has three moons and admits to two|that the survey team declined to comment|that it appears on no chart drawn before last century".split("|")
+};
+const PROBLEM = ["{creature_the}","its unpredictable weather","occasional civil war","the smell","its inhabitants' terrible manners","frequent earthquakes","a persistent fog","crippling import duties","seasonal flooding","the noise","a total lack of anything to do","an ongoing dispute about the calendar","its climate","{creature_again}"];
+const PROBLEM_SENTENCE = ["The {creature} are not the worst of it.","Nobody has explained the smell.","The dispute is still ongoing.","Three surveys have gone missing.","The weather is a matter of local pride."];
+
+/* Word Banks §4.1. {A} is the article placeholder — §4.3 rule 1 forbids a
+   hard-coded article inside a template. It is resolved after assembly. */
+const TEMPLATES = [
+  {w:12,dull:1,t:"{S} is {A} dull world."},
+  {w: 8,dull:1,t:"{S} is {A} {flat_adjective} planet."},
+  {w:10,t:"{S} is {fame} for {subject}."},
+  {w: 8,t:"{S} is {fame} for {subject} and {subject}."},
+  {w: 7,prob:1,t:"{S} is {fame} for {subject} but ruined by {problem}."},
+  {w: 6,prob:1,t:"{S} would be {fame} for {subject} were it not for {problem}."},
+  {w: 5,t:"The world {S} is {fame} for {subject}."},
+  {w: 5,t:"{S} is {A} {flat_adjective} world, notable only for {subject}."},
+  {w: 4,oddity:1,t:"Little is known about {S} except {oddity}."},
+  {w: 3,avoid:1,prob:1,t:"{S} is best avoided. {problem_sentence}"}
+];
+/* Word Banks §4.2 */
+const SUBJECTS = [
+  {w:10,k:"feature",    t:"its {feature_adj} {feature}"},
+  {w: 9,k:"creature",   t:"its {creature}"},
+  {w: 8,k:"institution",t:"its {institution}"},
+  {w: 7,k:"dish",       t:"{D} {dish}"},
+  {w: 6,k:"artform",    t:"its {artform}"},
+  {w: 5,k:"creature",   t:"the {creature} of {S}"},
+  {w: 4,k:"trait",      t:"its inhabitants' {trait}"},
+  {w: 3,k:"person",     t:"{person}, the {epithet}"}
+];
+
+/* [ASSUMED], session 006. Word Banks §5.6 says the dish "combines with the
+   demonym and often a creature", and the §7 worked example prints "Bivoran
+   plough beetle soup". No rule says how often. 0.5 is the dial. The 004 rig
+   implemented "{D} {dish}" only, so that example was unproducible. */
+const DISH_CREATURE_P = 0.5;
+
+/* ============================================================
+   GENERATION
+   ============================================================ */
+function pickWeighted(r, items, weightOf) {
+  let total = 0;
+  for (const it of items) total += weightOf(it);
+  let x = r() * total;
+  for (const it of items) { x -= weightOf(it); if (x < 0) return it; }
+  return items[items.length - 1];
+}
+function blockedBy(raw) {
+  for (const b of BLOCK_PROFANITY) if (raw.indexOf(b) !== -1) return "profanity";
+  if (BLOCK_WHOLE.has(raw)) return "whole";
+  return null;
+}
+/* §8.1 + Word Banks §2.1/§2.2. Rejection advances the draw on the sub-stream;
+   the seed is never mutated. */
+function drawName(r, pairCount, tally) {
+  for (let attempt = 0; attempt < 64; attempt++) {
+    let raw = "";
+    for (let i = 0; i < pairCount; i++) raw += SYL[ri(r, SYL.length)];
+    const hit = blockedBy(raw);
+    if (!hit) return raw.charAt(0) + raw.slice(1).toLowerCase();
+    if (tally) { tally.total++; tally[hit]++; tally.hits.push(raw); }
+  }
+  return "Unnamed";
+}
+/* Word Banks §2.3 */
+function demonym(name) {
+  const last = name.charAt(name.length - 1).toLowerCase();
+  if ("aeiou".indexOf(last) !== -1) return name + "n";
+  if (last === "s" || last === "z") return name + "ian";
+  if (last === "r" || last === "n") return name + "ese";
+  return name + "ite";
+}
+
+function deriveSystem(worldSeed, galaxy, index, tally) {
+  /* §3.4 core field draw order — LOCKED. Fields 1–10 frozen. */
+  const r = rng(systemSeed(worldSeed, galaxy, index));
+  const x             = ri(r, 256);
+  const y             = ri(r, 256);
+  const governmentRaw = ri(r, 8);
+  const economyRaw    = ri(r, 8);
+  const techNoise     = ri(r, 4);
+  const radiusRaw     = ri(r, 16);
+  const radiusFine    = ri(r, 256);
+  const nameSeed      = ri(r, 65536);
+  const speciesSeed   = ri(r, 65536);
+  const descSeed      = ri(r, 65536);
+  const starClassRaw  = ri(r, 8);
+  const stationTypeRaw= ri(r, 4);
+
+  const government = governmentRaw;                       /* §4 */
+  let economy = economyRaw;                               /* §5 */
+  if (government <= 1) economy |= 0b010;
+  const flipped      = (~economy) & 0b111;                /* §6 */
+  const techLevel    = clamp(flipped + techNoise + (government >> 1), 0, 14) + 1;
+  const population   = techLevel * 4 + economy + government + 1;
+  const productivity = (flipped + 3) * (government + 4) * population * 8;
+  const radiusKm     = (radiusRaw + 11) * 256 + radiusFine;
+  const starClass    = starClassRaw + 1;                  /* §3.7 — 1..8 */
+  const scoopable    = starClass >= 4;
+
+  /* §8.1 — name. Sub-stream carries the coordinates (§3.5). */
+  const nr = sub(nameSeed, TAG_NAME, galaxy, index);
+  const pairCount = (nameSeed & 0x40) ? 4 : 3;            /* reads the raw field */
+  const name = drawName(nr, pairCount, tally && tally.name);
+  const dem  = demonym(name);
+
+  /* §8.2 — species */
+  const sr = sub(speciesSeed, TAG_SPEC, galaxy, index);
+  let species;
+  if ((speciesSeed & 0x8000) === 0) {
+    species = "Human Colonials";                          /* reads the raw field */
+  } else {
+    const size = SP_SIZE[ri(sr, SP_SIZE.length)];
+    const col  = SP_COLOUR[ri(sr, SP_COLOUR.length)];
+    const texI = ri(sr, SP_TEXTURE.length);
+    const tex  = SP_TEXTURE[texI];
+    /* slot 4 constrained to slot3 + (0..3). The wrap is [ASSUMED] — §3 does
+       not say what happens past the end of the form list. Modulo, as in 004. */
+    const form = SP_FORM[(texI + ri(sr, 4)) % SP_FORM.length];
+    species = [size, col, tex, form].filter(Boolean).join(" ");
+  }
+
+  const sys = { galaxy, index, x, y, government, economy, techLevel, population,
+    productivity, radiusKm, starClass, scoopable, stationTypeRaw, name, dem, species,
+    govName: GOVERNMENT[government], ecoName: ECONOMY[economy] };
+
+  /* §8.3 + Word Banks §4–§6 */
+  const d = describe(sys, sub(descSeed, TAG_DESC, galaxy, index), tally);
+  sys.description = d.text;
+  sys.dull = d.dull;
+  sys.tpl = d.tpl;
+  return sys;
+}
+
+function describe(sys, r, tally) {
+  const agri   = sys.economy >= 4;
+  const rich   = (sys.economy === 0 || sys.economy === 5);
+  const poor   = (sys.economy === 2 || sys.economy === 7);
+  const loose  = sys.government <= 1;
+  const corp   = sys.government === 7;
+  const hiTech = sys.techLevel >= 12;
+  const loTech = sys.techLevel <= 3;
+
+  /* Word Banks §6 — weight, do not gate */
+  const tw = (t) => {
+    let w = t.w;
+    if (t.dull) w *= poor ? 1.5 : (rich ? 0.6 : 1);
+    if (t.prob) w *= (poor ? 1.5 : 1) * (loose ? 2 : 1);
+    if (t.avoid && loose) w *= 2;
+    if (t.oddity && hiTech) w *= 1.5;
+    return w;
+  };
+  const sw = (s) => {
+    let w = s.w;
+    if (s.k === "creature")    w *= (agri ? 2 : 1) * (loTech ? 2 : 1);
+    if (s.k === "feature")     w *= (agri ? 2 : 1) * (loTech ? 2 : 1);
+    if (s.k === "dish")        w *= agri ? 2 : 1;
+    if (s.k === "artform")     w *= agri ? 1 : 2;
+    if (s.k === "institution") w *= (agri ? 1 : 2) * (corp ? 3 : 1) * (hiTech ? 1.5 : 1);
+    return w;
+  };
+
+  let lastCreature = null;
+  const pick = (arr) => arr[ri(r, arr.length)];
+  const creature = () => { lastCreature = pick(B.creature_adj) + " " + pick(B.creature_noun); return lastCreature; };
+  /* "plough beetles" -> "plough beetle" for the dish frame */
+  const singular = (n) => (/ss$/.test(n) || !/s$/.test(n)) ? n : n.slice(0, -1);
+  /* §4.3 rule 2 — the frame supplies the possessive, so strip a leading article */
+  const stripArticle = (s) => s.replace(/^(an|a|the) /, "");
+
+  function fill(str, possessive) {
+    return str.replace(/\{(\w+)\}/g, (m, k) => {
+      switch (k) {
+        case "S": return sys.name;
+        case "D": return sys.dem;
+        case "A": return "a";                      /* resolved after assembly */
+        case "subject": return fill(pickWeighted(r, SUBJECTS, sw).t);
+        case "problem": return fill(pick(PROBLEM));
+        case "problem_sentence": return fill(pick(PROBLEM_SENTENCE));
+        case "institution": return possessive ? stripArticle(pick(B.institution)) : pick(B.institution);
+        case "creature": return creature();
+        case "creature_the": return "the " + creature();
+        case "creature_again": return "the " + (lastCreature || creature()) + " again";
+        case "person": return drawName(r, 2, tally && tally.person);
+        case "dish": return (r() < DISH_CREATURE_P)
+          ? singular(pick(B.creature_noun)) + " " + pick(B.dish)
+          : pick(B.dish);
+        default: return B[k] ? pick(B[k]) : m;
+      }
+    });
+  }
+  /* §4.2 frames beginning with a possessive get rule 2 applied */
+  function fillSubject(t) { return fill(t, /^its /.test(t)); }
+  const origFill = fill;
+  /* subject expansions route through fillSubject */
+  const tpl = pickWeighted(r, TEMPLATES, tw);
+  let text = tpl.t.replace(/\{(\w+)\}/g, (m, k) => {
+    if (k === "subject") { const s = pickWeighted(r, SUBJECTS, sw); return fillSubject(s.t); }
+    return origFill(m);
+  });
+  /* §4.3 rule 1 — article agreement, after assembly, over the whole string */
+  text = text.replace(/\ba (?=[aeiouAEIOU])/g, "an ");
+  return { text, dull: !!tpl.dull, tpl: TEMPLATES.indexOf(tpl) };
+}
+
+/* ============================================================
+   GALAXY ASSEMBLY — World Spec §3.6
+   ============================================================ */
+const MAX_FUEL_LY = 7.0, TARGET_LY = 6.9;
+function distLY(a, b) {
+  const dx = a.x - b.x, dy = (a.y - b.y) / 2;
+  return Math.sqrt(dx * dx + dy * dy) * 0.4;
+}
+function components(S) {
+  const unseen = new Set(S.map(s => s.index));
+  const out = [];
+  while (unseen.size) {
+    const start = Math.min.apply(null, Array.from(unseen));
+    const comp = [start]; unseen.delete(start);
+    const stack = [S[start]];
+    while (stack.length) {
+      const c = stack.pop();
+      for (const o of S) {
+        if (unseen.has(o.index) && distLY(c, o) <= MAX_FUEL_LY) {
+          unseen.delete(o.index); comp.push(o.index); stack.push(o);
+        }
+      }
+    }
+    comp.sort((a, b) => a - b);
+    out.push(comp);
+  }
+  out.sort((a, b) => b.length - a.length || a[0] - b[0]);
+  return out;
+}
+function repair(S) {
+  const log = [];
+  for (let pass = 0; pass < 32; pass++) {
+    const comps = components(S);
+    if (comps.length <= 1) break;
+    const main = comps[0];
+    const pocket = comps.slice(1).sort((a, b) => a[0] - b[0])[0];
+    let bp = null, bm = null, bd = Infinity;
+    for (const pi of pocket) for (const mi of main) {
+      const d = distLY(S[pi], S[mi]);
+      if (d < bd - 1e-9) { bd = d; bp = pi; bm = mi; }
+    }
+    const p = S[bp], m = S[bm], from = p.x + "," + p.y;
+    const ox = p.x, oy = p.y;
+    for (let t = 0.01; t <= 1.0; t += 0.01) {
+      p.x = Math.round(ox + (m.x - ox) * t);
+      p.y = Math.round(oy + (m.y - oy) * t);
+      if (distLY(p, m) > TARGET_LY) continue;
+      if (S.some(o => o !== p && o.x === p.x && o.y === p.y)) continue;
+      break;
+    }
+    log.push({ index: bp, name: p.name, from, to: p.x + "," + p.y,
+               was: bd, now: distLY(p, m), pocket: pocket.length });
+  }
+  return log;
+}
+function buildGalaxy(worldSeed, galaxy, tally) {
+  const S = [];
+  for (let i = 0; i < 256; i++) S.push(deriveSystem(worldSeed, galaxy, i, tally));
+  const before = components(S);
+  const repairs = repair(S);
+  const after = components(S);
+  for (const s of S) {
+    let n = 0, nearest = Infinity;
+    for (const o of S) {
+      if (o === s) continue;
+      const d = distLY(s, o);
+      if (d < nearest) nearest = d;
+      if (d <= MAX_FUEL_LY) n++;
+    }
+    s.reach = n; s.nearest = nearest;
+  }
+  for (const rp of repairs) S[rp.index].repaired = rp;
+  return { galaxy, systems: S, repairs, before, after };
+}
+function newTally() {
+  return { name: { total: 0, profanity: 0, whole: 0, hits: [] },
+           person: { total: 0, profanity: 0, whole: 0, hits: [] } };
+}
+
+/* ---------- galaxy cache: 0 eager, 1-7 lazy ---------- */
+const CACHE = new Array(8).fill(null);
+const MS    = new Array(8).fill(null);
+const TALLY = newTally();
+function galaxy(n){
+  if(n<0 || n>7) throw new RangeError("galaxy "+n);
+  if(!CACHE[n]){
+    const t0 = performance.now();
+    CACHE[n] = buildGalaxy(WORLD_SEED, n, TALLY);
+    MS[n] = performance.now() - t0;
+  }
+  return CACHE[n];
+}
+function system(g,i){ return galaxy(g).systems[i]; }
+function isBuilt(n){ return !!CACHE[n]; }
+function buildAll(){ for(let g=0;g<8;g++) galaxy(g); }
+function all(){ const a=[]; for(let g=0;g<8;g++) a.push(...galaxy(g).systems); return a; }
+
+/* CORE API §4.3 slot shape. generateName/generateDescription are NOT
+   exposed: their spec signatures cannot work — see open loop 19. */
+return { galaxy, system, isBuilt, buildAll, all,
+         ms:MS, tally:TALLY, distLY, demonym,
+         MAX_FUEL_LY, WORLD_SEED,
+         generateSystem:function(ws,g,i){ return deriveSystem(ws,g,i,null); } };
+})();
+
 
 /* ---------- quaternions ---------- */
 function qmul(a,b){ return [
@@ -431,10 +818,21 @@ const ENERGY_MAX = 100;   // [ASSUMED] displayed as four banks of 25
 const FUEL_MAX   = 70;    // World Model 2 - tenths of a light year
 
 const state = {
+  /* World Model §2.1 — settled. The index is the decision, not the name. */
+  position:  { galaxy:0, system:51 },
+  /* CORE API §3.1. Filled below from World, never copied or edited. */
+  system:    null,
   commander: { credits:1000, legalStatus:0, fuel:70, gameDay:0, kills:0 },
   ship: { hull:100, shieldFore:100, shieldAft:100, energy:100,
           cargoUsed:0, speed:0, docked:false }
 };
+
+/* ---------- boot the world. Galaxy 0 only; 1-7 wait to be asked. ---------- */
+const WORLD_BOOT_MS = (function(){
+  const t0 = performance.now();
+  state.system = World.system(state.position.galaxy, state.position.system);
+  return performance.now() - t0;
+})();
 
 /* ---------- object field ---------- */
 const CELL = 2000;
@@ -943,8 +1341,91 @@ function writeReport(){
     "blip size     "+T.blip+" px\n"+
     "console h     "+document.querySelector(".console").getBoundingClientRect().height.toFixed(0)+" px\n"+
     "fps           "+fpsShow.toFixed(0)+"\n"+
-    "viewport      "+window.innerWidth+"x"+window.innerHeight;
+    "viewport      "+window.innerWidth+"x"+window.innerHeight+
+    "\n\n"+worldReport();
 }
+
+/* ---------- world proof. Reads World and state; computes nothing twice. ----------
+   The invariants are the session 006 [TESTED] figures. If the wired-in
+   generator is the same generator, every row reads OK. Any FAIL means the
+   port moved the universe and the wiring is wrong, not the numbers.        */
+function pct(n,d){ return (n/d*100).toFixed(1)+"%"; }
+function chk(label,got,want){
+  const ok = String(got)===String(want);
+  return "  "+(label+"                    ").slice(0,22)+
+         (String(got)+"          ").slice(0,10)+
+         (String(want)+"          ").slice(0,10)+
+         (ok?"OK":"FAIL")+"\n";
+}
+function worldReport(){
+  const s = state.system, p = state.position;
+  const G0 = World.galaxy(0).systems;
+  const six = G0.filter(x=>x.name.length===6).length;
+  const eight = G0.filter(x=>x.name.length===8).length;
+  const hc = G0.filter(x=>x.species==="Human Colonials").length;
+  const dull = G0.filter(x=>x.dull).length;
+
+  let out = "WORLD — generator wired in, session 009\n"+
+    "seed          "+World.WORLD_SEED+"\n"+
+    "here          galaxy "+p.galaxy+" system "+p.system+"  "+s.name+"  ("+s.dem+")\n"+
+    "              "+s.ecoName+" · "+s.govName+" · TL "+s.techLevel+"\n"+
+    "              star class "+s.starClass+", "+(s.scoopable?"scoopable":"not scoopable")+"\n"+
+    "              pop "+(s.population/10).toFixed(1)+" bn · radius "+s.radiusKm+" km · "+s.species+"\n"+
+    "              "+s.description+"\n"+
+    "boot          "+WORLD_BOOT_MS.toFixed(1)+" ms  (galaxy 0 only)\n"+
+    "built         ";
+  for(let g=0;g<8;g++) out += (World.isBuilt(g) ? "G"+g : "--")+" ";
+  out += "\n";
+  for(let g=0;g<8;g++) if(World.isBuilt(g)) out += "  galaxy "+g+"     "+World.ms[g].toFixed(1)+" ms\n";
+
+  out += "\nSELF-CHECK — galaxy 0   got       want\n";
+  out += chk("six / eight names", six+"/"+eight, "137/119");
+  out += chk("Human Colonials", pct(hc,256), "47.3%");
+  out += chk("dull", pct(dull,256), "23.8%");
+  out += chk("§3.6 moves", World.galaxy(0).repairs.length, 1);
+  out += chk("components after", World.galaxy(0).after.length, 1);
+  out += chk("start system", s.name, "Vileze");
+
+  let allBuilt = true;
+  for(let g=0;g<8;g++) if(!World.isBuilt(g)) allBuilt = false;
+  if(!allBuilt){
+    out += "\nUniverse rows need all eight galaxies. Press BUILD ALL 8.\n";
+    return out;
+  }
+  const A = World.all();
+  const L = A.map(x=>x.description.length).sort((a,b)=>a-b);
+  const nc = {}; for(const x of A) (nc[x.name]=nc[x.name]||[]).push(x.galaxy+"/"+x.index);
+  const dupes = Object.keys(nc).filter(n=>nc[n].length>1);
+  let moves=0, comps=0, uniq=true, ms=0;
+  for(let g=0;g<8;g++){ const gg=World.galaxy(g);
+    moves+=gg.repairs.length; comps+=gg.after.length; ms+=World.ms[g];
+    if(new Set(gg.systems.map(x=>x.name)).size!==256) uniq=false; }
+
+  out += "\nSELF-CHECK — universe   got       want\n";
+  out += chk("systems", A.length, 2048);
+  out += chk("name rejections", World.tally.name.total, 14);
+  out += chk("  profanity", World.tally.name.profanity, 11);
+  out += chk("  whole-name", World.tally.name.whole, 3);
+  out += chk("dull", pct(A.filter(x=>x.dull).length, A.length), "28.0%");
+  out += chk("desc min/med/max", L[0]+"/"+L[L.length>>1]+"/"+L[L.length-1], "23/62/129");
+  out += chk("duplicate names", dupes.length, 1);
+  out += chk("  which", dupes.length?dupes[0]:"none", "Adlune");
+  out += chk("unique in galaxy", uniq?"yes":"no", "yes");
+  out += chk("§3.6 moves", moves, 6);
+  out += chk("components", comps, 8);
+  out += "\n  whole universe "+ms.toFixed(0)+" ms · "+
+         (dupes.length?dupes[0]+" at "+nc[dupes[0]].join(" and "):"no duplicates")+"\n";
+  return out;
+}
+document.getElementById("bWorld").addEventListener("click",function(){
+  this.textContent="BUILDING\u2026";
+  const b=this;
+  setTimeout(function(){
+    const t0=performance.now(); World.buildAll();
+    b.textContent="BUILT IN "+(performance.now()-t0).toFixed(0)+" MS";
+    writeReport();
+  },16);
+});
 document.getElementById("bCopy").addEventListener("click",function(){
   const el=document.getElementById("report");
   writeReport(); el.select(); el.setSelectionRange(0,99999);
