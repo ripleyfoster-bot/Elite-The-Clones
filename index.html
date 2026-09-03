@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 010</title>
+<title>ELITE: THE CLONES — 012</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -249,6 +249,57 @@
   .pnav .spacer{flex:1 1 auto;}
   .pnav .fly{min-width:74px;color:var(--ink);
              border-right:0;border-left:1px solid var(--ink-faint);}
+  /* ---- Short Range Chart — PANEL LAYOUT SPEC §4, session 012 ----
+
+     The chart panel does NOT take §6.3's 560px measure cap. That cap
+     exists because a label and its value are one unit of reading and
+     an iPad stretched them 1,700px apart. A chart is not a label/value
+     pair; it is a spatial field, and more area is more chart. §6.3's
+     own argument does not reach it. Recorded, not assumed silently.
+
+     The body does not scroll here. A chart you have to scroll to tap
+     is a chart you cannot tap accurately, and a pan-y scroll container
+     eats the gesture. Fixed column: header, canvas, selection, MUNGO. */
+  .pbody.chartbody{
+    max-width:none;overflow:hidden;touch-action:none;
+    display:flex;flex-direction:column;padding:8px 10px 10px;
+  }
+  .chead{
+    flex:0 0 auto;display:flex;justify-content:space-between;
+    align-items:baseline;font-size:10px;letter-spacing:.16em;
+    color:var(--ink-dim);padding-bottom:6px;
+  }
+  .chead i{font-style:normal;color:var(--warn);letter-spacing:.06em;
+           font-variant-numeric:tabular-nums;}
+  .cwrap{
+    flex:1 1 auto;min-height:90px;position:relative;
+    border:1px solid var(--ink-faint);
+  }
+  .cwrap canvas{display:block;width:100%;height:100%;touch-action:none;}
+  .csel{
+    flex:0 0 auto;padding-top:9px;display:flex;align-items:flex-start;
+    gap:10px;
+  }
+  .cinfo{flex:1 1 auto;min-width:0;}
+  .cname{font-size:13px;letter-spacing:.12em;color:var(--ink);
+         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cname em{float:right;font-style:normal;color:var(--warn);
+            font-variant-numeric:tabular-nums;letter-spacing:.04em;
+            padding-left:8px;}
+  .cmeta{font-size:10px;line-height:1.5;color:var(--ink-dim);margin-top:3px;
+         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cmeta b{font-weight:400;color:var(--ink);}
+  /* 44px minimum, Panel §2, without exception. */
+  .ccourse{
+    flex:0 0 auto;align-self:center;min-height:44px;min-width:104px;
+    background:transparent;border:1px solid var(--ink-dim);border-radius:2px;
+    color:var(--ink);font:inherit;font-size:10px;letter-spacing:.10em;
+    padding:6px 8px;line-height:1.3;
+  }
+  .ccourse:disabled{border-color:var(--ink-faint);color:var(--ink-faint);}
+  .cmungo{flex:0 0 auto;margin-top:9px;font-size:10px;line-height:1.5;
+          color:var(--ink-faint);
+          border-top:1px solid var(--ink-faint);padding-top:7px;}
   #sysBtn{
     position:fixed;top:calc(env(safe-area-inset-top) + 6px);right:70px;
     background:rgba(0,0,0,.55);color:var(--ink-dim);
@@ -264,9 +315,29 @@
   <div class="view"><canvas id="cv"></canvas><div class="viewedge"></div>
     <div id="panel">
       <div class="pbody" id="panelBody"></div>
-      <!-- §2: unavailable panels are not shown rather than greyed. SYS is
-           the only panel that exists, so the strip has one entry. -->
+      <!-- §4. Fixed column: header, chart, selection strip, MUNGO line.
+           The nav strip below is shared with every panel (§2). -->
+      <div class="pbody chartbody" id="chartBody" style="display:none">
+        <div class="chead"><span>SHORT RANGE</span><i>FUEL <span id="cFuel">7.0 LY</span></i></div>
+        <div class="cwrap" id="chartWrap"><canvas id="chartCv"></canvas></div>
+        <div class="csel">
+          <div class="cinfo">
+            <div class="cname" id="cSelName"></div>
+            <div class="cmeta" id="cSelMeta"></div>
+          </div>
+          <button class="ccourse" id="cCourse" disabled>SET COURSE</button>
+        </div>
+        <!-- §2.2 absence clause, same wording as §6. -->
+        <div class="cmungo">ai.mungo not installed &mdash; no assessment
+          available. The figures above are read from the world model and
+          are not opinions.</div>
+      </div>
+      <!-- §2: unavailable panels are not shown rather than greyed. Two
+           panels exist, so the strip has two entries plus FLY. Order
+           follows Panel §1.3. CHART is renamed when the Galactic Chart
+           lands and the two need telling apart. -->
       <div class="pnav">
+        <button id="navChart">CHART</button>
         <button id="navSys" class="on">SYS</button>
         <div class="spacer"></div>
         <button class="fly" id="navFly">FLY</button>
@@ -332,7 +403,9 @@
   </div>
 </div>
 
-<button id="sysBtn">SYS</button>
+<!-- Control §11 item 25, answered by building: shape 3, last-panel-reopens.
+     One button, the nav strip switches once inside. See the panel router. -->
+<button id="sysBtn">PANEL</button>
 <button id="tuneBtn">TUNE</button>
 
 <div id="tuner">
@@ -910,7 +983,13 @@ const state = {
   position:  { galaxy:0, system:51 },
   /* CORE API §3.1. Filled below from World, never copied or edited. */
   system:    null,
-  commander: { credits:1000, legalStatus:0, fuel:70, gameDay:0, kills:0 },
+  /* hyperspaceTarget is NOT in CORE API §3.1 and is added here under
+     protest — see the chart section's header. Panel §7's "Hyperspace
+     Target" row and Panel §6.2's Distance both require it and neither
+     the API's state list nor its §3.2 command list defines it. Found
+     by building, session 012. { galaxy, index } or null. */
+  commander: { credits:1000, legalStatus:0, fuel:70, gameDay:0, kills:0,
+               hyperspaceTarget:null },
   ship: { hull:100, shieldFore:100, shieldAft:100, energy:100,
           cargoUsed:0, speed:0, docked:false }
 };
@@ -1415,7 +1494,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 });
 function writeReport(){
   document.getElementById("report").value =
-    "ELITE: THE CLONES 010 — settings\n"+
+    "ELITE: THE CLONES 012 — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -1593,8 +1672,20 @@ function renderSystemData(){
   h += prow("Population",         pop+" Billion ("+s.species+")");
   h += prow("Gross Productivity", grp(s.productivity)+" M CR");
   h += prow("Radius",             grp(s.radiusKm)+" km");
-  h += prow("Distance",           "\u2014");
-  h += '<div class="pnote">current system</div>';
+
+  /* §6.2. Distance is current system to the system a course is set to.
+     Empty until one is. The caption names the reason in both states —
+     a bare number would not say what it is a distance TO. Naming the
+     target in the caption is [ASSUMED]; §6.2 only specifies the empty
+     one, because when it was written nothing could ever fill it. */
+  const tgt = targetSystem();
+  if(tgt && tgt !== s){
+    h += prow("Distance", World.distLY(s,tgt).toFixed(2)+" LY");
+    h += '<div class="pnote">to '+esc(tgt.name)+'</div>';
+  } else {
+    h += prow("Distance", "\u2014");
+    h += '<div class="pnote">current system</div>';
+  }
   h += '</div>';
 
   h += '<div class="pdesc">&ldquo;'+esc(s.description)+'&rdquo;</div>';
@@ -1607,18 +1698,271 @@ function renderSystemData(){
   panelBody.innerHTML = h;
 }
 
-function openPanel(){ renderSystemData(); panelEl.classList.add("open"); }
+
+/* ==================================================================
+   SHORT RANGE CHART — PANEL LAYOUT SPEC §4, in-flight mode (§1).
+   Session 012.
+
+   WHAT §4 SPECIFIES AND WHAT IT DOES NOT.
+   §4 gives the layout, the dot conventions and the fuel circle. It
+   gives no scale, no dot curves and no tap radius. Every invented
+   number sits in CHART below, in one block, marked [ASSUMED], and is
+   a one-line edit. None of them was tuned; they were reasoned.
+
+   SELECTION IS NOT STATE, A COURSE IS.
+   Tapping the chart moves a cursor. That cursor lives in this module
+   and touches nothing else — `state.system` is never written, which
+   is CORE API §3.1's read-only rule and constraint 2 besides.
+   SET COURSE commits the cursor to `state.commander.hyperspaceTarget`,
+   which is what Panel §6.2's Distance and Panel §7's Hyperspace Target
+   row read.
+
+   THAT FIELD IS NOT IN THE API. CORE API §3.1's state list has no
+   selected or target system and §3.2 has no command to write one, yet
+   two panels are specified against it. Failure mode 2 — a thing named
+   and never defined. It needs a CORE API revision and it is logged as
+   an open loop, not fixed here. One chat, one job.
+
+   VISITED SYSTEMS ARE NOT MARKED, DELIBERATELY. §4 asks for the mark.
+   Nothing persists and nothing jumps, so the only system that could
+   ever be marked visited is the one already drawn as current. A
+   session-only mark would be a mark that lies after a reload, which is
+   worse on an instrument panel than no mark. It waits for the save
+   file. Logged.
+================================================================== */
+const CHART = {
+  /* Scale. Fitted rather than fixed so the fuel circle is the same
+     size relative to the panel on every device — §4 calls it the most
+     important thing on the screen. FIT 1.35 puts the visible half-
+     height at 9.45 LY, so a full tank reaches most of the way to the
+     edge and a second jump is visible beyond it. [ASSUMED] */
+  FIT:        1.35,
+  /* Dot size by population. World Model §6: population is tenths of a
+     billion; galaxy 0 runs 12 to 64. Domain 10..70 clamped so no
+     galaxy can produce a dot off the end of the curve. [ASSUMED] */
+  POP_LO:     10,  POP_HI:  70,
+  DOT_MIN:    1.3, DOT_MAX: 3.4,
+  /* Brightness by tech level, 1..15 per World Model §6. [ASSUMED] */
+  TL_LO:      1,   TL_HI:   15,
+  ALPHA_MIN:  0.30, ALPHA_MAX: 1.0,
+  /* Out of fuel range: dimmer, still drawn, still selectable (§4). */
+  OUT_DIM:    0.45,
+  /* "A generous radius" (§4), given a number: half of Panel §2's 44px
+     tap target. A tap selects the nearest system whose dot centre is
+     within this many CSS px. Nearest-wins, so generous only decides
+     whether a tap in empty space selects anything at all. [ASSUMED] —
+     Panel §10 item 3, and the thing to judge on device. */
+  TAP_PX:     22,
+  /* Names drawn for in-range systems only. Five of them at the start.
+     Labelling everything on screen at 402px is unreadable; labelling
+     nothing makes the fuel circle a decoration. [ASSUMED] */
+  LABEL_IN_RANGE_ONLY: true
+};
+
+const chartWrap = document.getElementById("chartWrap");
+const chartCv   = document.getElementById("chartCv");
+const cctx      = chartCv.getContext("2d");
+let chartSel = null;      /* cursor. Module-local, never state. */
+let chartPts = [];        /* {sys, px, py} for hit testing. Rebuilt each draw. */
+let chartPPL = 10;        /* px per LY, recomputed on every draw */
+
+function targetSystem(){
+  const t = state.commander.hyperspaceTarget;
+  if(!t) return null;
+  return World.system(t.galaxy, t.index);
+}
+function sameSys(a,b){ return !!a && !!b && a.galaxy===b.galaxy && a.index===b.index; }
+
+function drawChart(){
+  const s = state.system;                          /* CORE API §3.1 */
+  if(!s) return;
+  const r = chartWrap.getBoundingClientRect();
+  const w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height));
+  const dpr = Math.min(window.devicePixelRatio||1, 3);
+  if(chartCv.width !== w*dpr || chartCv.height !== h*dpr){
+    chartCv.width = w*dpr; chartCv.height = h*dpr;
+  }
+  cctx.setTransform(dpr,0,0,dpr,0,0);
+  cctx.clearRect(0,0,w,h);
+
+  /* LY space is isotropic: World Model §2 halves dy before scaling, so
+     equal px per LY on both axes draws a true circle for fuel range and
+     keeps the chart's 2:1 convention without a second scale factor. */
+  const ppl = chartPPL = (Math.min(w,h)/2) / (World.MAX_FUEL_LY * CHART.FIT);
+  const cx = w/2, cy = h/2;
+  const toPx = o => [cx + (o.x - s.x)*0.4*ppl, cy + ((o.y - s.y)/2)*0.4*ppl];
+
+  /* fuel range circle — §4, drawn under everything */
+  const fuelLY = state.commander.fuel/10;          /* constraint 2 */
+  cctx.save();
+  cctx.setLineDash([4,4]); cctx.lineWidth = 1;
+  cctx.strokeStyle = "#3f7a58";
+  cctx.beginPath(); cctx.arc(cx, cy, fuelLY*ppl, 0, Math.PI*2); cctx.stroke();
+  cctx.restore();
+
+  const tgt = targetSystem();
+  const sysList = World.galaxy(s.galaxy).systems;
+  chartPts = [];
+
+  cctx.font = "8px ui-monospace,Menlo,monospace";
+  cctx.textAlign = "center";
+
+  for(const o of sysList){
+    const [px,py] = toPx(o);
+    if(px < -12 || px > w+12 || py < -12 || py > h+12) continue;
+    chartPts.push({sys:o, px, py});
+    if(o === s) continue;                          /* current drawn last */
+
+    const d  = World.distLY(s,o);
+    const inR = d <= fuelLY;
+    const tf = (Math.min(Math.max(o.techLevel,CHART.TL_LO),CHART.TL_HI)-CHART.TL_LO)
+               /(CHART.TL_HI-CHART.TL_LO);
+    let a = CHART.ALPHA_MIN + tf*(CHART.ALPHA_MAX-CHART.ALPHA_MIN);
+    if(!inR) a *= CHART.OUT_DIM;
+    const pf = (Math.min(Math.max(o.population,CHART.POP_LO),CHART.POP_HI)-CHART.POP_LO)
+               /(CHART.POP_HI-CHART.POP_LO);
+    const rad = CHART.DOT_MIN + pf*(CHART.DOT_MAX-CHART.DOT_MIN);
+
+    cctx.globalAlpha = a;
+    cctx.fillStyle = "#8fe3b0";
+    cctx.beginPath(); cctx.arc(px,py,rad,0,Math.PI*2); cctx.fill();
+
+    if(inR && CHART.LABEL_IN_RANGE_ONLY){
+      cctx.globalAlpha = Math.min(1, a*0.85);
+      cctx.fillText(o.name, px, py - rad - 3);
+    }
+    cctx.globalAlpha = 1;
+  }
+
+  /* course line, current -> target */
+  if(tgt && !sameSys(tgt,s)){
+    const [tx,ty] = toPx(tgt);
+    cctx.save(); cctx.setLineDash([2,3]); cctx.lineWidth = 1;
+    cctx.strokeStyle = "#e8b23a"; cctx.globalAlpha = .7;
+    cctx.beginPath(); cctx.moveTo(cx,cy); cctx.lineTo(tx,ty); cctx.stroke();
+    cctx.restore();
+    cctx.strokeStyle = "#e8b23a"; cctx.lineWidth = 1;
+    cctx.beginPath(); cctx.arc(tx,ty,6,0,Math.PI*2); cctx.stroke();
+  }
+
+  /* current system — open ring (§4's circle glyph) */
+  cctx.strokeStyle = "#8fe3b0"; cctx.lineWidth = 1.5;
+  cctx.beginPath(); cctx.arc(cx,cy,5.5,0,Math.PI*2); cctx.stroke();
+
+  /* cursor — ring plus ticks, so it reads over a dot of any size */
+  if(chartSel){
+    const [sx,sy] = toPx(chartSel);
+    cctx.strokeStyle = "#e8b23a"; cctx.lineWidth = 1;
+    cctx.beginPath(); cctx.arc(sx,sy,9,0,Math.PI*2); cctx.stroke();
+    cctx.beginPath();
+    cctx.moveTo(sx-13,sy); cctx.lineTo(sx-9,sy);
+    cctx.moveTo(sx+9,sy);  cctx.lineTo(sx+13,sy);
+    cctx.moveTo(sx,sy-13); cctx.lineTo(sx,sy-9);
+    cctx.moveTo(sx,sy+9);  cctx.lineTo(sx,sy+13);
+    cctx.stroke();
+  }
+}
+
+function renderChartStrip(){
+  const s = state.system;
+  document.getElementById("cFuel").textContent =
+    (state.commander.fuel/10).toFixed(1)+" LY";
+
+  const nameEl = document.getElementById("cSelName");
+  const metaEl = document.getElementById("cSelMeta");
+  const btn    = document.getElementById("cCourse");
+
+  if(!chartSel){
+    nameEl.innerHTML = '<span style="color:#3f7a58">NO SELECTION</span>';
+    metaEl.textContent = "Tap the chart to select a system";
+    btn.disabled = true; btn.textContent = "SET COURSE";
+    return;
+  }
+  const o = chartSel, d = World.distLY(s,o);
+  nameEl.innerHTML = esc(o.name.toUpperCase()) +
+    (o===s ? '' : '<em>'+d.toFixed(2)+' LY</em>');
+  metaEl.innerHTML = esc(o.ecoName)+' &middot; '+esc(o.govName)+
+                     ' &middot; Tech <b>'+o.techLevel+'</b>';
+
+  const fuelLY = state.commander.fuel/10;
+  if(o === s){
+    btn.disabled = true;  btn.textContent = "CURRENT SYSTEM";
+  } else if(d > fuelLY){
+    /* §4: disabled AND labelled when out of fuel range. */
+    btn.disabled = true;  btn.textContent = "OUT OF RANGE";
+  } else if(sameSys(targetSystem(), o)){
+    btn.disabled = true;  btn.textContent = "COURSE SET";
+  } else {
+    btn.disabled = false; btn.textContent = "SET COURSE";
+  }
+}
+
+function renderChart(){ drawChart(); renderChartStrip(); }
+
+/* Tap selects the nearest system within CHART.TAP_PX, not the exact
+   pixel (§4). pointerdown rather than click: no reason to wait. */
+chartCv.addEventListener("pointerdown", function(e){
+  const r = chartCv.getBoundingClientRect();
+  const px = e.clientX - r.left, py = e.clientY - r.top;
+  let best = null, bd = CHART.TAP_PX;
+  for(const p of chartPts){
+    const d = Math.hypot(p.px-px, p.py-py);
+    if(d <= bd){ bd = d; best = p.sys; }
+  }
+  if(best){ chartSel = best; renderChart(); }
+}, {passive:true});
+
+document.getElementById("cCourse").addEventListener("click", function(){
+  if(!chartSel) return;
+  state.commander.hyperspaceTarget = { galaxy:chartSel.galaxy, index:chartSel.index };
+  renderChart();
+});
+
+/* ------------------------------------------------------------------
+   PANEL ROUTER — Control §11 item 25, answered by building it.
+
+   Shape 3 of §4.8's three: one corner button reopens the last panel,
+   and the nav strip switches once inside. It costs no extra tap on a
+   repeat visit and no vertical pixels from a console band that is
+   [TESTED] at 140px.
+   Rejected, shape 1 — a button opening a picker: one extra tap on
+   every visit for a screen whose only content is a list the nav strip
+   already is.
+   Rejected, shape 2 — the strip made persistent with no panel open:
+   it spends flight-view pixels permanently to save one tap.
+   The corner button is labelled PANEL rather than SYS because with
+   two panels it no longer opens System Data specifically.
+------------------------------------------------------------------- */
+const PANELS = {
+  chart: { render:renderChart,      nav:"navChart", body:"chartBody" },
+  sys:   { render:renderSystemData, nav:"navSys",   body:"panelBody" }
+};
+let panelCur = "sys";
+
+function showPanel(id){
+  panelCur = id;
+  for(const k in PANELS){
+    const on = (k === id);
+    document.getElementById(PANELS[k].body).style.display = on ? "" : "none";
+    document.getElementById(PANELS[k].nav).classList.toggle("on", on);
+  }
+  PANELS[id].render();
+}
+function openPanel(){ panelEl.classList.add("open"); showPanel(panelCur); }
 function closePanel(){ panelEl.classList.remove("open"); }
 
-/* Access route. Control §4.4's radial menu is specified for guarded,
-   infrequent actions and a panel is neither; nothing in Control names
-   a control that opens one. This button is a stand-in so the panel can
-   be flown, not a control-spec decision. Open loop. */
 document.getElementById("sysBtn").addEventListener("click", function(){
   if(panelEl.classList.contains("open")) closePanel(); else openPanel();
 });
 document.getElementById("navFly").addEventListener("click", closePanel);
-document.getElementById("navSys").addEventListener("click", renderSystemData);
+document.getElementById("navSys").addEventListener("click", function(){ showPanel("sys"); });
+document.getElementById("navChart").addEventListener("click", function(){ showPanel("chart"); });
+
+/* The chart is the only panel with a laid-out canvas, so it is the only
+   one that has to be told the box changed. */
+window.addEventListener("resize", function(){
+  if(panelEl.classList.contains("open") && panelCur === "chart") drawChart();
+});
 
 /* ---------- wake lock ---------- */
 let wl=null;
