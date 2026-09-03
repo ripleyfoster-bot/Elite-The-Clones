@@ -7,7 +7,16 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>CONSOLE BAND — 003</title>
+<title>ELITE: THE CLONES — 010</title>
+<!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
+     misnamed the home screen icon. It is NOT a build marker: standalone mode
+     shows no title bar, so it cannot be read from the icon. The marker that
+     can be read is the report header in TUNE. -->
+<meta name="apple-mobile-web-app-title" content="Elite">
+<!-- Loop 21. iOS installs without a manifest; Windows and desktop Chrome do
+     not offer install at all without one. -->
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <style>
   :root{
     --ink:#8fe3b0;        /* primary phosphor */
@@ -1406,7 +1415,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 });
 function writeReport(){
   document.getElementById("report").value =
-    "CONSOLE BAND 003 — settings\n"+
+    "ELITE: THE CLONES 010 — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
