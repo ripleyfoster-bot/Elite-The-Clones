@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 012</title>
+<title>ELITE: THE CLONES — 012b</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -264,21 +264,61 @@
     max-width:none;overflow:hidden;touch-action:none;
     display:flex;flex-direction:column;padding:8px 10px 10px;
   }
+  /* FAULT 1, session 012, found on device, fixed twice.
+
+     First attempt moved both header items left, away from the fixed
+     §4.8 PANEL/TUNE buttons. That treated a collision as a placement
+     problem. It is not: the FUEL figure did not need placing anywhere,
+     because it should not have been on this panel at all.
+
+     Panel §4's header carries FUEL because the original had no
+     persistent fuel gauge. This build does. Panel §1's in-flight mode
+     keeps the console band live behind every panel, so instrument 5 is
+     on screen — live, read from state, constraint 2 — at the moment the
+     chart is open. A second copy of the same number is the display-side
+     duplicate that constraint 2 exists to forbid, and it was placed
+     where it could be covered by a button.
+
+     The dashed circle carries what the header was for. It is drawn from
+     `state.commander.fuel` at render time and says what a tank reaches,
+     which is the question. The number says less and takes the space.
+
+     DOCKED MODE IS THE EXCEPTION AND IT IS NOT BUILT. Panel §1's docked
+     row hides the console band, so the header FUEL is the only fuel
+     reading there and must come back when docking exists. Logged.
+
+     What this leaves: one item, left, nowhere near a corner button. */
   .chead{
-    flex:0 0 auto;display:flex;justify-content:space-between;
+    flex:0 0 auto;display:flex;justify-content:flex-start;gap:20px;
     align-items:baseline;font-size:10px;letter-spacing:.16em;
     color:var(--ink-dim);padding-bottom:6px;
   }
   .chead i{font-style:normal;color:var(--warn);letter-spacing:.06em;
            font-variant-numeric:tabular-nums;}
+  /* FAULT 3, session 012, found on device. The canvas filled the panel
+     width, and fitting the scale to the short side meant a 2,280px iPad
+     showed about 90 LY across against 18 LY tall — a quadrant, not a
+     short range chart. "More area is more chart" holds only up to a
+     bounded aspect; past it the extra area is all sideways and says
+     nothing more about where a full tank reaches. The canvas is capped
+     at CHART.ASPECT and centred; the frame moves onto the canvas so it
+     marks the chart rather than the empty space beside it. */
   .cwrap{
     flex:1 1 auto;min-height:90px;position:relative;
-    border:1px solid var(--ink-faint);
+    display:flex;align-items:stretch;justify-content:center;
   }
-  .cwrap canvas{display:block;width:100%;height:100%;touch-action:none;}
+  .cwrap canvas{display:block;touch-action:none;
+                border:1px solid var(--ink-faint);}
+  /* FAULT 4, session 012, found on device. Exempting the whole chart
+     panel from §6.3's 560px cap was too broad. On iPad it reproduced
+     exactly the fault §6.3 exists to prevent: YAKACAEN at the far left
+     and 4.77 LY at the far right of a 2,280px panel. The canvas is a
+     spatial field and wants width. The selection strip and the MUNGO
+     line are label-and-value text and want the cap. One panel, two
+     measures — and §6.3's own argument is what draws the line. */
   .csel{
     flex:0 0 auto;padding-top:9px;display:flex;align-items:flex-start;
-    gap:10px;
+    gap:10px;width:100%;max-width:560px;margin-left:auto;margin-right:auto;
   }
   .cinfo{flex:1 1 auto;min-width:0;}
   .cname{font-size:13px;letter-spacing:.12em;color:var(--ink);
@@ -297,8 +337,8 @@
     padding:6px 8px;line-height:1.3;
   }
   .ccourse:disabled{border-color:var(--ink-faint);color:var(--ink-faint);}
-  .cmungo{flex:0 0 auto;margin-top:9px;font-size:10px;line-height:1.5;
-          color:var(--ink-faint);
+  .cmungo{flex:0 0 auto;margin:9px auto 0;width:100%;max-width:560px;
+          font-size:10px;line-height:1.5;color:var(--ink-faint);
           border-top:1px solid var(--ink-faint);padding-top:7px;}
   #sysBtn{
     position:fixed;top:calc(env(safe-area-inset-top) + 6px);right:70px;
@@ -318,7 +358,7 @@
       <!-- §4. Fixed column: header, chart, selection strip, MUNGO line.
            The nav strip below is shared with every panel (§2). -->
       <div class="pbody chartbody" id="chartBody" style="display:none">
-        <div class="chead"><span>SHORT RANGE</span><i>FUEL <span id="cFuel">7.0 LY</span></i></div>
+        <div class="chead"><span>SHORT RANGE</span></div>
         <div class="cwrap" id="chartWrap"><canvas id="chartCv"></canvas></div>
         <div class="csel">
           <div class="cinfo">
@@ -1494,7 +1534,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 });
 function writeReport(){
   document.getElementById("report").value =
-    "ELITE: THE CLONES 012 — settings\n"+
+    "ELITE: THE CLONES 012b — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -1737,6 +1777,10 @@ const CHART = {
      height at 9.45 LY, so a full tank reaches most of the way to the
      edge and a second jump is visible beyond it. [ASSUMED] */
   FIT:        1.35,
+  /* Widest the chart box is allowed to get before extra width stops
+     being chart. 2.2:1 is the World Model §2 display convention (2:1)
+     with a little slack. FAULT 3. [ASSUMED] */
+  ASPECT:     2.2,
   /* Dot size by population. World Model §6: population is tenths of a
      billion; galaxy 0 runs 12 to 64. Domain 10..70 clamped so no
      galaxy can produce a dot off the end of the curve. [ASSUMED] */
@@ -1777,7 +1821,14 @@ function drawChart(){
   const s = state.system;                          /* CORE API §3.1 */
   if(!s) return;
   const r = chartWrap.getBoundingClientRect();
-  const w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height));
+  /* FAULT 3: the box is capped at CHART.ASPECT and centred by the flex
+     parent. The scale below still fits the short side, so the fuel
+     circle keeps its relative size — it is the frame that is bounded,
+     not the scale. */
+  const h = Math.max(1, Math.round(r.height));
+  const w = Math.max(1, Math.round(Math.min(r.width, h * CHART.ASPECT)));
+  chartCv.style.width = w + "px";
+  chartCv.style.height = h + "px";
   const dpr = Math.min(window.devicePixelRatio||1, 3);
   if(chartCv.width !== w*dpr || chartCv.height !== h*dpr){
     chartCv.width = w*dpr; chartCv.height = h*dpr;
@@ -1865,9 +1916,6 @@ function drawChart(){
 
 function renderChartStrip(){
   const s = state.system;
-  document.getElementById("cFuel").textContent =
-    (state.commander.fuel/10).toFixed(1)+" LY";
-
   const nameEl = document.getElementById("cSelName");
   const metaEl = document.getElementById("cSelMeta");
   const btn    = document.getElementById("cCourse");
