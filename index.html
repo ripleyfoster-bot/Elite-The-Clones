@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 012b</title>
+<title>ELITE: THE CLONES — 012c</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -340,6 +340,26 @@
   .cmungo{flex:0 0 auto;margin:9px auto 0;width:100%;max-width:560px;
           font-size:10px;line-height:1.5;color:var(--ink-faint);
           border-top:1px solid var(--ink-faint);padding-top:7px;}
+  /* FAULT 1, third form. Moving the header left cleared the FUEL text;
+     deleting FUEL cleared the header. Neither cleared the BUTTON BOXES,
+     whose lower edges still cut into the chart frame below them.
+
+     Chasing it a fourth time by adding top padding would spend real
+     chart height to avoid two outlines, on every panel, forever.
+
+     The buttons are not needed while a panel is open. `PANEL` toggles
+     the panel shut, and Panel §2.1's `FLY` in the nav strip already
+     does that — it is the specified way out and it is [TESTED]. `TUNE`
+     is a development panel and can wait for FLY.
+
+     So they are hidden while a panel is open. The corner comes back to
+     the panel entirely, at no cost in layout.
+
+     THE FINDING UNDERNEATH, now shown three ways: Control §4.8 records
+     these buttons as consuming no pixels because they overlay inert
+     view area. Inside a panel that area is not inert, and §4.8 has no
+     clause for it. That is a Control revision, not a CSS rule. */
+  body.panelon #sysBtn, body.panelon #tuneBtn{ display:none; }
   #sysBtn{
     position:fixed;top:calc(env(safe-area-inset-top) + 6px);right:70px;
     background:rgba(0,0,0,.55);color:var(--ink-dim);
@@ -1534,7 +1554,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 });
 function writeReport(){
   document.getElementById("report").value =
-    "ELITE: THE CLONES 012b — settings\n"+
+    "ELITE: THE CLONES 012c — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -1996,8 +2016,15 @@ function showPanel(id){
   }
   PANELS[id].render();
 }
-function openPanel(){ panelEl.classList.add("open"); showPanel(panelCur); }
-function closePanel(){ panelEl.classList.remove("open"); }
+function openPanel(){
+  panelEl.classList.add("open");
+  document.body.classList.add("panelon");   /* §4.8 buttons stand down */
+  showPanel(panelCur);
+}
+function closePanel(){
+  panelEl.classList.remove("open");
+  document.body.classList.remove("panelon");
+}
 
 document.getElementById("sysBtn").addEventListener("click", function(){
   if(panelEl.classList.contains("open")) closePanel(); else openPanel();
