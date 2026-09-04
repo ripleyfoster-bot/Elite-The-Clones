@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 014f</title>
+<title>ELITE: THE CLONES — 016a</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -326,9 +326,44 @@
   .cname em{float:right;font-style:normal;color:var(--warn);
             font-variant-numeric:tabular-nums;letter-spacing:.04em;
             padding-left:8px;}
+  /* LOOP 49, session 016. Panel §4.6 — the selection strip is a fixed
+     box, so tech level cannot be pushed or clipped off it.
+
+     WHAT §4.6 GETS WRONG, RECORDED HERE BECAUSE ANYONE READING BOTH
+     WILL HIT IT. §4.6 says row 2 WRAPS and that the wrap pushes tech
+     out of the box. This strip has never wrapped. .cmeta was
+     white-space:nowrap with an ellipsis and it carried economy,
+     government AND tech as ONE run; the ellipsis ate the end of that
+     run, and tech was the end of it. Same symptom, different
+     mechanism. §4.6 also draws SET COURSE as a fourth stacked row. It
+     is beside the text and always has been. The spec is owed a
+     correction; this file is not the place to make it.
+
+     THE RULE, applied to the strip that exists. Two rows, each with a
+     reserved height that does not depend on the string:
+       .cmeta  {economy} · {government} — two lines ALWAYS
+       .ctech  Tech N — its own line, ALWAYS
+     Nothing moves as you tap between systems, and tech is no longer at
+     the end of anything that can be cut. Constraint 2: a field that
+     silently disappears reports nothing, and nothing reads as "there
+     is no tech level here".
+
+     WHY A FIXED height AND NOT min-height. min-height lets a third
+     line appear, which pushes .ctech down and reproduces the fault one
+     row lower — PROJECT PRIMER §0.4's shape exactly. Two reserved
+     lines is roughly double the worst case: "Average Agricultural ·
+     Multi-Government" is 38 characters, about 229px at this size,
+     against about 268px of .cinfo at 402px. It fits ONE line down to
+     about 390px wide and two down to about 135px. So on this phone the
+     second line is normally EMPTY, and that is the point — it is a
+     guarantee, not a layout need. [ASSUMED]: the arithmetic is read
+     off this stylesheet, not measured on device. */
   .cmeta{font-size:10px;line-height:1.5;color:var(--ink-dim);margin-top:3px;
-         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .cmeta b{font-weight:400;color:var(--ink);}
+         height:30px;white-space:normal;overflow:hidden;
+         display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;}
+  .ctech{font-size:10px;line-height:1.5;color:var(--ink-dim);margin-top:3px;
+         height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cmeta b,.ctech b{font-weight:400;color:var(--ink);}
   /* 44px minimum, Panel §2, without exception. */
   .ccourse{
     flex:0 0 auto;align-self:center;min-height:44px;min-width:104px;
@@ -474,6 +509,7 @@
           <div class="cinfo">
             <div class="cname" id="cSelName"></div>
             <div class="cmeta" id="cSelMeta"></div>
+            <div class="ctech" id="cSelTech"></div>
           </div>
           <button class="ccourse" id="cCourse" disabled>SET COURSE</button>
         </div>
@@ -512,6 +548,7 @@
           <div class="cinfo">
             <div class="cname" id="gSelName"></div>
             <div class="cmeta" id="gSelMeta"></div>
+            <div class="ctech" id="gSelTech"></div>
           </div>
           <button class="ccourse" id="gCourse" disabled>SET COURSE</button>
         </div>
@@ -527,7 +564,21 @@
            the rename was written into v1.2 of this file as a condition
            and the condition has been met. Four entries at 402px: 3 x
            60px plus 74px is 254px against 402. Panel §10 item 8 worries
-           about eight and is still untested past four. -->
+           about eight and is still untested past four.
+
+           TRIGGER — Panel §10 item 22 / Control §11 item 34. The
+           labels STAY AS FULL WORDS. Deferred by decision, Ripley,
+           session 015. ASK AGAIN WHEN THIS STRIP CARRIES SEVEN PANEL
+           ENTRIES PLUS FLY. Four full words fit at 402px. Eight
+           buttons of full words have never been drawn and are not
+           assumed to fit — Panel §10 item 8's estimate was made
+           against three-letter codes, which are about a third the
+           width, so whatever eight costs it costs more than that
+           table says.
+
+           This note is here and not only in a table because session
+           012 wrote the CHART -> SHORT rename here as a condition and
+           session 014 met it. A condition in a table is not one. -->
       <div class="pnav">
         <button id="navChart">SHORT</button>
         <button id="navGal">GALACTIC</button>
@@ -1687,7 +1738,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 });
 function writeReport(){
   document.getElementById("report").value =
-    "ELITE: THE CLONES 014f — settings\n"+
+    "ELITE: THE CLONES 016a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -2076,19 +2127,25 @@ function renderSelStrip(p){
   const s = state.system;
   const nameEl = document.getElementById(p+"SelName");
   const metaEl = document.getElementById(p+"SelMeta");
+  const techEl = document.getElementById(p+"SelTech");
   const btn    = document.getElementById(p+"Course");
 
   if(!chartSel){
     nameEl.innerHTML = '<span style="color:#3f7a58">NO SELECTION</span>';
     metaEl.textContent = "Tap the chart to select a system";
+    /* LOOP 49: emptied, not hidden. The row keeps its reserved height,
+       so the strip is the same box with and without a selection. */
+    techEl.textContent = "";
     btn.disabled = true; btn.textContent = "SET COURSE";
     return;
   }
   const o = chartSel, d = World.distLY(s,o);
   nameEl.innerHTML = esc(o.name.toUpperCase()) +
     (o===s ? '' : '<em>'+d.toFixed(2)+' LY</em>');
-  metaEl.innerHTML = esc(o.ecoName)+' &middot; '+esc(o.govName)+
-                     ' &middot; Tech <b>'+o.techLevel+'</b>';
+  /* LOOP 49: tech leaves this run. It is the field the destination is
+     judged on, so it does not share a line with anything that grows. */
+  metaEl.innerHTML = esc(o.ecoName)+' &middot; '+esc(o.govName);
+  techEl.innerHTML = 'Tech <b>'+o.techLevel+'</b>';
 
   const fuelLY = state.commander.fuel/10;
   if(o === s){
