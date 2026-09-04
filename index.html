@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 012c</title>
+<title>ELITE: THE CLONES — 014f</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -340,6 +340,96 @@
   .cmungo{flex:0 0 auto;margin:9px auto 0;width:100%;max-width:560px;
           font-size:10px;line-height:1.5;color:var(--ink-faint);
           border-top:1px solid var(--ink-faint);padding-top:7px;}
+  /* ---- Galactic Chart — PANEL LAYOUT SPEC §5, session 014 ----
+
+     Reuses .pbody.chartbody, .cwrap, .csel and .cmungo unchanged. §5
+     says "same dot conventions as §4", and the same is meant here: the
+     canvas is exempt from §6.3's cap because it is a spatial field, and
+     the selection strip and MUNGO line take it because they are
+     label-and-value text. §4.3's distinction, applied a second time and
+     not re-argued.
+
+     The FIND row collapses. It is a text input, and a text input on iOS
+     raises the keyboard over the panel — so it is opened deliberately
+     and shut deliberately, rather than sitting in the column taking
+     44px of chart height on every visit. */
+  /* FAULT D, second attempt. Making the results one row was not enough.
+
+     Measured off the screenshots: the panel region on this phone is
+     about 254px once the nav strip is out, and the column with FIND open
+     wants roughly 390. Every fix that shortens the row is arithmetic
+     against a gap of 136px, and there is no version of a search row that
+     small. THE ROW ITSELF WAS THE PROBLEM, not its height.
+
+     So it leaves the column. It floats over the top of the chart, and
+     the chart keeps every pixel it had. Opening FIND now changes nothing
+     about the layout underneath it, which is why this one cannot clip.
+     [ASSUMED] on the 254px — read off an image, per Panel §1.2's warning,
+     and not measured on device. The fix does not depend on the figure. */
+  .pbody.chartbody{position:relative;}
+  .gtop{flex:0 0 auto;position:relative;}
+  .gbar{
+    display:flex;align-items:center;gap:8px;padding-bottom:6px;
+  }
+  .gbar .gspacer{flex:1 1 auto;}
+  /* 44px minimum, Panel §2, without exception. */
+  .gbar button{
+    min-height:44px;min-width:62px;background:transparent;
+    border:1px solid var(--ink-dim);border-radius:2px;color:var(--ink);
+    font:inherit;font-size:10px;letter-spacing:.10em;padding:4px 8px;
+  }
+  .gbar button.on{background:rgba(143,227,176,.10);}
+  .gfind{
+    display:none;flex-direction:column;gap:6px;
+    position:absolute;top:100%;left:0;right:0;z-index:6;
+    background:var(--bg);border:1px solid var(--ink-faint);
+    border-radius:2px;padding:7px;
+  }
+  .gfind.open{display:flex;}
+  /* FAULT E, session 014, found on device. THIS IS THE ONE THAT MATTERS.
+
+     iOS Safari zooms the whole page when a focusable form field with a
+     computed font-size below 16px takes focus. It did, on the first tap
+     into this input, and there was no way back: the viewport meta in
+     <head> carries user-scalable=no, which disables the pinch that would
+     otherwise undo it. The console was left magnified and clipped and
+     the only exit was killing the app.
+
+     16px is therefore not a style choice on this element. It is the
+     threshold, and anything below it re-arms the trap. The letter
+     spacing is pulled in so it still reads as console type.
+
+     THE GENERAL FORM, and it is wider than this panel: user-scalable=no
+     means every accidental page zoom is permanent. Before this input
+     there was no focusable text field anywhere in the build, so nothing
+     could arm it. This is the first one. Logged — the rule belongs in
+     CONTROL, not in a comment on one input. */
+  .gfind input{
+    min-height:44px;background:#000;border:1px solid var(--ink-dim);
+    border-radius:2px;color:var(--ink);font-family:inherit;
+    font-size:16px;                 /* iOS threshold. Do not lower. */
+    letter-spacing:.04em;padding:6px 8px;width:100%;
+  }
+  /* FAULT D, session 014, found on device. Six results wrapped onto two
+     rows took about 100px out of a column that does not scroll, the
+     canvas hit its 90px floor and stopped giving way, and the bottom of
+     the chart was clipped by the nav strip. Bounding the height was not
+     enough — a bounded box that still wraps still needs two rows.
+
+     One row that scrolls sideways. It costs a fixed 52px whatever the
+     result count, which is the property the column needs. */
+  .gres{
+    display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;
+    -webkit-overflow-scrolling:touch;padding-bottom:2px;
+  }
+  .gres button{flex:0 0 auto;white-space:nowrap;}
+  .gres .none{flex:0 0 auto;white-space:nowrap;}
+  .gres button{
+    min-height:44px;background:transparent;border:1px solid var(--ink-faint);
+    border-radius:2px;color:var(--ink);font:inherit;font-size:11px;
+    letter-spacing:.06em;padding:4px 9px;
+  }
+  .gres .none{color:var(--ink-faint);font-size:10px;padding:6px 2px;}
   /* FAULT 1, third form. Moving the header left cleared the FUEL text;
      deleting FUEL cleared the header. Neither cleared the BUTTON BOXES,
      whose lower edges still cut into the chart frame below them.
@@ -392,12 +482,55 @@
           available. The figures above are read from the world model and
           are not opinions.</div>
       </div>
-      <!-- §2: unavailable panels are not shown rather than greyed. Two
-           panels exist, so the strip has two entries plus FLY. Order
-           follows Panel §1.3. CHART is renamed when the Galactic Chart
-           lands and the two need telling apart. -->
+      <!-- §5. All 256 systems of the current galaxy. Pinch to zoom,
+           drag to pan, wheel to zoom on desktop, FIND by name. Current
+           and selected are persistently marked, with an arrow at the
+           frame edge pointing to either when it is off screen. Same dot
+           conventions and the same selection strip as §4. -->
+      <div class="pbody chartbody" id="galBody" style="display:none">
+        <div class="chead"><span>GALACTIC CHART</span><i id="gZoom">&times;1.0</i></div>
+        <!-- FAULT D: the search row is positioned against this wrapper
+             rather than stacked in the column, so opening it cannot
+             shorten the chart or clip the strip below. -->
+        <div class="gtop">
+          <div class="gbar">
+            <button id="gFindBtn">FIND</button>
+            <!-- FAULT A. Appears only once a result has moved the view. -->
+            <button id="gBackBtn" style="display:none">BACK</button>
+            <button id="gFitBtn">FIT</button>
+            <div class="gspacer"></div>
+          </div>
+          <div class="gfind" id="gFind">
+            <input id="gFindIn" type="text" inputmode="text" autocomplete="off"
+                   autocorrect="off" autocapitalize="characters" spellcheck="false"
+                   placeholder="SYSTEM NAME">
+            <div class="gres" id="gRes"></div>
+          </div>
+        </div>
+        <div class="cwrap" id="galWrap"><canvas id="galCv"></canvas></div>
+        <div class="csel">
+          <div class="cinfo">
+            <div class="cname" id="gSelName"></div>
+            <div class="cmeta" id="gSelMeta"></div>
+          </div>
+          <button class="ccourse" id="gCourse" disabled>SET COURSE</button>
+        </div>
+        <!-- §2.2 absence clause, same wording as §4 and §6. -->
+        <div class="cmungo">ai.mungo not installed &mdash; no assessment
+          available. The figures above are read from the world model and
+          are not opinions.</div>
+      </div>
+      <!-- §2: unavailable panels are not shown rather than greyed. Three
+           panels exist, so the strip has three entries plus FLY. Order
+           follows Panel §1.3. CHART became SHORT in 014 because the
+           Galactic Chart landed and the two now need telling apart —
+           the rename was written into v1.2 of this file as a condition
+           and the condition has been met. Four entries at 402px: 3 x
+           60px plus 74px is 254px against 402. Panel §10 item 8 worries
+           about eight and is still untested past four. -->
       <div class="pnav">
-        <button id="navChart">CHART</button>
+        <button id="navChart">SHORT</button>
+        <button id="navGal">GALACTIC</button>
         <button id="navSys" class="on">SYS</button>
         <div class="spacer"></div>
         <button class="fly" id="navFly">FLY</button>
@@ -1554,7 +1687,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 });
 function writeReport(){
   document.getElementById("report").value =
-    "ELITE: THE CLONES 012c — settings\n"+
+    "ELITE: THE CLONES 014f — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -1934,11 +2067,16 @@ function drawChart(){
   }
 }
 
-function renderChartStrip(){
+/* Shared by both charts (§4 and §5). `p` is the panel's id prefix.
+   Session 014: was renderChartStrip, one panel, hard-coded ids. The
+   two charts show the same cursor and the same four facts about it,
+   and a second copy of this function would be a second place for
+   Panel §4.1's SET COURSE states to disagree with themselves. */
+function renderSelStrip(p){
   const s = state.system;
-  const nameEl = document.getElementById("cSelName");
-  const metaEl = document.getElementById("cSelMeta");
-  const btn    = document.getElementById("cCourse");
+  const nameEl = document.getElementById(p+"SelName");
+  const metaEl = document.getElementById(p+"SelMeta");
+  const btn    = document.getElementById(p+"Course");
 
   if(!chartSel){
     nameEl.innerHTML = '<span style="color:#3f7a58">NO SELECTION</span>';
@@ -1965,7 +2103,7 @@ function renderChartStrip(){
   }
 }
 
-function renderChart(){ drawChart(); renderChartStrip(); }
+function renderChart(){ drawChart(); renderSelStrip("c"); }
 
 /* Tap selects the nearest system within CHART.TAP_PX, not the exact
    pixel (§4). pointerdown rather than click: no reason to wait. */
@@ -1980,11 +2118,524 @@ chartCv.addEventListener("pointerdown", function(e){
   if(best){ chartSel = best; renderChart(); }
 }, {passive:true});
 
-document.getElementById("cCourse").addEventListener("click", function(){
+/* The one writer of `state.commander.hyperspaceTarget` (§4.1), now
+   reached from either chart. Re-renders whichever panel is open. */
+function setCourse(){
   if(!chartSel) return;
   state.commander.hyperspaceTarget = { galaxy:chartSel.galaxy, index:chartSel.index };
-  renderChart();
+  PANELS[panelCur].render();
+}
+document.getElementById("cCourse").addEventListener("click", setCourse);
+document.getElementById("gCourse").addEventListener("click", setCourse);
+
+/* ==================================================================
+   GALACTIC CHART — PANEL LAYOUT SPEC §5, in-flight mode (§1).
+   Session 014. The third panel.
+
+   WHAT §5 SPECIFIES. All 256 systems of the current galaxy, same dot
+   conventions as §4, pinch to zoom and drag to pan, scroll to zoom on
+   desktop, a FIND name search, current and selected persistently marked
+   with an edge arrow when off screen, and the fuel circle drawn to
+   scale — which at full zoom-out is small, and §5 calls that honest.
+
+   WHAT §5 DOES NOT SPECIFY, and is invented below. The zoom range, what
+   FIND matches on, when labels appear, and the tap/drag threshold.
+   Every one is in GAL, in one block, [ASSUMED], each a one-line edit.
+   None was tuned. The chart's own constants in CHART are reused
+   unchanged where they still apply — dot curves, out-of-range dimming
+   and the aspect cap — because §5 says "same conventions as §4" and
+   two sets of numbers for one convention is two places to be wrong.
+
+   ONE CURSOR, TWO CHARTS. `chartSel` is shared with §4 rather than
+   duplicated. Both charts are viewers of the same selection, so
+   selecting on one and switching to the other keeps the system you
+   were looking at. §4.1's rule is unchanged and is what makes this
+   safe: the cursor is module-local and writes nothing to state, so
+   sharing it shares a cursor, not state. SET COURSE is still the only
+   thing that writes `state.commander.hyperspaceTarget`, and it is now
+   reached from either chart through one function.
+
+   THE FUEL CIRCLE IS DRAWN ROUND THE CURRENT SYSTEM, NOT THE CENTRE.
+   §4's chart is always centred on where you are, so the two were the
+   same thing. Here they are not, and the circle follows the ship.
+
+   NO GALACTIC HYPERDRIVE. §5 gives it a guarded action on this panel.
+   There is no equipment list, nothing to fit and nothing to fit it to.
+   Logged, not built.
+================================================================== */
+const GAL = {
+  /* Zoom. 1.0 is the whole galaxy fitted. On a 402px phone that puts
+     the base scale near 3.6 px/LY, so §4's own scale (15.9 px/LY at
+     that size) sits at zoom 4.4, where this chart measures 16.0 px/LY
+     against §4's 15.87 — the point where the two charts agree. 8.0 is roughly twice as close again, which is what a dense
+     cluster needs and the short range chart cannot give. [ASSUMED] */
+  ZOOM_MIN:   1.0,
+  ZOOM_MAX:   8.0,
+  /* One wheel notch on desktop. Pinch is continuous and ignores this. */
+  WHEEL_STEP: 1.15,
+  /* Above this zoom every system on screen is labelled; below it, only
+     the ones a full tank reaches, which is §4's rule. 4.0 is roughly
+     §4's own scale, and it puts 24 systems in the window at 402px.
+     At zoom 3 it is 49, which is too many, and at zoom 1 it is all 256,
+     which is a smear. Those three counts were computed against the real
+     galaxy 0, not guessed. What stays [ASSUMED] is that 24 labels is
+     readable and 49 is not — that is the thing to judge on device. */
+  LABEL_ZOOM: 4.0,
+  /* Same 22px as CHART.TAP_PX and for the same reason (§4.2): half of
+     Panel §2's 44px, because 44 is a floor on a button's total size and
+     not a radius. Kept separate so the denser chart can differ later
+     without moving §4's [TESTED] number. [ASSUMED] */
+  TAP_PX:     22,
+  /* FAULT C, session 014, found on device. Below this zoom no labels are
+     drawn at all, not even for in-range systems. §4's rule is "names on
+     in-range systems only", and §4's chart is always at about 16 px/LY
+     where five names inside a 7 LY circle have room. At zoom 1 that same
+     circle is 25px across and the same five names land on top of each
+     other and on the current-system ring. The rule was right and the
+     scale it assumed was not. [ASSUMED] — 2.0 is where they separate by
+     inspection, not by measurement. */
+  LABEL_MIN:  2.0,
+  /* Movement above this makes a gesture a drag rather than a tap. */
+  DRAG_PX:    6,
+  /* Inset when the whole galaxy is fitted, so edge systems are not on
+     the frame line. */
+  MARGIN:     6,
+  ARROW:      8,
+  /* Six, not eight. FAULT D: the results row is one row now and six
+     names is what fits before the sideways scroll stops being obvious. */
+  FIND_MAX:   6,
+  /* FIND centres the hit and zooms at least this far in, because a
+     system found and then not findable on screen is not found. Equal to
+     LABEL_ZOOM deliberately: at that zoom the system you searched for
+     is drawn with its name against it. [ASSUMED] */
+  FIND_ZOOM:  4.0
+};
+
+/* World Model §2: x 0-255, y 0-255, y halved for display, 0.4 LY per
+   coordinate unit. The galaxy is therefore 102.0 by 51.0 LY — exactly
+   the 2:1 the display convention describes, which is why CHART.ASPECT
+   at 2.2 is the right cap here too. */
+const GAL_W_LY = 255 * 0.4;
+const GAL_H_LY = (255 / 2) * 0.4;
+
+const galWrap = document.getElementById("galWrap");
+const galCv   = document.getElementById("galCv");
+const gctx    = galCv.getContext("2d");
+
+let galZoom = 1, galCX = 127.5, galCY = 127.5;
+/* FAULT B: the current FIND hits, so every candidate is marked on the
+   chart at once rather than one at a time as you tap through them. */
+let galMatches = [];
+let galW = 1, galH = 1, galBasePPL = 1, galPPL = 1;
+let galPts = [];
+
+function galClampCentre(){
+  galCX = Math.min(255, Math.max(0, galCX));
+  galCY = Math.min(255, Math.max(0, galCY));
+}
+
+/* Zoom about a point: the galaxy coordinate under the finger stays
+   under the finger. Without this, pinching drifts and the thing you
+   were looking at leaves the screen. */
+function galZoomAt(factor, px, py){
+  const z = Math.min(GAL.ZOOM_MAX, Math.max(GAL.ZOOM_MIN, galZoom * factor));
+  if(z === galZoom) return;
+  const bx = galCX + (px - galW/2)   / (0.4*galPPL);
+  const by = galCY + (py - galH/2)*2 / (0.4*galPPL);
+  galZoom = z;
+  const np = galBasePPL * galZoom;
+  galCX += bx - (galCX + (px - galW/2)   / (0.4*np));
+  galCY += by - (galCY + (py - galH/2)*2 / (0.4*np));
+  galPPL = np;
+  galClampCentre();
+}
+
+/* An arrow at the frame edge, pointing at something off screen (§5).
+   Returns true if it drew one, so the caller knows not to draw the
+   marker itself. */
+function galEdgeArrow(px, py, w, h, colour){
+  if(px >= 0 && px <= w && py >= 0 && py <= h) return false;
+  const m = 10, cx = w/2, cy = h/2;
+  let dx = px - cx, dy = py - cy;
+  const len = Math.hypot(dx, dy) || 1;
+  dx /= len; dy /= len;
+  const tx = dx > 0 ? (w-m-cx)/dx : (dx < 0 ? (m-cx)/dx : Infinity);
+  const ty = dy > 0 ? (h-m-cy)/dy : (dy < 0 ? (m-cy)/dy : Infinity);
+  const t = Math.min(tx, ty);
+  const ax = cx + dx*t, ay = cy + dy*t, k = GAL.ARROW;
+  gctx.save();
+  gctx.translate(ax, ay); gctx.rotate(Math.atan2(dy, dx));
+  gctx.fillStyle = colour;
+  gctx.beginPath();
+  gctx.moveTo(k, 0); gctx.lineTo(-k*0.7, k*0.6); gctx.lineTo(-k*0.7, -k*0.6);
+  gctx.closePath(); gctx.fill();
+  gctx.restore();
+  return true;
+}
+
+function drawGal(){
+  const s = state.system;                          /* CORE API §3.1 */
+  if(!s) return;
+  const r = galWrap.getBoundingClientRect();
+  const h = Math.max(1, Math.round(r.height));
+  const w = Math.max(1, Math.round(Math.min(r.width, h * CHART.ASPECT)));
+  galCv.style.width = w + "px";
+  galCv.style.height = h + "px";
+  const dpr = Math.min(window.devicePixelRatio||1, 3);
+  if(galCv.width !== w*dpr || galCv.height !== h*dpr){
+    galCv.width = w*dpr; galCv.height = h*dpr;
+  }
+  gctx.setTransform(dpr,0,0,dpr,0,0);
+  gctx.clearRect(0,0,w,h);
+  galW = w; galH = h;
+
+  galBasePPL = Math.min((w - 2*GAL.MARGIN)/GAL_W_LY, (h - 2*GAL.MARGIN)/GAL_H_LY);
+  const ppl = galPPL = galBasePPL * galZoom;
+  galClampCentre();
+  const toPx = o => [ w/2 + (o.x - galCX)*0.4*ppl,
+                      h/2 + ((o.y - galCY)/2)*0.4*ppl ];
+
+  /* fuel range circle, round the ship, to scale — §5 */
+  const fuelLY = state.commander.fuel/10;          /* constraint 2 */
+  const cur = toPx(s);
+  gctx.save();
+  gctx.setLineDash([4,4]); gctx.lineWidth = 1;
+  gctx.strokeStyle = "#3f7a58";
+  gctx.beginPath(); gctx.arc(cur[0], cur[1], fuelLY*ppl, 0, Math.PI*2); gctx.stroke();
+  gctx.restore();
+
+  const tgt = targetSystem();
+  const sysList = World.galaxy(s.galaxy).systems;
+  const labelAll = galZoom >= GAL.LABEL_ZOOM;
+  galPts = [];
+  /* FAULT F, session 014, found on device at x4.2. LABEL_MIN stopped the
+     labels colliding with the CURRENT SYSTEM RING at low zoom; it does
+     nothing about them colliding with EACH OTHER. Zurunibe over Tepeca,
+     Boxase over Tulegiag, Caroan over Paerol.
+
+     A zoom threshold cannot fix this, because the density that matters
+     is local: two systems 0.3 LY apart collide at every zoom that shows
+     them both. So the labels are laid out rather than thresholded — each
+     one is drawn only if its box is clear, in-range names first, and the
+     current-system ring reserves a box so nothing lands on it. A name
+     that will not fit is dropped, which is what a chart does. */
+  const labelQueue = [];
+
+  gctx.font = "8px ui-monospace,Menlo,monospace";
+  gctx.textAlign = "center";
+
+  for(const o of sysList){
+    const [px,py] = toPx(o);
+    if(px < -12 || px > w+12 || py < -12 || py > h+12) continue;
+    galPts.push({sys:o, px, py});
+    if(o === s) continue;                          /* current drawn last */
+
+    const d  = World.distLY(s,o);
+    const inR = d <= fuelLY;
+    const tf = (Math.min(Math.max(o.techLevel,CHART.TL_LO),CHART.TL_HI)-CHART.TL_LO)
+               /(CHART.TL_HI-CHART.TL_LO);
+    let a = CHART.ALPHA_MIN + tf*(CHART.ALPHA_MAX-CHART.ALPHA_MIN);
+    if(!inR) a *= CHART.OUT_DIM;
+    const pf = (Math.min(Math.max(o.population,CHART.POP_LO),CHART.POP_HI)-CHART.POP_LO)
+               /(CHART.POP_HI-CHART.POP_LO);
+    const rad = CHART.DOT_MIN + pf*(CHART.DOT_MAX-CHART.DOT_MIN);
+
+    gctx.globalAlpha = a;
+    gctx.fillStyle = "#8fe3b0";
+    gctx.beginPath(); gctx.arc(px,py,rad,0,Math.PI*2); gctx.fill();
+
+    if(labelAll || (inR && galZoom >= GAL.LABEL_MIN)){
+      labelQueue.push({ name:o.name, px, py: py - rad - 3,
+                        a: Math.min(1, a*0.85), inR });
+    }
+    gctx.globalAlpha = 1;
+  }
+
+  /* in-range names win the space; the rest take what is left */
+  labelQueue.sort((A,B) => (B.inR ? 1 : 0) - (A.inR ? 1 : 0));
+  const taken = [{ x:cur[0]-15, y:cur[1]-15, w:30, h:30 }];
+  for(const L of labelQueue){
+    const tw = gctx.measureText(L.name).width;
+    const box = { x:L.px - tw/2 - 2, y:L.py - 9, w:tw + 4, h:11 };
+    let clash = false;
+    for(const t of taken){
+      if(box.x < t.x+t.w && box.x+box.w > t.x &&
+         box.y < t.y+t.h && box.y+box.h > t.y){ clash = true; break; }
+    }
+    if(clash) continue;
+    taken.push(box);
+    gctx.globalAlpha = L.a;
+    gctx.fillText(L.name, L.px, L.py);
+  }
+  gctx.globalAlpha = 1;
+
+  /* FIND hits — every candidate marked, so the search answers "where
+     are they all" and not only "where is this one". Squares, because
+     rings are the cursor and the target already. */
+  if(galMatches.length){
+    gctx.save();
+    gctx.strokeStyle = "#e8b23a"; gctx.globalAlpha = .55; gctx.lineWidth = 1;
+    for(const o of galMatches){
+      if(o === chartSel) continue;
+      const [px,py] = toPx(o);
+      if(px < -14 || px > w+14 || py < -14 || py > h+14) continue;
+      gctx.strokeRect(px-5.5, py-5.5, 11, 11);
+    }
+    gctx.restore();
+  }
+
+  /* course line, current -> target */
+  if(tgt && !sameSys(tgt,s)){
+    const [tx,ty] = toPx(tgt);
+    gctx.save(); gctx.setLineDash([2,3]); gctx.lineWidth = 1;
+    gctx.strokeStyle = "#e8b23a"; gctx.globalAlpha = .7;
+    gctx.beginPath(); gctx.moveTo(cur[0],cur[1]); gctx.lineTo(tx,ty); gctx.stroke();
+    gctx.restore();
+    gctx.strokeStyle = "#e8b23a"; gctx.lineWidth = 1;
+    gctx.beginPath(); gctx.arc(tx,ty,6,0,Math.PI*2); gctx.stroke();
+  }
+
+  /* current system — open ring, or an edge arrow if it is off screen */
+  if(!galEdgeArrow(cur[0],cur[1],w,h,"#8fe3b0")){
+    gctx.strokeStyle = "#8fe3b0"; gctx.lineWidth = 1.5;
+    gctx.beginPath(); gctx.arc(cur[0],cur[1],5.5,0,Math.PI*2); gctx.stroke();
+  }
+
+  /* cursor — same ring and ticks as §4, or an edge arrow */
+  if(chartSel){
+    const [sx,sy] = toPx(chartSel);
+    if(!galEdgeArrow(sx,sy,w,h,"#e8b23a")){
+      gctx.strokeStyle = "#e8b23a"; gctx.lineWidth = 1;
+      gctx.beginPath(); gctx.arc(sx,sy,9,0,Math.PI*2); gctx.stroke();
+      gctx.beginPath();
+      gctx.moveTo(sx-13,sy); gctx.lineTo(sx-9,sy);
+      gctx.moveTo(sx+9,sy);  gctx.lineTo(sx+13,sy);
+      gctx.moveTo(sx,sy-13); gctx.lineTo(sx,sy-9);
+      gctx.moveTo(sx,sy+9);  gctx.lineTo(sx,sy+13);
+      gctx.stroke();
+    }
+  }
+}
+
+function renderGal(){
+  drawGal();
+  document.getElementById("gZoom").textContent = "\u00d7" + galZoom.toFixed(1);
+  renderSelStrip("g");
+}
+
+/* ---- gestures. Pointer Events, so one path covers touch and mouse.
+   One pointer pans, two pinch. A tap is a single pointer that moved
+   less than GAL.DRAG_PX — without that test every attempt to pan
+   would also select whatever was under the finger when it landed. */
+const galPtr = new Map();
+let galDrag = null, galPinch = null;
+
+function galXY(e){
+  const r = galCv.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+
+galCv.addEventListener("pointerdown", function(e){
+  try{ galCv.setPointerCapture(e.pointerId); }catch(err){}
+  const p = galXY(e);
+  galPtr.set(e.pointerId, p);
+  if(galPtr.size === 1){ galDrag = { moved: 0 }; }
+  else { galDrag = null; galPinch = null; }   /* a second finger cancels the tap */
 });
+
+galCv.addEventListener("pointermove", function(e){
+  if(!galPtr.has(e.pointerId)) return;
+  const prev = galPtr.get(e.pointerId);
+  const p = galXY(e);
+  galPtr.set(e.pointerId, p);
+
+  if(galPtr.size === 1){
+    const dx = p.x - prev.x, dy = p.y - prev.y;
+    if(galDrag) galDrag.moved += Math.hypot(dx, dy);
+    galCX -= dx   / (0.4*galPPL);
+    galCY -= dy*2 / (0.4*galPPL);
+    galClampCentre();
+    renderGal();
+  } else if(galPtr.size === 2){
+    const v = Array.from(galPtr.values());
+    const d  = Math.hypot(v[0].x-v[1].x, v[0].y-v[1].y);
+    const mx = (v[0].x+v[1].x)/2, my = (v[0].y+v[1].y)/2;
+    if(galPinch && galPinch.d > 0){
+      galZoomAt(d/galPinch.d, mx, my);
+      galCX -= (mx-galPinch.mx)   / (0.4*galPPL);
+      galCY -= (my-galPinch.my)*2 / (0.4*galPPL);
+      galClampCentre();
+      renderGal();
+    }
+    galPinch = { d, mx, my };
+  }
+});
+
+function galEnd(e){
+  const p = galPtr.get(e.pointerId);
+  galPtr.delete(e.pointerId);
+  if(galPtr.size < 2) galPinch = null;
+  if(p && galDrag && galPtr.size === 0 && galDrag.moved <= GAL.DRAG_PX){
+    let best = null, bd = GAL.TAP_PX;
+    for(const q of galPts){
+      const d = Math.hypot(q.px-p.x, q.py-p.y);
+      if(d <= bd){ bd = d; best = q.sys; }
+    }
+    if(best){ chartSel = best; renderGal(); }
+  }
+  if(galPtr.size === 0) galDrag = null;
+}
+galCv.addEventListener("pointerup", galEnd);
+galCv.addEventListener("pointercancel", galEnd);
+
+galCv.addEventListener("wheel", function(e){
+  e.preventDefault();
+  const p = galXY(e);
+  galZoomAt(e.deltaY < 0 ? GAL.WHEEL_STEP : 1/GAL.WHEEL_STEP, p.x, p.y);
+  renderGal();
+}, {passive:false});
+
+/* ---- FIT. Not in §5. Pinching back out to the whole galaxy inside a
+   small box on a phone is awkward enough that the overview becomes
+   hard to get back to, and the overview is what this panel is for.
+   One button, [ASSUMED] to be worth its tap target. Logged. */
+document.getElementById("gFitBtn").addEventListener("click", function(){
+  galZoom = 1; galCX = 127.5; galCY = 127.5;
+  galFindPrev = null;           /* FIT is the other way out; one is enough */
+  galSyncFindBtn();             /* BACK goes away with it */
+  renderGal();
+});
+
+/* ---- FIND (§5). Prefix matches first, then anywhere in the name.
+   Current galaxy only: §5 is a chart of the current galaxy, and the
+   other seven are not reachable without a Galactic Hyperdrive. */
+/* The view as it was before the first FIND jump.
+
+   FAULT A, session 014, found on device, fixed twice. The first fix put
+   BACK on the FIND button itself: one word, two jobs, and pressing it
+   both restored the view AND shut the search row. That made comparing
+   candidates cost a retype — tap TULOSARE, press BACK, the query is
+   gone, press FIND, type TU again, tap TUACNI. A search you have to
+   redo to see the second result is a search that shows you one result.
+
+   THE TELL: the mechanism worked exactly as written and the complaint
+   was unchanged. That is PRIMER §0.4 in a new place — the symptom was
+   "no way back" and the cause was "no way back that keeps the search".
+
+   So BACK is its own button, it restores the view, and it leaves the row
+   and the query alone. FIND opens and closes the row and nothing else.
+   FIT clears the snapshot because it is the other way out. */
+let galFindPrev = null;
+
+/* FAULT E recovery. The 16px above is the fix; this is the way out if
+   anything arms the trap anyway. Re-applying the viewport meta after a
+   change forces Safari to snap the page back to scale 1. [ASSUMED] —
+   it is a documented trick, not something measured here, and it costs
+   nothing when the page was never zoomed. */
+function resetPageZoom(){
+  const vp = document.querySelector('meta[name=viewport]');
+  if(!vp) return;
+  const base = "width=device-width, initial-scale=1, maximum-scale=1, " +
+               "user-scalable=no, viewport-fit=cover";
+  vp.setAttribute("content", base.replace("user-scalable=no","user-scalable=yes"));
+  void document.body.offsetWidth;
+  vp.setAttribute("content", base);
+}
+
+const gFind   = document.getElementById("gFind");
+const gFindIn = document.getElementById("gFindIn");
+const gRes    = document.getElementById("gRes");
+
+function galFindRun(){
+  const q = gFindIn.value.trim().toUpperCase();
+  gRes.innerHTML = "";
+  if(q.length < 2){
+    gRes.innerHTML = '<div class="none">Two letters or more</div>';
+    galMatches = [];
+    renderGal();
+    return;
+  }
+  const all = World.galaxy(state.system.galaxy).systems;
+  const pre = all.filter(o => o.name.toUpperCase().indexOf(q) === 0);
+  const mid = all.filter(o => o.name.toUpperCase().indexOf(q) > 0);
+  const hits = pre.concat(mid).slice(0, GAL.FIND_MAX);
+  galMatches = hits;
+  if(!hits.length){
+    gRes.innerHTML = '<div class="none">No system of that name in this galaxy</div>';
+    renderGal();
+    return;
+  }
+  for(const o of hits){
+    const b = document.createElement("button");
+    b.textContent = o.name.toUpperCase();
+    b.addEventListener("click", function(){
+      if(!galFindPrev) galFindPrev = { zoom:galZoom, cx:galCX, cy:galCY };
+      chartSel = o;
+      galCX = o.x; galCY = o.y;
+      if(galZoom < GAL.FIND_ZOOM) galZoom = GAL.FIND_ZOOM;
+      galClampCentre();
+      /* FAULT D, third attempt. Picking a result now closes the row, so
+         the chart you just centred is the thing you are looking at. The
+         query and the hit list survive the close — FIND reopens both —
+         which is what makes closing cheap enough to do automatically.
+         The marks stay too, so the other candidates remain visible. */
+      galCloseFind(true);
+      renderGal();
+    });
+    gRes.appendChild(b);
+  }
+  renderGal();                  /* the hits are marked on the chart */
+}
+
+/* One button, one job. BACK is only on screen when it has something to
+   undo, so it is never a control that does nothing. */
+function galSyncFindBtn(){
+  document.getElementById("gBackBtn").style.display = galFindPrev ? "" : "none";
+}
+
+/* `keep` distinguishes the two ways a search ends. Picking a result
+   closes the row but the search is still live — the marks stay and BACK
+   still has somewhere to go. Pressing FIND closes the search itself. */
+function galCloseFind(keep){
+  gFind.classList.remove("open");
+  document.getElementById("gFindBtn").classList.remove("on");
+  gFindIn.blur();
+  resetPageZoom();
+  if(!keep){ galMatches = []; galFindPrev = null; }
+  galSyncFindBtn();
+}
+
+document.getElementById("gFindBtn").addEventListener("click", function(){
+  if(gFind.classList.contains("open")){
+    galCloseFind(false);
+  } else {
+    gFind.classList.add("open");
+    this.classList.add("on");
+    galFindRun();
+    gFindIn.focus();
+    galSyncFindBtn();
+  }
+  renderGal();
+});
+
+/* Restores the view — and gets the search row out of the way while it
+   does, because a view restored behind an opaque panel looks like a
+   button that does nothing. Ripley, session 014, from the screenshots.
+   The query survives, so FIND puts the list back with one tap. */
+document.getElementById("gBackBtn").addEventListener("click", function(){
+  if(!galFindPrev) return;
+  galZoom = galFindPrev.zoom;
+  galCX   = galFindPrev.cx;
+  galCY   = galFindPrev.cy;
+  galFindPrev = null;
+  galClampCentre();
+  if(gFind.classList.contains("open")) galCloseFind(true);
+  galSyncFindBtn();
+  renderGal();
+});
+
+gFindIn.addEventListener("input", galFindRun);
+gFindIn.addEventListener("blur", resetPageZoom);
 
 /* ------------------------------------------------------------------
    PANEL ROUTER — Control §11 item 25, answered by building it.
@@ -2003,6 +2654,7 @@ document.getElementById("cCourse").addEventListener("click", function(){
 ------------------------------------------------------------------- */
 const PANELS = {
   chart: { render:renderChart,      nav:"navChart", body:"chartBody" },
+  gal:   { render:renderGal,        nav:"navGal",   body:"galBody"   },
   sys:   { render:renderSystemData, nav:"navSys",   body:"panelBody" }
 };
 let panelCur = "sys";
@@ -2024,6 +2676,7 @@ function openPanel(){
 function closePanel(){
   panelEl.classList.remove("open");
   document.body.classList.remove("panelon");
+  resetPageZoom();              /* FAULT E: never fly a zoomed console */
 }
 
 document.getElementById("sysBtn").addEventListener("click", function(){
@@ -2032,11 +2685,14 @@ document.getElementById("sysBtn").addEventListener("click", function(){
 document.getElementById("navFly").addEventListener("click", closePanel);
 document.getElementById("navSys").addEventListener("click", function(){ showPanel("sys"); });
 document.getElementById("navChart").addEventListener("click", function(){ showPanel("chart"); });
+document.getElementById("navGal").addEventListener("click", function(){ showPanel("gal"); });
 
-/* The chart is the only panel with a laid-out canvas, so it is the only
-   one that has to be told the box changed. */
+/* The two charts are the only panels with a laid-out canvas, so they
+   are the only ones that have to be told the box changed. */
 window.addEventListener("resize", function(){
-  if(panelEl.classList.contains("open") && panelCur === "chart") drawChart();
+  if(!panelEl.classList.contains("open")) return;
+  if(panelCur === "chart") drawChart();
+  if(panelCur === "gal")   drawGal();
 });
 
 /* ---------- wake lock ---------- */
