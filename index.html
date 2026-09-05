@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 016b</title>
+<title>ELITE: THE CLONES — 016e</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -268,16 +268,44 @@
      is the one panel that would otherwise want a number field on every
      row. Steppers cost taps and avoid both faults outright. */
   .pbody.mktbody{padding-top:0;}
+  /* §3.2's HOLD ONLY toggle lives in here rather than in the flow.
+
+     THE LABEL IS "HOLD ONLY", NOT "HELD ONLY". [DECISION], Ripley,
+     session 016. The ship's compartment is THE HOLD — a noun — and
+     the filter shows what is in it. PANEL §3.2 SAYS "HELD ONLY" AND
+     IS OWED THE CORRECTION; the document is wrong, not this file.
+     The bar therefore reads HOLD n/20 on the left and HOLD ONLY on
+     the right: one word doing two jobs, which was the argument
+     against it and was overruled. Both refer to the same compartment,
+     so the repetition is coherent rather than ambiguous.
+     The reason §3.2 gives for the filter is that scanning twenty rows
+     to find your two cargo items is tedious — so a toggle you have to
+     scroll back to the top to reach does not discharge it. The hold
+     figure comes with it, which is a bonus rather than the reason:
+     the expanded row already carries Hold n/20 at the moment you
+     commit. Session 016. */
+  .mtop{position:sticky;top:0;z-index:2;background:var(--band);
+        border-bottom:1px solid var(--ink-faint);}
   .mhead{
-    position:sticky;top:0;z-index:2;background:var(--band);
     display:flex;justify-content:space-between;align-items:baseline;
     gap:12px;padding:12px 0 8px;font-size:11px;letter-spacing:.14em;
-    color:var(--ink-dim);border-bottom:1px solid var(--ink-faint);
+    color:var(--ink-dim);
   }
   .mhead i{font-style:normal;color:var(--warn);letter-spacing:.04em;
            font-variant-numeric:tabular-nums;}
-  .mhold{font-size:10px;letter-spacing:.10em;color:var(--ink-dim);
-         padding:7px 0 2px;font-variant-numeric:tabular-nums;}
+  .mbar{display:flex;align-items:center;gap:10px;min-height:44px;
+        border-top:1px solid var(--ink-faint);}
+  .mhold{flex:1 1 auto;font-size:10px;letter-spacing:.10em;
+         color:var(--ink-dim);font-variant-numeric:tabular-nums;}
+  .mfilt{
+    flex:0 0 auto;min-height:36px;padding:0 10px;background:transparent;
+    border:1px solid var(--ink-faint);border-radius:2px;
+    color:var(--ink-dim);font:inherit;font-size:9px;letter-spacing:.12em;
+  }
+  .mfilt.on{border-color:var(--ink-dim);color:var(--ink);
+            background:rgba(143,227,176,.10);}
+  .mempty{font-size:10px;line-height:1.6;color:var(--ink-faint);
+          padding:16px 0;}
   .mcat{
     font-size:9px;letter-spacing:.20em;color:var(--ink-dim);
     margin-top:12px;padding-bottom:5px;border-bottom:1px solid var(--ink-faint);
@@ -323,6 +351,12 @@
     border:1px solid var(--ink-dim);border-radius:2px;color:var(--ink);
     font:inherit;font-size:10px;letter-spacing:.08em;
   }
+  /* FAULT 016c. MAX was disabled in the markup and drawn at full
+     brightness, because .mstep and .mconf had a :disabled rule and
+     this did not. With a full hold it was an inert control that
+     looked live. Same complaint as loop 49 one layer down: a control
+     that misreports its own state. Found on device, session 016. */
+  .mmax:disabled{border-color:var(--ink-faint);color:var(--ink-faint);}
   .mfig{font-size:10px;line-height:1.5;color:var(--ink-dim);
         padding:6px 0 8px;font-variant-numeric:tabular-nums;}
   .mconf{
@@ -1833,7 +1867,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 });
 function writeReport(){
   document.getElementById("report").value =
-    "ELITE: THE CLONES 016b — settings\n"+
+    "ELITE: THE CLONES 016e — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -2179,7 +2213,25 @@ function drawChart(){
 
     if(inR && CHART.LABEL_IN_RANGE_ONLY){
       cctx.globalAlpha = Math.min(1, a*0.85);
-      cctx.fillText(o.name, px, py - rad - 3);
+      /* LOOP 52, session 016, found on device. The cursor reticle is
+         drawn around the SELECTED dot at radius 9 with ticks out to
+         13, and the label sat at py - rad - 3, roughly 5px above the
+         dot. So the reticle was drawn straight through the name of
+         the system you had just selected — the one name on the chart
+         that most needs reading.
+
+         The selected system's label is lifted clear of its own
+         reticle. This is NOT §5.3's forbidden nudge: that rule bans
+         moving a name sideways onto a NEIGHBOUR'S dot, where the
+         player cannot tell which dot it belongs to. Here the name
+         moves straight up and the reticle underneath it says which
+         dot it is. A moved name is a lie only when it becomes
+         ambiguous.
+
+         §4 has no layout pass — five names at a fixed scale, per
+         §4.5 — so a lifted label could in principle land on another
+         name. At this scale it has not been seen. [ASSUMED]. */
+      cctx.fillText(o.name, px, (o === chartSel) ? py - 16 : py - rad - 3);
     }
     cctx.globalAlpha = 1;
   }
@@ -2497,28 +2549,53 @@ function drawGal(){
     gctx.beginPath(); gctx.arc(px,py,rad,0,Math.PI*2); gctx.fill();
 
     if(labelAll || (inR && galZoom >= GAL.LABEL_MIN)){
-      labelQueue.push({ name:o.name, px, py: py - rad - 3,
-                        a: Math.min(1, a*0.85), inR });
+      /* LOOP 52: the selected system's label clears its own reticle,
+         which reaches 13px above the dot. See the note in §4. */
+      const sel = (o === chartSel);
+      labelQueue.push({ name:o.name, px, py: sel ? py - 16 : py - rad - 3,
+                        a: Math.min(1, a*0.85), inR, sel });
     }
     gctx.globalAlpha = 1;
   }
 
-  /* in-range names win the space; the rest take what is left */
-  labelQueue.sort((A,B) => (B.inR ? 1 : 0) - (A.inR ? 1 : 0));
+  /* LOOP 52, session 016. `taken` seeded the CURRENT SYSTEM RING and
+     nothing else, so other systems' names were laid out straight
+     across the SELECTION RETICLE. Seen on device at x8: Boxase and
+     Tulegiag both drawn through the crosshair.
+
+     ORDER MATTERS AND IS THE WHOLE FIX. The selected system's own
+     label is placed FIRST, already lifted clear of the reticle, and
+     only THEN is the reticle's box reserved against everyone else.
+     Seeding the reticle before placing it would drop the name of the
+     thing you just selected, which is worse than the fault. */
   const taken = [{ x:cur[0]-15, y:cur[1]-15, w:30, h:30 }];
-  for(const L of labelQueue){
+  function placeLabel(L){
     const tw = gctx.measureText(L.name).width;
     const box = { x:L.px - tw/2 - 2, y:L.py - 9, w:tw + 4, h:11 };
-    let clash = false;
     for(const t of taken){
       if(box.x < t.x+t.w && box.x+box.w > t.x &&
-         box.y < t.y+t.h && box.y+box.h > t.y){ clash = true; break; }
+         box.y < t.y+t.h && box.y+box.h > t.y) return;
     }
-    if(clash) continue;
     taken.push(box);
     gctx.globalAlpha = L.a;
     gctx.fillText(L.name, L.px, L.py);
   }
+
+  const selIdx = labelQueue.findIndex(L => L.sel);
+  if(selIdx >= 0){ placeLabel(labelQueue[selIdx]); labelQueue.splice(selIdx,1); }
+
+  /* Reserve the reticle only if it is actually on the canvas — off
+     screen it is an edge arrow (§5) and reserves nothing. */
+  if(chartSel && chartSel.galaxy === s.galaxy){
+    const [rx,ry] = toPx(chartSel);
+    if(rx >= -15 && rx <= w+15 && ry >= -15 && ry <= h+15){
+      taken.push({ x:rx-15, y:ry-15, w:30, h:30 });
+    }
+  }
+
+  /* in-range names win what is left; the rest take the remainder */
+  labelQueue.sort((A,B) => (B.inR ? 1 : 0) - (A.inR ? 1 : 0));
+  for(const L of labelQueue) placeLabel(L);
   gctx.globalAlpha = 1;
 
   /* FIND hits — every candidate marked, so the search answers "where
@@ -2965,6 +3042,11 @@ function cr(t){ return (t/10).toFixed(1); }
 
 /* ---------- accordion state. One row open at a time (§3.1). ---------- */
 let mktOpen = null, mktBuyQ = 0, mktSellQ = 0;
+/* §3.2. Off by default — the unfiltered list is the one that teaches
+   position, which is the whole argument for the fixed sort.
+   Named for the label it drives (§3.2's HOLD ONLY), not for the
+   `held` quantities it tests, so the two cannot drift apart. */
+let mktHoldOnly = false;
 const mktBody = document.getElementById("mktBody");
 
 function mktMaxBuy(sys, c){
@@ -2981,18 +3063,35 @@ function renderMarket(){
   const m = marketFor(s, state.commander.gameDay);
 
   let h = '';
+  h += '<div class="mtop">';
   h += '<div class="mhead"><span>'+esc(s.name.toUpperCase())+
        ' \u2014 MARKET</span><i>'+cr(state.commander.credits)+' CR</i></div>';
-  h += '<div class="mhold">HOLD '+holdUsed()+'/'+CARGO_MAX+'</div>';
+  h += '<div class="mbar"><span class="mhold">HOLD '+holdUsed()+'/'+CARGO_MAX+
+       '</span><button class="mfilt'+(mktHoldOnly?' on':'')+
+       '" data-act="filt">HOLD ONLY</button></div>';
+  h += '</div>';
 
-  let cat = null;
-  for(const c of COMMODITIES){
+  /* §3.2: filtering preserves relative order. It hides rows; it does
+     not re-sort them, and it does not change what a row means. */
+  const shown = COMMODITIES.filter(function(c){
     const held = heldQty(c.id);
-    const avail = mktAvail(s, c);
     /* Sell-only goods have no counter presence. The row exists only
        when the hold does, which today is never — nothing scoops. */
-    if(c.legal === "S" && held === 0) continue;
+    if(c.legal === "S" && held === 0) return false;
+    if(mktHoldOnly && held === 0) return false;
+    return true;
+  });
+  if(shown.length === 0){
+    h += '<div class="mempty">The hold is empty. HOLD ONLY is on.</div>';
+  }
+
+  let cat = null;
+  for(const c of shown){
+    const held = heldQty(c.id);
+    const avail = mktAvail(s, c);
     const cc = mktCategory(c);
+    /* A category heading is drawn only when a row follows it, or the
+       filter leaves headings standing over nothing. */
     if(cc !== cat){ cat = cc; h += '<div class="mcat">'+cat+'</div>'; }
 
     const illegal = !mktLegalHere(c, s.government);
@@ -3084,6 +3183,16 @@ mktBody.addEventListener("click", function(e){
   const act = e.target.closest("[data-act]");
   const s = state.system;
   if(act){
+    /* Handled before the commodity lookup: the filter is a panel
+       control, not a row control, and no row need be open. */
+    if(act.getAttribute("data-act") === "filt"){
+      mktHoldOnly = !mktHoldOnly;
+      /* An open row the filter is about to hide would stay open and
+         invisible. Close on toggle — predictable, and one rule. */
+      mktOpen = null; mktBuyQ = 0; mktSellQ = 0;
+      renderMarket();
+      return;
+    }
     const c = COMMODITIES.find(x => x.id === mktOpen);
     if(!c) return;
     const price = marketFor(s, state.commander.gameDay).rows[c.id].price;
