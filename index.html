@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 016a</title>
+<title>ELITE: THE CLONES — 016b</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -249,6 +249,88 @@
   .pnav .spacer{flex:1 1 auto;}
   .pnav .fly{min-width:74px;color:var(--ink);
              border-right:0;border-left:1px solid var(--ink-faint);}
+  /* ---- Market — PANEL LAYOUT SPEC §3, session 016 ----
+
+     WHAT §3 SPECIFIES AND WHAT IT DOES NOT. §3 gives the accordion,
+     the fixed sort, average purchase price and the illegal marker.
+     World Model §7 gives the commodity table and both formulas, and
+     §7 is entirely [SPEC] — nothing in it had been built before now.
+
+     FOUR THINGS §3 AND §7 DO NOT DEFINE, decided by Ripley in 016:
+       hold capacity 20 units          — [ASSUMED], no document had one
+       cargo slots carry avgPaid       — WORLD MODEL §9 is owed a bump
+       gold/platinum/gems cost no hold — the 1984 model, §7's units
+       sell at the local price         — no spread
+
+     NO TEXT INPUT ANYWHERE ON THIS PANEL, and that is deliberate.
+     Quantities are steppers. CONTROL §9.2's 16px floor and Panel §5.4's
+     iOS AutoFill bar are both problems a caret creates, and a market
+     is the one panel that would otherwise want a number field on every
+     row. Steppers cost taps and avoid both faults outright. */
+  .pbody.mktbody{padding-top:0;}
+  .mhead{
+    position:sticky;top:0;z-index:2;background:var(--band);
+    display:flex;justify-content:space-between;align-items:baseline;
+    gap:12px;padding:12px 0 8px;font-size:11px;letter-spacing:.14em;
+    color:var(--ink-dim);border-bottom:1px solid var(--ink-faint);
+  }
+  .mhead i{font-style:normal;color:var(--warn);letter-spacing:.04em;
+           font-variant-numeric:tabular-nums;}
+  .mhold{font-size:10px;letter-spacing:.10em;color:var(--ink-dim);
+         padding:7px 0 2px;font-variant-numeric:tabular-nums;}
+  .mcat{
+    font-size:9px;letter-spacing:.20em;color:var(--ink-dim);
+    margin-top:12px;padding-bottom:5px;border-bottom:1px solid var(--ink-faint);
+  }
+  /* Panel §2's 44px minimum. The whole row is the target — a 20-row
+     list where only the name is tappable is a list you miss. */
+  .mrow{
+    display:flex;align-items:center;gap:8px;width:100%;min-height:44px;
+    background:transparent;border:0;border-bottom:1px solid var(--ink-faint);
+    color:var(--ink);font:inherit;font-size:12px;text-align:left;padding:0;
+  }
+  .mrow .mn{flex:1 1 auto;min-width:0;white-space:nowrap;
+            overflow:hidden;text-overflow:ellipsis;color:var(--ink);}
+  .mrow .mp,.mrow .ma,.mrow .mh{
+    flex:0 0 auto;text-align:right;font-variant-numeric:tabular-nums;}
+  .mrow .mp{width:52px;color:var(--warn);}
+  .mrow .ma{width:38px;color:var(--ink-dim);}
+  .mrow .mh{width:38px;color:var(--ink);}
+  .mrow.on{background:rgba(143,227,176,.08);}
+  .mrow .mill{color:var(--warn);padding-right:4px;}
+  .mexp{padding:10px 0 14px;border-bottom:1px solid var(--ink-faint);}
+  /* §3.4. The marker is derivable from §7.1's legality column and the
+     system's government. THE CUSTOMS POSTURE IS NOT DRAWN: §3.4 names
+     six labels for eight governments and gives no mapping, and an
+     invented one would read as an instrument. Logged, not guessed. */
+  .mwarn{font-size:10px;letter-spacing:.08em;color:var(--warn);
+         padding-bottom:8px;}
+  .mgrp{margin-top:8px;}
+  .mgrp:first-child{margin-top:0;}
+  .mline{display:flex;align-items:center;gap:8px;}
+  .mline b{flex:0 0 46px;font-weight:400;font-size:10px;
+           letter-spacing:.12em;color:var(--ink-dim);}
+  .mstep{
+    flex:0 0 auto;min-width:44px;min-height:44px;background:transparent;
+    border:1px solid var(--ink-dim);border-radius:2px;color:var(--ink);
+    font:inherit;font-size:14px;line-height:1;
+  }
+  .mstep:disabled{border-color:var(--ink-faint);color:var(--ink-faint);}
+  .mqty{flex:1 1 auto;text-align:center;font-size:14px;color:var(--warn);
+        font-variant-numeric:tabular-nums;}
+  .mmax{
+    flex:0 0 auto;min-width:56px;min-height:44px;background:transparent;
+    border:1px solid var(--ink-dim);border-radius:2px;color:var(--ink);
+    font:inherit;font-size:10px;letter-spacing:.08em;
+  }
+  .mfig{font-size:10px;line-height:1.5;color:var(--ink-dim);
+        padding:6px 0 8px;font-variant-numeric:tabular-nums;}
+  .mconf{
+    width:100%;min-height:44px;background:transparent;
+    border:1px solid var(--ink-dim);border-radius:2px;color:var(--ink);
+    font:inherit;font-size:10px;letter-spacing:.10em;
+  }
+  .mconf:disabled{border-color:var(--ink-faint);color:var(--ink-faint);}
   /* ---- Short Range Chart — PANEL LAYOUT SPEC §4, session 012 ----
 
      The chart panel does NOT take §6.3's 560px measure cap. That cap
@@ -500,6 +582,10 @@
   <div class="view"><canvas id="cv"></canvas><div class="viewedge"></div>
     <div id="panel">
       <div class="pbody" id="panelBody"></div>
+      <!-- §3. Accordion market. Scrolls, unlike the charts: this is
+           a list and a list you cannot scroll is a list you cannot
+           use. No text input on it anywhere — see the CSS note. -->
+      <div class="pbody mktbody" id="mktBody" style="display:none"></div>
       <!-- §4. Fixed column: header, chart, selection strip, MUNGO line.
            The nav strip below is shared with every panel (§2). -->
       <div class="pbody chartbody" id="chartBody" style="display:none">
@@ -559,7 +645,8 @@
       </div>
       <!-- §2: unavailable panels are not shown rather than greyed. Three
            panels exist, so the strip has three entries plus FLY. Order
-           follows Panel §1.3. CHART became SHORT in 014 because the
+           follows Panel §1.3. FIVE entries since 016b — MARKET was
+           added with the market panel. CHART became SHORT in 014 because the
            Galactic Chart landed and the two now need telling apart —
            the rename was written into v1.2 of this file as a condition
            and the condition has been met. Four entries at 402px: 3 x
@@ -580,6 +667,7 @@
            012 wrote the CHART -> SHORT rename here as a condition and
            session 014 met it. A condition in a table is not one. -->
       <div class="pnav">
+        <button id="navMkt">MARKET</button>
         <button id="navChart">SHORT</button>
         <button id="navGal">GALACTIC</button>
         <button id="navSys" class="on">SYS</button>
@@ -1235,7 +1323,14 @@ const state = {
   commander: { credits:1000, legalStatus:0, fuel:70, gameDay:0, kills:0,
                hyperspaceTarget:null },
   ship: { hull:100, shieldFore:100, shieldAft:100, energy:100,
-          cargoUsed:0, speed:0, docked:false }
+          cargoUsed:0, speed:0, docked:false },
+  /* WORLD MODEL §9's `cargo`, with Panel §3.3.1's average purchase
+     price folded into the slot. §9 draws this as { grain: 0, ore: 5 }
+     — one number per commodity, with nowhere to keep a second value.
+     §3.3 is LOCKED, so §9 is the one that gives. A slot is
+     { qty, avgPaid }, avgPaid in tenths of a credit. §9 IS OWED A
+     BUMP — recorded here rather than fixed silently. Session 016. */
+  cargo: {}
 };
 
 /* ---------- boot the world. Galaxy 0 only; 1-7 wait to be asked. ---------- */
@@ -1738,7 +1833,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 });
 function writeReport(){
   document.getElementById("report").value =
-    "ELITE: THE CLONES 016a — settings\n"+
+    "ELITE: THE CLONES 016b — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -2709,7 +2804,312 @@ gFindIn.addEventListener("blur", resetPageZoom);
    The corner button is labelled PANEL rather than SYS because with
    two panels it no longer opens System Data specifically.
 ------------------------------------------------------------------- */
+/* ==================================================================
+   MARKET — PANEL LAYOUT SPEC §3, WORLD MODEL SPEC §7. Session 016.
+   The fourth panel, and the first thing in this project that spends
+   credits.
+
+   WORLD MODEL §7 WAS ENTIRELY [SPEC] UNTIL NOW. The table below is
+   §7.1 transcribed, and the two formulas are §7's, unchanged. Where
+   §7 stopped short, the gap is marked and nothing is quietly filled.
+
+   WHAT THE SPECS DID NOT DEFINE, AND WHO DECIDED IT.
+
+   1. HOLD CAPACITY. Nowhere in the project. WORLD MODEL §9's `ship`
+      object says "defined in ship module spec" and that spec does not
+      exist; Panel §3.1's diagram says "Hold 15/20" and 20 appears in
+      no other document. CARGO_MAX = 20. [ASSUMED], Ripley, 016.
+
+   2. WHERE avgPaid LIVES. Panel §3.3.1 says one value per occupied
+      cargo slot in the save file's `cargo` object. WORLD MODEL §9
+      draws `cargo` as { grain: 0, ore: 5 } — one number, nowhere to
+      put a second. §3.3 is LOCKED so §9 gives: a slot is now
+      { qty, avgPaid }. WORLD MODEL §9 IS OWED A BUMP. [DECISION],
+      Ripley, 016. Found by building.
+
+   3. HOLD SPACE FOR gold, platinum AND gems. §7.1 prices them in kg,
+      kg and grams while the hold is in tonnes, and nothing joins the
+      two. They cost NO hold space — the 1984 model, which makes them
+      the compact high-value trade. [DECISION], Ripley, 016.
+
+   4. SELL PRICE. §7 defines one price per commodity per system and
+      never says whether you sell at it. You do. No spread. A local
+      haircut would tax the wrong thing — §3.3's own argument is that
+      the skill is predicting prices ELSEWHERE.
+
+   THREE MORE GAPS, LEFT OPEN RATHER THAN INVENTED AROUND.
+
+   A. §7.1 HAS NO CATEGORY COLUMN, and Panel §3.2 sorts by category.
+      Category is derived here from the sign of econFactor, which is
+      §7's own sentence: negative is agricultural produce, positive is
+      industrial. Zero falls out as minerals, which matches the one
+      worked example §3.1 gives (Raw Ore under MINERALS). Water Ice is
+      -2 and therefore lands under AGRICULTURAL, which reads oddly and
+      is what the rule produces. Not overridden. [ASSUMED].
+
+   B. §3.4's CUSTOMS POSTURE IS NOT DRAWN. It names six labels for
+      eight governments and gives no mapping. The illegal marker IS
+      drawn, because legality plus government is enough for it. An
+      invented posture would be an instrument reporting a number
+      nobody chose — constraint 2.
+
+   C. CARRYING ILLEGAL GOODS HAS NO CONSEQUENCE. §7.3 defines a
+      customs roll for Xeno Salvage and for nothing else. Buying
+      Neuro-Stimulants here is therefore free of risk, which is wrong
+      and is not this session's job.
+
+   THE DRAW ORDER IS [ASSUMED] AND IT IS THE MARKET. §7.2 gives one
+   mktRng for the system-day and both formulas draw from it. It does
+   not say in what order. Price then quantity, table order, one pass.
+   Any other order is a different universe at the same seed.
+
+   CREDITS ARE TENTHS. state.commander.credits is 1000, and every
+   money figure in this project is tenths of a credit — §7's prices,
+   §3.3.1's avgPaid. So the opening balance is 100.0 CR, not 1000.
+   [ASSUMED]. It is the reading that makes Panel §3.1's "14.6 CR"
+   header sensible and it matches the original's opening balance. If
+   it is wrong it is one character.
+   ================================================================== */
+
+const CARGO_MAX = 20;          /* [ASSUMED], Ripley, session 016 */
+
+/* WORLD MODEL §7.1, transcribed. `bulk` is not in §7.1 — it is
+   decision 3 above, expressed as a column so it is visible rather
+   than buried in an if. */
+const COMMODITIES = [
+  { id:"grain",     name:"Grain Staples",        unit:"t",  base:76,   ef:-8,  sw:4,   bq:6,  sq:3,  legal:"L", bulk:1 },
+  { id:"produce",   name:"Hydroponic Produce",   unit:"t",  base:96,   ef:-10, sw:6,   bq:12, sq:7,  legal:"L", bulk:1 },
+  { id:"protein",   name:"Vat Protein",          unit:"t",  base:120,  ef:-12, sw:8,   bq:8,  sq:7,  legal:"L", bulk:1 },
+  { id:"fibre",     name:"Textile Fibres",       unit:"t",  base:80,   ef:-4,  sw:12,  bq:10, sq:7,  legal:"L", bulk:1 },
+  { id:"timber",    name:"Biopolymer Timber",    unit:"t",  base:108,  ef:-6,  sw:8,   bq:9,  sq:7,  legal:"L", bulk:1 },
+  { id:"spirits",   name:"Distilled Spirits",    unit:"t",  base:340,  ef:-20, sw:60,  bq:5,  sq:7,  legal:"R", bulk:1 },
+  { id:"hides",     name:"Exotic Hides",         unit:"t",  base:700,  ef:-28, sw:32,  bq:4,  sq:3,  legal:"R", bulk:1 },
+  { id:"ice",       name:"Water Ice",            unit:"t",  base:44,   ef:-2,  sw:6,   bq:14, sq:15, legal:"L", bulk:1 },
+  { id:"ore",       name:"Raw Ore",              unit:"t",  base:60,   ef:0,   sw:12,  bq:12, sq:15, legal:"L", bulk:1 },
+  { id:"gold",      name:"Gold",                 unit:"kg", base:400,  ef:0,   sw:24,  bq:6,  sq:7,  legal:"L", bulk:0 },
+  { id:"platinum",  name:"Platinum",             unit:"kg", base:780,  ef:0,   sw:40,  bq:4,  sq:7,  legal:"L", bulk:0 },
+  { id:"gems",      name:"Gemstones",            unit:"g",  base:1400, ef:0,   sw:100, bq:3,  sq:3,  legal:"L", bulk:0 },
+  { id:"alloys",    name:"Refined Alloys",       unit:"t",  base:160,  ef:6,   sw:12,  bq:10, sq:7,  legal:"L", bulk:1 },
+  { id:"tools",     name:"Machine Tools",        unit:"t",  base:228,  ef:12,  sw:16,  bq:8,  sq:7,  legal:"L", bulk:1 },
+  { id:"cells",     name:"Fusion Cells",         unit:"t",  base:260,  ef:14,  sw:20,  bq:7,  sq:7,  legal:"R", bulk:1 },
+  { id:"medicals",  name:"Nano-Medicals",        unit:"t",  base:520,  ef:18,  sw:36,  bq:4,  sq:3,  legal:"L", bulk:1 },
+  { id:"cores",     name:"Computer Cores",       unit:"t",  base:620,  ef:22,  sw:40,  bq:5,  sq:7,  legal:"L", bulk:1 },
+  { id:"drones",    name:"Combat Drones",        unit:"t",  base:1000, ef:24,  sw:60,  bq:3,  sq:3,  legal:"I", bulk:1 },
+  { id:"stims",     name:"Neuro-Stimulants",     unit:"t",  base:1880, ef:32,  sw:480, bq:3,  sq:3,  legal:"I", bulk:1 },
+  { id:"contracts", name:"Indentured Contracts", unit:"t",  base:380,  ef:20,  sw:40,  bq:5,  sq:7,  legal:"I", bulk:1 },
+  { id:"salvage",   name:"Xeno Salvage",         unit:"t",  base:1200, ef:0,   sw:200, bq:0,  sq:0,  legal:"S", bulk:1 }
+];
+
+/* Gap A. §7's own sentence, applied. */
+function mktCategory(c){
+  if(c.id === "salvage") return "SALVAGE";
+  return c.ef < 0 ? "AGRICULTURAL" : (c.ef === 0 ? "MINERALS" : "INDUSTRIAL");
+}
+
+/* §7.1's note: Restricted is legal at government <= 3, Illegal only at
+   government 0. Salvage is sell-only and sells anywhere (§7.3). */
+function mktLegalHere(c, gov){
+  if(c.legal === "R") return gov <= 3;
+  if(c.legal === "I") return gov === 0;
+  return true;
+}
+
+/* §7.2. mktRng = rng(hash32(systemSeed(...), gameDay)). systemSeed is
+   not on World's public surface, but hash32 and WORLD_SEED are the
+   same globals World builds from, so this is that function verbatim
+   rather than a second implementation of it. */
+let mktCache = null;
+function marketFor(sys, gameDay){
+  const key = sys.galaxy + ":" + sys.index + ":" + gameDay;
+  if(mktCache && mktCache.key === key) return mktCache;
+  const r = rng(hash32(hash32(WORLD_SEED, sys.galaxy, sys.index), gameDay));
+  const ri = (n) => Math.floor(r() * n);
+  const rows = {};
+  for(const c of COMMODITIES){
+    /* §7. Prices and quantities are tenths of a credit and whole
+       units. Draw order is price then quantity — see the header. */
+    let price = c.base + ri(c.sw + 1) + (sys.economy * c.ef);
+    if(price < 1) price = 1;
+    let qty = c.bq + ri(c.sq + 1) - ((sys.economy * c.ef / 4) | 0);
+    qty = qty < 0 ? 0 : (qty > 63 ? 63 : qty);
+    /* Sell-only (§7.1). Nothing offers it and nothing scoops yet. */
+    if(c.legal === "S") qty = 0;
+    rows[c.id] = { price:price, qty:qty };
+  }
+  mktCache = { key:key, rows:rows };
+  return mktCache;
+}
+
+/* NOT SPECIFIED AND NECESSARY. §7.2 says the market is stable while
+   you sit at a station and different when you come back. It does not
+   say whether buying reduces what is left on the counter. It must —
+   an unlimited counter is not a market — so purchases are held here,
+   module-local, keyed to the system-day and NOT persisted. A jump
+   clears it because the key changes. [ASSUMED]. */
+let mktTaken = { key:"", by:{} };
+function mktAvail(sys, c){
+  const m = marketFor(sys, state.commander.gameDay);
+  if(mktTaken.key !== m.key){ mktTaken = { key:m.key, by:{} }; }
+  const a = m.rows[c.id].qty - (mktTaken.by[c.id] || 0);
+  return a < 0 ? 0 : a;
+}
+
+function heldQty(id){ const s = state.cargo[id]; return s ? s.qty : 0; }
+function holdUsed(){
+  let n = 0;
+  for(const c of COMMODITIES) n += heldQty(c.id) * c.bulk;
+  return n;
+}
+/* tenths of a credit, everywhere. */
+function cr(t){ return (t/10).toFixed(1); }
+
+/* ---------- accordion state. One row open at a time (§3.1). ---------- */
+let mktOpen = null, mktBuyQ = 0, mktSellQ = 0;
+const mktBody = document.getElementById("mktBody");
+
+function mktMaxBuy(sys, c){
+  const price = marketFor(sys, state.commander.gameDay).rows[c.id].price;
+  const byCash  = price > 0 ? Math.floor(state.commander.credits / price) : 0;
+  const byStock = mktAvail(sys, c);
+  const byHold  = c.bulk === 0 ? Infinity : (CARGO_MAX - holdUsed());
+  return Math.max(0, Math.min(byCash, byStock, byHold));
+}
+
+function renderMarket(){
+  const s = state.system;
+  if(!s){ mktBody.innerHTML = '<div class="pname">NO SYSTEM</div>'; return; }
+  const m = marketFor(s, state.commander.gameDay);
+
+  let h = '';
+  h += '<div class="mhead"><span>'+esc(s.name.toUpperCase())+
+       ' \u2014 MARKET</span><i>'+cr(state.commander.credits)+' CR</i></div>';
+  h += '<div class="mhold">HOLD '+holdUsed()+'/'+CARGO_MAX+'</div>';
+
+  let cat = null;
+  for(const c of COMMODITIES){
+    const held = heldQty(c.id);
+    const avail = mktAvail(s, c);
+    /* Sell-only goods have no counter presence. The row exists only
+       when the hold does, which today is never — nothing scoops. */
+    if(c.legal === "S" && held === 0) continue;
+    const cc = mktCategory(c);
+    if(cc !== cat){ cat = cc; h += '<div class="mcat">'+cat+'</div>'; }
+
+    const illegal = !mktLegalHere(c, s.government);
+    const open = (mktOpen === c.id);
+    h += '<button class="mrow'+(open?' on':'')+'" data-row="'+c.id+'">'+
+         '<span class="mn">'+(illegal?'<span class="mill">\u26a0</span>':'')+
+         esc(c.name)+'</span>'+
+         '<span class="mp">'+cr(m.rows[c.id].price)+'</span>'+
+         '<span class="ma">'+(avail>0 ? avail+c.unit : '\u2014')+'</span>'+
+         '<span class="mh">'+(held>0 ? held+c.unit : '\u2014')+'</span>'+
+         '</button>';
+    if(open) h += mktExpansion(s, c, m.rows[c.id].price, avail, held, illegal);
+  }
+
+  h += '<div class="phead">MUNGO\u2019S ASSESSMENT</div>';
+  h += '<div class="pmungo">ai.mungo not installed \u2014 no assessment '+
+       'available. The prices above are read from the world model and '+
+       'are not opinions.</div>';
+  mktBody.innerHTML = h;
+}
+
+/* §3.1: SELL sits above BUY in the same expansion when you hold stock. */
+function mktExpansion(s, c, price, avail, held, illegal){
+  let h = '<div class="mexp">';
+  /* §3.4, marker only — the posture mapping does not exist. */
+  if(illegal) h += '<div class="mwarn">\u26a0 ILLEGAL HERE</div>';
+
+  if(held > 0){
+    const slot = state.cargo[c.id];
+    if(mktSellQ > held) mktSellQ = held;
+    h += '<div class="mgrp"><div class="mline"><b>SELL</b>'+
+         '<button class="mstep" data-act="s-" '+(mktSellQ<=0?'disabled':'')+'>\u2212</button>'+
+         '<span class="mqty">'+mktSellQ+'</span>'+
+         '<button class="mstep" data-act="s+" '+(mktSellQ>=held?'disabled':'')+'>+</button>'+
+         '<button class="mmax" data-act="sall">ALL</button></div>'+
+         '<div class="mfig">Gross '+cr(mktSellQ*price)+' CR \u00b7 avg paid '+
+         cr(slot.avgPaid)+' \u00b7 '+
+         (price>=slot.avgPaid ? '+' : '\u2212')+
+         cr(Math.abs((price-slot.avgPaid)*mktSellQ))+' CR</div>'+
+         '<button class="mconf" data-act="sell" '+(mktSellQ<=0?'disabled':'')+
+         '>CONFIRM SALE</button></div>';
+  }
+
+  const max = mktMaxBuy(s, c);
+  if(mktBuyQ > max) mktBuyQ = max;
+  const room = c.bulk === 0 ? '\u2014 no hold space' :
+               ('Hold '+holdUsed()+'/'+CARGO_MAX);
+  h += '<div class="mgrp"><div class="mline"><b>BUY</b>'+
+       '<button class="mstep" data-act="b-" '+(mktBuyQ<=0?'disabled':'')+'>\u2212</button>'+
+       '<span class="mqty">'+mktBuyQ+'</span>'+
+       '<button class="mstep" data-act="b+" '+(mktBuyQ>=max?'disabled':'')+'>+</button>'+
+       '<button class="mmax" data-act="bmax" '+(max<=0?'disabled':'')+'>MAX</button></div>'+
+       '<div class="mfig">Cost '+cr(mktBuyQ*price)+' CR \u00b7 '+room+
+       (avail<=0 ? ' \u00b7 none on the counter' : '')+'</div>'+
+       '<button class="mconf" data-act="buy" '+(mktBuyQ<=0?'disabled':'')+
+       '>CONFIRM PURCHASE</button></div>';
+
+  return h + '</div>';
+}
+
+/* §3.3.1's accounting table, applied literally. */
+function mktBuy(c, qty, price){
+  if(qty <= 0) return;
+  const slot = state.cargo[c.id];
+  if(!slot){
+    state.cargo[c.id] = { qty:qty, avgPaid:price };
+  } else {
+    slot.avgPaid = Math.round((slot.qty*slot.avgPaid + qty*price)/(slot.qty+qty));
+    slot.qty += qty;
+  }
+  state.commander.credits -= qty * price;
+  mktTaken.by[c.id] = (mktTaken.by[c.id] || 0) + qty;
+  state.ship.cargoUsed = holdUsed();
+}
+function mktSell(c, qty, price){
+  const slot = state.cargo[c.id];
+  if(!slot || qty <= 0) return;
+  /* §3.3.1: partial sale leaves avgPaid unchanged; a full sale clears
+     the slot and discards it. */
+  slot.qty -= qty;
+  state.commander.credits += qty * price;
+  if(slot.qty <= 0) delete state.cargo[c.id];
+  mktTaken.by[c.id] = Math.max(0, (mktTaken.by[c.id] || 0) - qty);
+  state.ship.cargoUsed = holdUsed();
+}
+
+mktBody.addEventListener("click", function(e){
+  const row = e.target.closest("[data-row]");
+  const act = e.target.closest("[data-act]");
+  const s = state.system;
+  if(act){
+    const c = COMMODITIES.find(x => x.id === mktOpen);
+    if(!c) return;
+    const price = marketFor(s, state.commander.gameDay).rows[c.id].price;
+    const a = act.getAttribute("data-act");
+    if(a === "b-")   mktBuyQ = Math.max(0, mktBuyQ-1);
+    if(a === "b+")   mktBuyQ = Math.min(mktMaxBuy(s,c), mktBuyQ+1);
+    if(a === "bmax") mktBuyQ = mktMaxBuy(s,c);
+    if(a === "s-")   mktSellQ = Math.max(0, mktSellQ-1);
+    if(a === "s+")   mktSellQ = Math.min(heldQty(c.id), mktSellQ+1);
+    if(a === "sall") mktSellQ = heldQty(c.id);
+    if(a === "buy"){  mktBuy(c, mktBuyQ, price);  mktBuyQ = 0; }
+    if(a === "sell"){ mktSell(c, mktSellQ, price); mktSellQ = 0; }
+    renderMarket();
+    return;
+  }
+  if(row){
+    const id = row.getAttribute("data-row");
+    /* §3.1: one row open at a time. Tapping the open row closes it. */
+    mktOpen = (mktOpen === id) ? null : id;
+    mktBuyQ = 0; mktSellQ = 0;
+    renderMarket();
+  }
+});
+
 const PANELS = {
+  mkt:   { render:renderMarket,     nav:"navMkt",   body:"mktBody"   },
   chart: { render:renderChart,      nav:"navChart", body:"chartBody" },
   gal:   { render:renderGal,        nav:"navGal",   body:"galBody"   },
   sys:   { render:renderSystemData, nav:"navSys",   body:"panelBody" }
@@ -2741,6 +3141,7 @@ document.getElementById("sysBtn").addEventListener("click", function(){
 });
 document.getElementById("navFly").addEventListener("click", closePanel);
 document.getElementById("navSys").addEventListener("click", function(){ showPanel("sys"); });
+document.getElementById("navMkt").addEventListener("click", function(){ showPanel("mkt"); });
 document.getElementById("navChart").addEventListener("click", function(){ showPanel("chart"); });
 document.getElementById("navGal").addEventListener("click", function(){ showPanel("gal"); });
 
