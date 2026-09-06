@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 016e</title>
+<title>ELITE: THE CLONES — 018a</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -1867,7 +1867,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 });
 function writeReport(){
   document.getElementById("report").value =
-    "ELITE: THE CLONES 016e — settings\n"+
+    "ELITE: THE CLONES 018a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -1883,6 +1883,11 @@ function writeReport(){
     "radar range   "+T.radarRange+" units\n"+
     "blip size     "+T.blip+" px\n"+
     "console h     "+document.querySelector(".console").getBoundingClientRect().height.toFixed(0)+" px\n"+
+    /* LOOP 51. Measured, not arithmetic. Open each chart once, then
+       TUNE. "not drawn" means the panel has not been opened this
+       session and the number would be a lie. */
+    "chart canvas  "+(chartW ? chartW+"x"+chartH+" px" : "not drawn")+"\n"+
+    "gal canvas    "+(galW>1  ? galW+"x"+galH+" px"   : "not drawn")+"\n"+
     "fps           "+fpsShow.toFixed(0)+"\n"+
     "viewport      "+window.innerWidth+"x"+window.innerHeight+
     "\n\n"+worldReport();
@@ -2142,6 +2147,11 @@ const cctx      = chartCv.getContext("2d");
 let chartSel = null;      /* cursor. Module-local, never state. */
 let chartPts = [];        /* {sys, px, py} for hit testing. Rebuilt each draw. */
 let chartPPL = 10;        /* px per LY, recomputed on every draw */
+/* LOOP 51. The drawn canvas box, captured on every draw so TUNE can
+   print it. galW/galH below already did this for the galactic chart
+   and nothing read them out. A canvas has no size while the panel is
+   shut, so the report prints the last draw, not a live measure. */
+let chartW = 0, chartH = 0;
 
 function targetSystem(){
   const t = state.commander.hyperspaceTarget;
@@ -2168,6 +2178,7 @@ function drawChart(){
   }
   cctx.setTransform(dpr,0,0,dpr,0,0);
   cctx.clearRect(0,0,w,h);
+  chartW = w; chartH = h;                          /* loop 51 */
 
   /* LY space is isotropic: World Model §2 halves dy before scaling, so
      equal px per LY on both axes draws a true circle for fuel range and
@@ -2301,7 +2312,11 @@ function renderSelStrip(p){
     /* §4: disabled AND labelled when out of fuel range. */
     btn.disabled = true;  btn.textContent = "OUT OF RANGE";
   } else if(sameSys(targetSystem(), o)){
-    btn.disabled = true;  btn.textContent = "COURSE SET";
+    /* SESSION 018. This read "COURSE SET", disabled — a button that
+       described a state and did nothing. It is now the jump. See the
+       JUMP block below for why the trigger lives here and not in
+       CONTROL §4.4's radial. */
+    btn.disabled = false; btn.textContent = "ENGAGE";
   } else {
     btn.disabled = false; btn.textContent = "SET COURSE";
   }
@@ -2329,8 +2344,92 @@ function setCourse(){
   state.commander.hyperspaceTarget = { galaxy:chartSel.galaxy, index:chartSel.index };
   PANELS[panelCur].render();
 }
-document.getElementById("cCourse").addEventListener("click", setCourse);
-document.getElementById("gCourse").addEventListener("click", setCourse);
+
+/* ==================================================================
+   THE JUMP — session 018. The first thing in this game that travels.
+
+   WHERE THE TRIGGER LIVES, AND WHY THAT IS TEMPORARY.
+   CONTROL & LAYOUT §4.4 puts hyperspace in a guarded radial menu,
+   beside ECM, missiles and the escape pod. The radial does not exist
+   and is a session of its own. Rather than invent a second home for
+   the action, it is the strip button already on screen: SET COURSE
+   commits the target, and the same button then reads ENGAGE. Two
+   deliberate taps on two different labels IS the guard §4.4 wanted,
+   reached without building §4.4.
+
+   THE CONDITION, and it is written in the spec as well as here,
+   exactly as the Market's in-flight condition is: ENGAGE moves into
+   the radial the session the radial lands.
+
+   FOUND BY BUILDING THIS: Control §3 defines a `hyperspace` button
+   action and §5 binds no key to it in any of the three presets. All
+   three bind `J` to the in-system jump, which is a different thing.
+   Logged, not fixed — this is a touch control and that is another
+   document.
+
+   FUEL. Cost is ceil(distance x 10) tenths, so fractional travel is
+   never free. [DECISION], Ripley, session 018. The tank is 70 tenths
+   (World Model §2) and NOTHING REFUELS, so one tank is roughly one
+   round trip to the nearest neighbour and then you are stranded.
+   That is known, it is not a bug, and it is not a playable game:
+   refuelling is a separate job. Nothing persists, so a reload
+   resets the tank.
+
+   gameDay += 1 PER JUMP, regardless of distance. WORLD MODEL §7.2.
+   Settled there, not decided here.
+
+   NOTHING IS CAPPED ON ARRIVAL. World §13 [ASSUMED] 13 says the
+   market counter has no cap and has never been observed uncapped
+   because it needs a hold of cargo bought elsewhere. This build is
+   what reaches that situation. Capping it here would destroy the
+   observation the build exists to make. Loop 54 is left open on
+   purpose.
+   ================================================================== */
+function jumpCostTenths(d){ return Math.ceil(d * 10); }
+
+function doJump(){
+  const s = state.system, o = targetSystem();
+  if(!s || !o) return;
+  const cost = jumpCostTenths(World.distLY(s, o));
+  /* The button is already disabled out of range. This is checked again
+     because the button is display and this is state — constraint 2
+     cuts both ways, and an instrument must never be the thing that
+     decides. */
+  if(cost > state.commander.fuel) return;
+
+  state.commander.fuel    -= cost;
+  state.position           = { galaxy:o.galaxy, system:o.index };
+  state.system             = World.system(o.galaxy, o.index);
+  state.commander.gameDay += 1;               /* World Model §7.2 */
+  state.commander.hyperspaceTarget = null;
+
+  /* The cursor follows the ship. [ASSUMED]. On arrival the strip then
+     reads CURRENT SYSTEM, which is true and useful; leaving the cursor
+     where it was would point at a system you are now standing in, and
+     clearing it to NO SELECTION is also true and says less. */
+  chartSel = state.system;
+
+  /* The open accordion row belongs to the market you left. Neither the
+     price table nor the counter needs clearing: marketFor and mktAvail
+     are both keyed on system-and-gameDay and both halves just moved. */
+  mktOpen = null; mktBuyQ = 0; mktSellQ = 0;
+
+  /* Arrival returns you to the view. [DECISION], Ripley, session 018.
+     A jump that leaves you looking at a chart of somewhere you no
+     longer are is the wrong first thing to see. */
+  closePanel();
+}
+
+/* One button, two acts. The branch is on state, never on the label —
+   a handler that read the button's own text would make the label the
+   decision, and the label is display. */
+function courseButton(){
+  if(!chartSel) return;
+  if(sameSys(targetSystem(), chartSel)) doJump();
+  else setCourse();
+}
+document.getElementById("cCourse").addEventListener("click", courseButton);
+document.getElementById("gCourse").addEventListener("click", courseButton);
 
 /* ==================================================================
    GALACTIC CHART — PANEL LAYOUT SPEC §5, in-flight mode (§1).
