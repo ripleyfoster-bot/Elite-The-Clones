@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 018a</title>
+<title>ELITE: THE CLONES — 020b</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -1867,7 +1867,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 });
 function writeReport(){
   document.getElementById("report").value =
-    "ELITE: THE CLONES 018a — settings\n"+
+    "ELITE: THE CLONES 020b — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -3015,13 +3015,20 @@ gFindIn.addEventListener("blur", resetPageZoom);
 
    THREE MORE GAPS, LEFT OPEN RATHER THAN INVENTED AROUND.
 
-   A. §7.1 HAS NO CATEGORY COLUMN, and Panel §3.2 sorts by category.
-      Category is derived here from the sign of econFactor, which is
-      §7's own sentence: negative is agricultural produce, positive is
-      industrial. Zero falls out as minerals, which matches the one
-      worked example §3.1 gives (Raw Ore under MINERALS). Water Ice is
-      -2 and therefore lands under AGRICULTURAL, which reads oddly and
-      is what the rule produces. Not overridden. [ASSUMED].
+   A. CLOSED, session 017 and 019. §7.1 NOW HAS A CATEGORY COLUMN.
+      It was written down as the derivation this file already ran —
+      negative agricultural, positive industrial, zero minerals — so
+      the two agree row for row today. Water Ice was the last row still
+      sitting where the derivation put it; §7.1 moved it to Minerals and
+      set econFactor to 0, and loop 56 above is that edit.
+
+      STILL DERIVED HERE, AND THAT IS NOW A DIVERGENCE. §7.1 says
+      category is world data and is NOT derived, and gives the reason:
+      PANEL §3.2 fixes the sort order because position in the list is
+      learned, so a derived category makes that order a side effect of
+      price tuning. LOOP 59 — BUILT, session 020. mktCategory reads the
+      `cat` column now and the id special-case for salvage is gone.
+      See that function's comment for the failure the change buys.
 
    B. §3.4's CUSTOMS POSTURE IS NOT DRAWN. It names six labels for
       eight governments and gives no mapping. The illegal marker IS
@@ -3053,34 +3060,56 @@ const CARGO_MAX = 20;          /* [ASSUMED], Ripley, session 016 */
    decision 3 above, expressed as a column so it is visible rather
    than buried in an if. */
 const COMMODITIES = [
-  { id:"grain",     name:"Grain Staples",        unit:"t",  base:76,   ef:-8,  sw:4,   bq:6,  sq:3,  legal:"L", bulk:1 },
-  { id:"produce",   name:"Hydroponic Produce",   unit:"t",  base:96,   ef:-10, sw:6,   bq:12, sq:7,  legal:"L", bulk:1 },
-  { id:"protein",   name:"Vat Protein",          unit:"t",  base:120,  ef:-12, sw:8,   bq:8,  sq:7,  legal:"L", bulk:1 },
-  { id:"fibre",     name:"Textile Fibres",       unit:"t",  base:80,   ef:-4,  sw:12,  bq:10, sq:7,  legal:"L", bulk:1 },
-  { id:"timber",    name:"Biopolymer Timber",    unit:"t",  base:108,  ef:-6,  sw:8,   bq:9,  sq:7,  legal:"L", bulk:1 },
-  { id:"spirits",   name:"Distilled Spirits",    unit:"t",  base:340,  ef:-20, sw:60,  bq:5,  sq:7,  legal:"R", bulk:1 },
-  { id:"hides",     name:"Exotic Hides",         unit:"t",  base:700,  ef:-28, sw:32,  bq:4,  sq:3,  legal:"R", bulk:1 },
-  { id:"ice",       name:"Water Ice",            unit:"t",  base:44,   ef:-2,  sw:6,   bq:14, sq:15, legal:"L", bulk:1 },
-  { id:"ore",       name:"Raw Ore",              unit:"t",  base:60,   ef:0,   sw:12,  bq:12, sq:15, legal:"L", bulk:1 },
-  { id:"gold",      name:"Gold",                 unit:"kg", base:400,  ef:0,   sw:24,  bq:6,  sq:7,  legal:"L", bulk:0 },
-  { id:"platinum",  name:"Platinum",             unit:"kg", base:780,  ef:0,   sw:40,  bq:4,  sq:7,  legal:"L", bulk:0 },
-  { id:"gems",      name:"Gemstones",            unit:"g",  base:1400, ef:0,   sw:100, bq:3,  sq:3,  legal:"L", bulk:0 },
-  { id:"alloys",    name:"Refined Alloys",       unit:"t",  base:160,  ef:6,   sw:12,  bq:10, sq:7,  legal:"L", bulk:1 },
-  { id:"tools",     name:"Machine Tools",        unit:"t",  base:228,  ef:12,  sw:16,  bq:8,  sq:7,  legal:"L", bulk:1 },
-  { id:"cells",     name:"Fusion Cells",         unit:"t",  base:260,  ef:14,  sw:20,  bq:7,  sq:7,  legal:"R", bulk:1 },
-  { id:"medicals",  name:"Nano-Medicals",        unit:"t",  base:520,  ef:18,  sw:36,  bq:4,  sq:3,  legal:"L", bulk:1 },
-  { id:"cores",     name:"Computer Cores",       unit:"t",  base:620,  ef:22,  sw:40,  bq:5,  sq:7,  legal:"L", bulk:1 },
-  { id:"drones",    name:"Combat Drones",        unit:"t",  base:1000, ef:24,  sw:60,  bq:3,  sq:3,  legal:"I", bulk:1 },
-  { id:"stims",     name:"Neuro-Stimulants",     unit:"t",  base:1880, ef:32,  sw:480, bq:3,  sq:3,  legal:"I", bulk:1 },
-  { id:"contracts", name:"Indentured Contracts", unit:"t",  base:380,  ef:20,  sw:40,  bq:5,  sq:7,  legal:"I", bulk:1 },
-  { id:"salvage",   name:"Xeno Salvage",         unit:"t",  base:1200, ef:0,   sw:200, bq:0,  sq:0,  legal:"S", bulk:1 }
+  { id:"grain",     name:"Grain Staples",        unit:"t",  base:76,   ef:-8,  sw:4,   bq:6,  sq:3,  legal:"L", bulk:1, cat:"AGRICULTURAL" },
+  { id:"produce",   name:"Hydroponic Produce",   unit:"t",  base:96,   ef:-10, sw:6,   bq:12, sq:7,  legal:"L", bulk:1, cat:"AGRICULTURAL" },
+  { id:"protein",   name:"Vat Protein",          unit:"t",  base:120,  ef:-12, sw:8,   bq:8,  sq:7,  legal:"L", bulk:1, cat:"AGRICULTURAL" },
+  { id:"fibre",     name:"Textile Fibres",       unit:"t",  base:80,   ef:-4,  sw:12,  bq:10, sq:7,  legal:"L", bulk:1, cat:"AGRICULTURAL" },
+  { id:"timber",    name:"Biopolymer Timber",    unit:"t",  base:108,  ef:-6,  sw:8,   bq:9,  sq:7,  legal:"L", bulk:1, cat:"AGRICULTURAL" },
+  { id:"spirits",   name:"Distilled Spirits",    unit:"t",  base:340,  ef:-20, sw:60,  bq:5,  sq:7,  legal:"R", bulk:1, cat:"AGRICULTURAL" },
+  { id:"hides",     name:"Exotic Hides",         unit:"t",  base:700,  ef:-28, sw:32,  bq:4,  sq:3,  legal:"R", bulk:1, cat:"AGRICULTURAL" },
+  /* LOOP 56, session 020. ef was -2, which put this row under
+     AGRICULTURAL by the derivation in mktCategory below. Nothing chose
+     that. WORLD MODEL §7.1 moves it to Minerals and sets ef to 0 —
+     [DECISION], Ripley, session 019, both halves. sw stays 6: World §13
+     [DECISION] 16 is open and the category question does not license
+     inventing a volatility number. Cost, measured in §7.1: the price
+     spread falls 2.0 CR -> 0.6 CR and ice stops being worth carrying. */
+  { id:"ice",       name:"Water Ice",            unit:"t",  base:44,   ef:0,   sw:6,   bq:14, sq:15, legal:"L", bulk:1, cat:"MINERALS" },
+  { id:"ore",       name:"Raw Ore",              unit:"t",  base:60,   ef:0,   sw:12,  bq:12, sq:15, legal:"L", bulk:1, cat:"MINERALS" },
+  { id:"gold",      name:"Gold",                 unit:"kg", base:400,  ef:0,   sw:24,  bq:6,  sq:7,  legal:"L", bulk:0, cat:"MINERALS" },
+  { id:"platinum",  name:"Platinum",             unit:"kg", base:780,  ef:0,   sw:40,  bq:4,  sq:7,  legal:"L", bulk:0, cat:"MINERALS" },
+  { id:"gems",      name:"Gemstones",            unit:"g",  base:1400, ef:0,   sw:100, bq:3,  sq:3,  legal:"L", bulk:0, cat:"MINERALS" },
+  { id:"alloys",    name:"Refined Alloys",       unit:"t",  base:160,  ef:6,   sw:12,  bq:10, sq:7,  legal:"L", bulk:1, cat:"INDUSTRIAL" },
+  { id:"tools",     name:"Machine Tools",        unit:"t",  base:228,  ef:12,  sw:16,  bq:8,  sq:7,  legal:"L", bulk:1, cat:"INDUSTRIAL" },
+  { id:"cells",     name:"Fusion Cells",         unit:"t",  base:260,  ef:14,  sw:20,  bq:7,  sq:7,  legal:"R", bulk:1, cat:"INDUSTRIAL" },
+  { id:"medicals",  name:"Nano-Medicals",        unit:"t",  base:520,  ef:18,  sw:36,  bq:4,  sq:3,  legal:"L", bulk:1, cat:"INDUSTRIAL" },
+  { id:"cores",     name:"Computer Cores",       unit:"t",  base:620,  ef:22,  sw:40,  bq:5,  sq:7,  legal:"L", bulk:1, cat:"INDUSTRIAL" },
+  { id:"drones",    name:"Combat Drones",        unit:"t",  base:1000, ef:24,  sw:60,  bq:3,  sq:3,  legal:"I", bulk:1, cat:"INDUSTRIAL" },
+  { id:"stims",     name:"Neuro-Stimulants",     unit:"t",  base:1880, ef:32,  sw:480, bq:3,  sq:3,  legal:"I", bulk:1, cat:"INDUSTRIAL" },
+  { id:"contracts", name:"Indentured Contracts", unit:"t",  base:380,  ef:20,  sw:40,  bq:5,  sq:7,  legal:"I", bulk:1, cat:"INDUSTRIAL" },
+  { id:"salvage",   name:"Xeno Salvage",         unit:"t",  base:1200, ef:0,   sw:200, bq:0,  sq:0,  legal:"S", bulk:1, cat:"SALVAGE" }
 ];
 
-/* Gap A. §7's own sentence, applied. */
-function mktCategory(c){
-  if(c.id === "salvage") return "SALVAGE";
-  return c.ef < 0 ? "AGRICULTURAL" : (c.ef === 0 ? "MINERALS" : "INDUSTRIAL");
-}
+/* LOOP 59, session 020. This derived category from the sign of ef and
+   special-cased salvage by id. WORLD MODEL §7.1 says category is world
+   data and is NOT derived, and gives the reason: PANEL §3.2 fixes the
+   sort order because position in the list is learned and reached for
+   without reading, so a derived category makes that order a side effect
+   of price tuning. Session 020's own ice edit was exactly that — an ef
+   change that moved a row — and it only landed correctly by agreeing
+   with the column. The `cat` field above is §7.1's Category column
+   transcribed, all 21 rows, and the id special-case is gone with it.
+
+   THE NEW FAILURE THIS BUYS, NAMED RATHER THAN GUARDED. renderMarket
+   draws a heading when `cat` CHANGES while walking table order. The
+   derivation could not put one category in two separate runs — the
+   sign is monotonic down the table. A column can. Put MINERALS on a row
+   between two INDUSTRIAL rows and the screen grows a second MINERALS
+   heading. No guard is added here: §7.1's table order is the source
+   order, and inventing a runtime check for a state no document permits
+   is a mechanism nobody chose. [ASSUMED] that the transcription is
+   right — it was typed from §7.1, not recalled. */
+function mktCategory(c){ return c.cat; }
 
 /* §7.1's note: Restricted is legal at government <= 3, Illegal only at
    government 0. Salvage is sell-only and sells anywhere (§7.3). */
@@ -3273,7 +3302,16 @@ function mktSell(c, qty, price){
   slot.qty -= qty;
   state.commander.credits += qty * price;
   if(slot.qty <= 0) delete state.cargo[c.id];
-  mktTaken.by[c.id] = Math.max(0, (mktTaken.by[c.id] || 0) - qty);
+  /* LOOP 55, session 020. This was Math.max(0, ...). The floor meant
+     selling cargo bought ELSEWHERE moved the counter not at all, while
+     selling cargo bought HERE restored it — one visible action, two
+     outcomes, told apart by provenance the player cannot see. That is
+     the constraint-2 failure, and it is why WORLD MODEL §7.2 decided
+     the counter is supply on the pad: your net trade, no floor.
+     [DECISION], Ripley, session 019. `taken` now goes negative and
+     mktAvail adds it back, so a 23t market you sell 20t into reads 43t.
+     Uncapped on purpose — World §13 [ASSUMED] 13 says what to watch. */
+  mktTaken.by[c.id] = (mktTaken.by[c.id] || 0) - qty;
   state.ship.cargoUsed = holdUsed();
 }
 
