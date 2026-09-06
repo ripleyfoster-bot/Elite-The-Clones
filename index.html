@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 020b</title>
+<title>ELITE: THE CLONES — 022a</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -258,7 +258,7 @@
 
      FOUR THINGS §3 AND §7 DO NOT DEFINE, decided by Ripley in 016:
        hold capacity 20 units          — [ASSUMED], no document had one
-       cargo slots carry avgPaid       — WORLD MODEL §9 is owed a bump
+       cargo slots carry `paid`        — WORLD MODEL §9 is owed a bump
        gold/platinum/gems cost no hold — the 1984 model, §7's units
        sell at the local price         — no spread
 
@@ -1362,8 +1362,10 @@ const state = {
      price folded into the slot. §9 draws this as { grain: 0, ore: 5 }
      — one number per commodity, with nowhere to keep a second value.
      §3.3 is LOCKED, so §9 is the one that gives. A slot is
-     { qty, avgPaid }, avgPaid in tenths of a credit. §9 IS OWED A
-     BUMP — recorded here rather than fixed silently. Session 016. */
+     { qty, paid } — paid is TOTAL paid in tenths, and the average is
+     divided out at display. It was { qty, avgPaid } until loop 61,
+     session 022. §9 IS OWED A BUMP — recorded here rather than fixed
+     silently, and carried as loop 62 where a sweep can reach it. */
   cargo: {}
 };
 
@@ -1867,7 +1869,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 });
 function writeReport(){
   document.getElementById("report").value =
-    "ELITE: THE CLONES 020b — settings\n"+
+    "ELITE: THE CLONES 022a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -1957,7 +1959,12 @@ function worldReport(){
   out += chk("dull", pct(dull,256), "23.8%");
   out += chk("§3.6 moves", World.galaxy(0).repairs.length, 1);
   out += chk("components after", World.galaxy(0).after.length, 1);
-  out += chk("start system", s.name, "Vileze");
+  /* LOOP 60, session 022. This read `s.name` — the CURRENT system —
+     and so asserted a position rather than a generated name. Right for
+     eleven sessions because nothing travelled; FAILs after every jump
+     since 018. The row's subject is the generator: does 0/51 still
+     produce Vileze. World Model §2.2, §13 [DECISION] 17. */
+  out += chk("start system", World.system(0,51).name, "Vileze");
 
   let allBuilt = true;
   for(let g=0;g<8;g++) if(!World.isBuilt(g)) allBuilt = false;
@@ -3000,8 +3007,10 @@ gFindIn.addEventListener("blur", resetPageZoom);
       cargo slot in the save file's `cargo` object. WORLD MODEL §9
       draws `cargo` as { grain: 0, ore: 5 } — one number, nowhere to
       put a second. §3.3 is LOCKED so §9 gives: a slot is now
-      { qty, avgPaid }. WORLD MODEL §9 IS OWED A BUMP. [DECISION],
-      Ripley, 016. Found by building.
+      { qty, paid } — total paid, not a unit price. WORLD MODEL §9 IS
+      OWED A BUMP. [DECISION], Ripley, 016; reshaped by loop 61 in 022
+      because storing a rounded unit price misreported profit by
+      1.0 CR. Found by building, both times.
 
    3. HOLD SPACE FOR gold, platinum AND gems. §7.1 prices them in kg,
       kg and grams while the hold is in tonnes, and nothing joins the
@@ -3256,9 +3265,9 @@ function mktExpansion(s, c, price, avail, held, illegal){
          '<button class="mstep" data-act="s+" '+(mktSellQ>=held?'disabled':'')+'>+</button>'+
          '<button class="mmax" data-act="sall">ALL</button></div>'+
          '<div class="mfig">Gross '+cr(mktSellQ*price)+' CR \u00b7 avg paid '+
-         cr(slot.avgPaid)+' \u00b7 '+
-         (price>=slot.avgPaid ? '+' : '\u2212')+
-         cr(Math.abs((price-slot.avgPaid)*mktSellQ))+' CR</div>'+
+         cr(slot.paid/slot.qty)+' \u00b7 '+
+         (price*slot.qty >= slot.paid ? '+' : '\u2212')+
+         cr(Math.abs(mktSellQ*price - slot.paid*mktSellQ/slot.qty))+' CR</div>'+
          '<button class="mconf" data-act="sell" '+(mktSellQ<=0?'disabled':'')+
          '>CONFIRM SALE</button></div>';
   }
@@ -3284,11 +3293,19 @@ function mktExpansion(s, c, price, avail, held, illegal){
 function mktBuy(c, qty, price){
   if(qty <= 0) return;
   const slot = state.cargo[c.id];
+  /* LOOP 61, session 022. This stored a ROUNDED unit price and rounded
+     it again on every part-buy: 10t at 24 and 10t at 31 stored 28
+     against a true 27.5, and the sale reported +50.0 CR against a real
+     51.0. Credits were never wrong; the profit line was. A slot now
+     carries `paid` — total paid, integer tenths — and the average is
+     divided out at display, where cr() rounds it to a tenth anyway.
+     Storage stops rounding; only the pixels do. World Model §9,
+     §13 [DECISION] 18. §9 IS OWED A BUMP — loop 62. */
   if(!slot){
-    state.cargo[c.id] = { qty:qty, avgPaid:price };
+    state.cargo[c.id] = { qty:qty, paid:qty*price };
   } else {
-    slot.avgPaid = Math.round((slot.qty*slot.avgPaid + qty*price)/(slot.qty+qty));
-    slot.qty += qty;
+    slot.paid += qty * price;
+    slot.qty  += qty;
   }
   state.commander.credits -= qty * price;
   mktTaken.by[c.id] = (mktTaken.by[c.id] || 0) + qty;
@@ -3299,9 +3316,16 @@ function mktSell(c, qty, price){
   if(!slot || qty <= 0) return;
   /* §3.3.1: partial sale leaves avgPaid unchanged; a full sale clears
      the slot and discards it. */
+  const before = slot.qty;
   slot.qty -= qty;
   state.commander.credits += qty * price;
   if(slot.qty <= 0) delete state.cargo[c.id];
+  /* LOOP 61. §3.3.1 is LOCKED: a partial sale leaves the average
+     unchanged, so `paid` scales with what is left. That ratio is not
+     an integer, so ONE rounding survives — here, on partial sales
+     only, bounded at half a tenth on the whole slot rather than half
+     a tenth per tonne per buy. [ASSUMED], Ripley, session 022. */
+  else slot.paid = Math.round(slot.paid * slot.qty / before);
   /* LOOP 55, session 020. This was Math.max(0, ...). The floor meant
      selling cargo bought ELSEWHERE moved the counter not at all, while
      selling cargo bought HERE restored it — one visible action, two
