@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 024b</title>
+<title>ELITE: THE CLONES — 024c</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -1881,7 +1881,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 });
 function writeReport(){
   document.getElementById("report").value =
-    "ELITE: THE CLONES 024b — settings\n"+
+    "ELITE: THE CLONES 024c — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -1964,6 +1964,15 @@ function worldReport(){
     "              star class "+s.starClass+", "+(s.scoopable?"scoopable":"not scoopable")+"\n"+
     "              pop "+(s.population/10).toFixed(1)+" bn · radius "+s.radiusKm+" km · "+s.species+"\n"+
     "              "+s.description+"\n"+
+    /* Session 024. Added because the 024b test had no report line to
+       compare the dev Fuel slider against, and the instruction to compare
+       it with "the report's fuel line" named a line that did not exist.
+       Both units on one row: the slider reads tenths, the console reads
+       LY, and this is the row that shows they are one number. Read from
+       state at write time — CORE API §3.1, no stored copy. Constraint 6:
+       the commander's own record is never gated. */
+    "fuel          "+state.commander.fuel+" tenths = "+
+      (state.commander.fuel/10).toFixed(1)+" LY\n"+
     "boot          "+WORLD_BOOT_MS.toFixed(1)+" ms  (galaxy 0 only)\n"+
     "built         ";
   for(let g=0;g<8;g++) out += (World.isBuilt(g) ? "G"+g : "--")+" ";
