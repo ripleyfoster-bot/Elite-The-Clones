@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 022a</title>
+<title>ELITE: THE CLONES — 024b</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -860,8 +860,11 @@
     <label>Fuel <i><span id="vFu"></span> tenths LY</i></label>
     <input type="range" id="sFu" min="0" max="70" step="1">
     <div class="note">These four write to state. The instruments only ever read it —
-      there is no second copy of the number. Nothing recharges: no recharge rate
-      has been designed yet and inventing one here would be a lie.</div>
+      no instrument holds a second copy. These sliders do: a slider position is a
+      copy, refreshed when this panel opens and at no other moment. Nothing
+      recharges: no recharge rate has been designed yet and inventing one here
+      would be a lie, so the only value that moves on its own is Fuel, and only
+      a jump moves it.</div>
   </div>
 
   <div class="tunevals" id="tv"></div>
@@ -1858,8 +1861,17 @@ function toggle(id,key){
 toggle("tRadial","radial"); toggle("tInvP","invP");
 toggle("tInvR","invR");     toggle("tMirror","mirror");
 
+/* LOOP 63, session 024. Everything TUNE displays is refreshed here, in one
+   place, at the only moment a human can read it.
+   The report was already regenerated on open. The four dev sliders were not:
+   syncDev() ran only from syncUI(), which fires at page load, on RESET, and
+   on the four toggles. A jump between page load and opening TUNE therefore
+   left the Fuel slider showing the tank as it was before the jump, while the
+   report beside it read the truth. Constraint 2's shape on a dev control.
+   Anything added to the panel hangs off this function, not off the click. */
+function refreshTune(){ syncDev(); writeReport(); }
 document.getElementById("tuneBtn").addEventListener("click",function(){
-  tuner.classList.add("open"); writeReport();
+  tuner.classList.add("open"); refreshTune();
 });
 document.getElementById("bClose").addEventListener("click",function(){
   tuner.classList.remove("open");
@@ -1869,7 +1881,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 });
 function writeReport(){
   document.getElementById("report").value =
-    "ELITE: THE CLONES 022a — settings\n"+
+    "ELITE: THE CLONES 024b — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -1890,6 +1902,11 @@ function writeReport(){
        session and the number would be a lie. */
     "chart canvas  "+(chartW ? chartW+"x"+chartH+" px" : "not drawn")+"\n"+
     "gal canvas    "+(galW>1  ? galW+"x"+galH+" px"   : "not drawn")+"\n"+
+    /* LOOP 51, session 024. Same rule as the canvas lines above: "not
+       drawn" means the Short Range chart has not been opened this
+       session and any number here would be a lie. */
+    "strip row     "+(stripH ? stripH+" px" : "not drawn")+"\n"+
+    "  of which tech "+(stripH ? techH+" px" : "not drawn")+"\n"+
     "fps           "+fpsShow.toFixed(0)+"\n"+
     "viewport      "+window.innerWidth+"x"+window.innerHeight+
     "\n\n"+worldReport();
@@ -2159,6 +2176,7 @@ let chartPPL = 10;        /* px per LY, recomputed on every draw */
    and nothing read them out. A canvas has no size while the panel is
    shut, so the report prints the last draw, not a live measure. */
 let chartW = 0, chartH = 0;
+let stripH = 0, techH = 0;                         /* loop 51, session 024 */
 
 function targetSystem(){
   const t = state.commander.hyperspaceTarget;
@@ -2186,6 +2204,17 @@ function drawChart(){
   cctx.setTransform(dpr,0,0,dpr,0,0);
   cctx.clearRect(0,0,w,h);
   chartW = w; chartH = h;                          /* loop 51 */
+
+  /* LOOP 51, session 024. The strip is [ASSUMED] ≈33px and the tech row
+     [ASSUMED] to be the 17px the canvas lost between 018 and 022. Neither
+     has ever been measured. Captured here rather than read in writeReport
+     because .csel has no layout while the panel is display:none — same
+     reason chartW is captured here. Both are outer heights including
+     margin-top; the tech row's margin is part of what it cost. */
+  const rs = document.querySelector("#chartBody .csel").getBoundingClientRect();
+  const rt = document.getElementById("cSelTech").getBoundingClientRect();
+  stripH = Math.round(rs.height);
+  techH  = Math.round(rt.height) + 3;               /* .ctech margin-top:3px */
 
   /* LY space is isotropic: World Model §2 halves dy before scaling, so
      equal px per LY on both axes draws a true circle for fuel range and
