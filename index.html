@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 024c</title>
+<title>ELITE: THE CLONES — 026a</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -183,9 +183,25 @@
     flex:1;background:transparent;border:1px solid var(--ink-dim);color:var(--ink);
     font:inherit;font-size:11px;padding:11px;border-radius:2px;letter-spacing:.08em;
   }
+  /* LOOP 64, session 026. This was a <textarea> with height:120px. At
+     10px that box holds about nine lines, and the report is ~42 lines
+     with galaxy 0 built and ~62 after BUILD ALL 8 — so every measurement
+     in this project has been read through COPY rather than off the
+     screen. It is now a <pre>: it is exactly as tall as the report, so
+     the height is not a number that can go stale when the report grows.
+     Fight mode will add rows and nothing here has to change.
+
+     It is also no longer a focusable text field, and that is deliberate.
+     CONTROL §9.2 requires anything that can take a caret to render at
+     >=16px, and it names TUNE explicitly. At 16px the 46-character
+     self-check rows wrap on a 402px screen and the got/want columns
+     break. §9.2 answers that case itself: if a field will not fit at
+     16px the layout is wrong, not the threshold. A <pre> takes no caret,
+     so the rule does not bind it and no carve-out is needed. */
   #report{
-    width:100%;height:120px;margin-top:12px;background:#040705;color:var(--ink-dim);
+    width:100%;margin-top:12px;background:#040705;color:var(--ink-dim);
     border:1px solid var(--ink-faint);font:inherit;font-size:10px;padding:7px;
+    white-space:pre-wrap;overflow-wrap:break-word;
     -webkit-user-select:text;user-select:text;
   }
   .sep{height:1px;background:var(--ink-faint);margin:16px 0;}
@@ -890,8 +906,11 @@
     <button id="bClose">FLY</button>
   </div>
 
-  <textarea id="report" readonly></textarea>
+  <!-- LOOP 64. Both buttons sit ABOVE the report. The report now grows to
+       its own length, so anything below it is a scroll away and gets
+       longer every time the report does. -->
   <div class="acts"><button id="bWorld">BUILD ALL 8 GALAXIES</button><button id="bCopy">COPY SETTINGS FOR REPORT</button></div>
+  <pre id="report"></pre>
 </div>
 
 <script>
@@ -1879,9 +1898,13 @@ document.getElementById("bClose").addEventListener("click",function(){
 document.getElementById("bReset").addEventListener("click",function(){
   T=Object.assign({},SPEC); saveT(); syncUI();
 });
+/* LOOP 64. The report text is kept as a string so COPY can write it to
+   the clipboard directly. It used to be read back out of the textarea's
+   .value via el.select(), which is what made the box focusable. */
+let lastReport = "";
 function writeReport(){
-  document.getElementById("report").value =
-    "ELITE: THE CLONES 024c — settings\n"+
+  lastReport =
+    "ELITE: THE CLONES 026a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -1910,6 +1933,7 @@ function writeReport(){
     "fps           "+fpsShow.toFixed(0)+"\n"+
     "viewport      "+window.innerWidth+"x"+window.innerHeight+
     "\n\n"+worldReport();
+  document.getElementById("report").textContent = lastReport;
 }
 
 /* ---------- world proof. Reads World and state; computes nothing twice. ----------
@@ -2027,10 +2051,25 @@ document.getElementById("bWorld").addEventListener("click",function(){
   },16);
 });
 document.getElementById("bCopy").addEventListener("click",function(){
-  const el=document.getElementById("report");
-  writeReport(); el.select(); el.setSelectionRange(0,99999);
-  try{ navigator.clipboard.writeText(el.value); this.textContent="COPIED"; 
-       setTimeout(()=>this.textContent="COPY SETTINGS FOR REPORT",1400); }catch(e){}
+  /* LOOP 64, session 026. There is no el.select() any more — the report
+     is a <pre> and takes no caret. The clipboard is written from the
+     string writeReport() has just built, which is the same text on the
+     screen and not a second copy of it.
+     The fallback is what el.select() used to provide for free: if the
+     clipboard API is missing or refuses, select the block with a Range
+     so the iOS long-press Copy menu still works. */
+  writeReport();
+  const el=document.getElementById("report"), b=this;
+  function done(t){ b.textContent=t;
+    setTimeout(function(){ b.textContent="COPY SETTINGS FOR REPORT"; },1400); }
+  function selectFallback(){
+    try{ const r=document.createRange(); r.selectNodeContents(el);
+         const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+         done("SELECTED \u2014 LONG-PRESS COPY"); }catch(e){}
+  }
+  try{ navigator.clipboard.writeText(lastReport)
+         .then(function(){ done("COPIED"); }, selectFallback); }
+  catch(e){ selectFallback(); }
 });
 
 /* ==================================================================
