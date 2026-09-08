@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 026a</title>
+<title>ELITE: THE CLONES — 028a</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -274,7 +274,7 @@
 
      FOUR THINGS §3 AND §7 DO NOT DEFINE, decided by Ripley in 016:
        hold capacity 20 units          — [ASSUMED], no document had one
-       cargo slots carry `paid`        — WORLD MODEL §9 is owed a bump
+       cargo slots carry `paid`        — WORLD MODEL §9, v1.9
        gold/platinum/gems cost no hold — the 1984 model, §7's units
        sell at the local price         — no spread
 
@@ -1386,8 +1386,11 @@ const state = {
      §3.3 is LOCKED, so §9 is the one that gives. A slot is
      { qty, paid } — paid is TOTAL paid in tenths, and the average is
      divided out at display. It was { qty, avgPaid } until loop 61,
-     session 022. §9 IS OWED A BUMP — recorded here rather than fixed
-     silently, and carried as loop 62 where a sweep can reach it. */
+     session 022. §9 CARRIES THIS SHAPE as of v1.9, session 023 — the
+     debt was recorded here rather than fixed silently, carried as loop
+     62, and paid. THE CLAIM THAT IT WAS OWED THEN SURVIVED IN FOUR
+     PLACES IN THIS FILE FOR FIVE SESSIONS. A comment block is a
+     document for sweep check 5 and had never been swept. Loop 73. */
   cargo: {}
 };
 
@@ -1904,7 +1907,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 026a — settings\n"+
+    "ELITE: THE CLONES 028a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -3084,8 +3087,8 @@ gFindIn.addEventListener("blur", resetPageZoom);
       cargo slot in the save file's `cargo` object. WORLD MODEL §9
       draws `cargo` as { grain: 0, ore: 5 } — one number, nowhere to
       put a second. §3.3 is LOCKED so §9 gives: a slot is now
-      { qty, paid } — total paid, not a unit price. WORLD MODEL §9 IS
-      OWED A BUMP. [DECISION], Ripley, 016; reshaped by loop 61 in 022
+      { qty, paid } — total paid, not a unit price. WORLD MODEL §9
+      carries it, v1.9. [DECISION], Ripley, 016; reshaped by loop 61 in 022
       because storing a rounded unit price misreported profit by
       1.0 CR. Found by building, both times.
 
@@ -3377,7 +3380,7 @@ function mktBuy(c, qty, price){
      carries `paid` — total paid, integer tenths — and the average is
      divided out at display, where cr() rounds it to a tenth anyway.
      Storage stops rounding; only the pixels do. World Model §9,
-     §13 [DECISION] 18. §9 IS OWED A BUMP — loop 62. */
+     §13 [DECISION] 18. §9 carries it, v1.9 — loop 62, closed in 023. */
   if(!slot){
     state.cargo[c.id] = { qty:qty, paid:qty*price };
   } else {
