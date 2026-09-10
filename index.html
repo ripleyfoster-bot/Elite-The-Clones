@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 028a</title>
+<title>ELITE: THE CLONES — 030a</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -1359,8 +1359,14 @@ let speed=0, throttle=0;
    drops in without renaming anything. The painter below reads from
    here and from nowhere else; there is no second copy of a value for
    display. Speed is written once per frame from the integrator.
-   Maxima: fuel 70 tenths is WORLD MODEL 2. The other three are
+   Maxima: fuel 70 tenths is WORLD MODEL 2. The other TWO are
    [ASSUMED] - the ship module spec does not exist yet.
+   SAID "THREE" FROM THE DAY IT WAS WRITTEN AND THERE HAVE ALWAYS BEEN
+   THREE CONSTANTS, ONE OF THEM FUEL. Found session 030 while adding
+   holdTonnes to `state` two lines below - a count nobody restated
+   because nobody had reason to read this block. Loop 80.
+   HOLD CAPACITY IS NOT HERE. It is `state.ship.holdTonnes` and it is
+   save-file state, not a maximum. See the state object.
 ------------------------------------------------------------------- */
 const SHIELD_MAX = 100;   // [ASSUMED]
 const ENERGY_MAX = 100;   // [ASSUMED] displayed as four banks of 25
@@ -1378,8 +1384,24 @@ const state = {
      by building, session 012. { galaxy, index } or null. */
   commander: { credits:1000, legalStatus:0, fuel:70, gameDay:0, kills:0,
                hyperspaceTarget:null },
+  /* LOOP 75, session 030. `holdTonnes` was `CARGO_MAX`, a module
+     constant in the market section, from session 016 to 029. WORLD
+     MODEL §9 has said capacity is save-file state since v1.6 and CORE
+     API §7.1 recorded the placement fault in 028; both said it was
+     harmless because there was nothing that could change it. EQUIPMENT
+     LIST §5.2's Large Cargo Bay is the thing that changes it, so it
+     stopped being harmless the day that document was filed.
+     FIELD ORDER MATCHES CORE API §3.1's `ship` line exactly, so the
+     two can be read against each other without translating.
+     THE VALUE IS UNCHANGED AT 20 AND IS STILL [ASSUMED] — WORLD MODEL
+     §13 [ASSUMED] 10 and §9. This session moved it; it did not tune
+     it. Nothing has been played against 20 tonnes.
+     NOTHING WRITES IT YET. The three verbs EQUIPMENT LIST §8.2 needs
+     do not exist in DECLARATIVE §5 — loop 79 — so today this is a
+     value that is read from state instead of from a constant, and
+     that is the whole of the change. */
   ship: { hull:100, shieldFore:100, shieldAft:100, energy:100,
-          cargoUsed:0, speed:0, docked:false },
+          cargoUsed:0, holdTonnes:20, speed:0, docked:false },
   /* WORLD MODEL §9's `cargo`, with Panel §3.3.1's average purchase
      price folded into the slot. §9 draws this as { grain: 0, ore: 5 }
      — one number per commodity, with nowhere to keep a second value.
@@ -1907,7 +1929,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 028a — settings\n"+
+    "ELITE: THE CLONES 030a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -3083,6 +3105,25 @@ gFindIn.addEventListener("blur", resetPageZoom);
       exist; Panel §3.1's diagram says "Hold 15/20" and 20 appears in
       no other document. CARGO_MAX = 20. [ASSUMED], Ripley, 016.
 
+      MOVED, session 030 — LOOP 75. Capacity is `state.ship.holdTonnes`
+      and this section reads it from state in three places. The
+      constant is deleted, not aliased.
+      WHAT CHANGED IS PLACEMENT, NOT VALUE. Still 20. Still [ASSUMED].
+      WHY IT COULD NOT WAIT. WORLD MODEL §9 said capacity was save-file
+      state in v1.6, session 017 — one session AFTER this constant was
+      written — and CORE API §7.1 wrote the fault down in 028. Both
+      judged it harmless because nothing could change the number.
+      EQUIPMENT LIST §5.2 prices a Large Cargo Bay at holdBonus 15, and
+      a document that sells a thing which changes a constant is the
+      event both notes were waiting for.
+      THE LESSON IS THE SHAPE, NOT THE NUMBER. A placement fault has no
+      symptom. It reads correct on screen, it passes every test, and it
+      is invisible until the day something needs to write the value —
+      at which point it is not a comment, it is a build. Two documents
+      saw it two sessions early and neither could act, because
+      "harmless today" is a true statement that expires without
+      notifying anyone.
+
    2. WHERE avgPaid LIVES. Panel §3.3.1 says one value per occupied
       cargo slot in the save file's `cargo` object. WORLD MODEL §9
       draws `cargo` as { grain: 0, ore: 5 } — one number, nowhere to
@@ -3143,7 +3184,15 @@ gFindIn.addEventListener("blur", resetPageZoom);
    it is wrong it is one character.
    ================================================================== */
 
-const CARGO_MAX = 20;          /* [ASSUMED], Ripley, session 016 */
+/* CARGO_MAX IS GONE — LOOP 75, session 030. It was `const CARGO_MAX =
+   20` here from session 016. Capacity now reads `state.ship.holdTonnes`,
+   which is where WORLD MODEL §9, CORE API §3.1 and DECLARATIVE §4.1 all
+   say it lives. The value did not change and is still [ASSUMED].
+   The name is retired rather than aliased. An alias would have left
+   `CARGO_MAX` readable and writable-looking in a file where four
+   documents now agree it is not the name, which is how one number
+   acquired three names in the first place — DECLARATIVE v1.4's §9
+   item 6 is that story. */
 
 /* WORLD MODEL §7.1, transcribed. `bulk` is not in §7.1 — it is
    decision 3 above, expressed as a column so it is visible rather
@@ -3270,7 +3319,8 @@ function mktMaxBuy(sys, c){
   const price = marketFor(sys, state.commander.gameDay).rows[c.id].price;
   const byCash  = price > 0 ? Math.floor(state.commander.credits / price) : 0;
   const byStock = mktAvail(sys, c);
-  const byHold  = c.bulk === 0 ? Infinity : (CARGO_MAX - holdUsed());
+  const byHold  = c.bulk === 0 ? Infinity :
+                  (state.ship.holdTonnes - holdUsed());
   return Math.max(0, Math.min(byCash, byStock, byHold));
 }
 
@@ -3283,7 +3333,7 @@ function renderMarket(){
   h += '<div class="mtop">';
   h += '<div class="mhead"><span>'+esc(s.name.toUpperCase())+
        ' \u2014 MARKET</span><i>'+cr(state.commander.credits)+' CR</i></div>';
-  h += '<div class="mbar"><span class="mhold">HOLD '+holdUsed()+'/'+CARGO_MAX+
+  h += '<div class="mbar"><span class="mhold">HOLD '+holdUsed()+'/'+state.ship.holdTonnes+
        '</span><button class="mfilt'+(mktHoldOnly?' on':'')+
        '" data-act="filt">HOLD ONLY</button></div>';
   h += '</div>';
@@ -3355,7 +3405,7 @@ function mktExpansion(s, c, price, avail, held, illegal){
   const max = mktMaxBuy(s, c);
   if(mktBuyQ > max) mktBuyQ = max;
   const room = c.bulk === 0 ? '\u2014 no hold space' :
-               ('Hold '+holdUsed()+'/'+CARGO_MAX);
+               ('Hold '+holdUsed()+'/'+state.ship.holdTonnes);
   h += '<div class="mgrp"><div class="mline"><b>BUY</b>'+
        '<button class="mstep" data-act="b-" '+(mktBuyQ<=0?'disabled':'')+'>\u2212</button>'+
        '<span class="mqty">'+mktBuyQ+'</span>'+
