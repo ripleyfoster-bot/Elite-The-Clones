@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 030a</title>
+<title>ELITE: THE CLONES — 030b</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -1929,7 +1929,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 030a — settings\n"+
+    "ELITE: THE CLONES 030b — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -2001,6 +2001,18 @@ function uniStats(){
     lo:L[0], mid:L[L.length>>1], hi:L[L.length-1],
     dupes, nc, moves, comps, uniq, ms };
 }
+/* LOOP 81, session 030. Kept as its own function rather than inlined
+   so the disagreement test is readable. holdUsed() and COMMODITIES are
+   declared in the MARKET section further down the file; this runs only
+   when TUNE is opened, long after parse, so both exist. */
+function holdReportLine(){
+  const stored = state.ship.cargoUsed;
+  const walk   = holdUsed();
+  let line = stored+"/"+state.ship.holdTonnes+" t";
+  if(stored !== walk) line += "   MISMATCH — cargo walk says "+walk;
+  return line;
+}
+
 function worldReport(){
   const s = state.system, p = state.position;
   const g0 = g0Stats();
@@ -2022,6 +2034,21 @@ function worldReport(){
        the commander's own record is never gated. */
     "fuel          "+state.commander.fuel+" tenths = "+
       (state.commander.fuel/10).toFixed(1)+" LY\n"+
+    /* LOOP 81, session 030. Session 030 moved hold capacity into
+       `state.ship.holdTonnes` and THE REPORT COULD NOT SEE IT. The only
+       way to verify the build's own job was to open a game panel and
+       read a number that looks identical on the build before it.
+       A DIAGNOSTIC THAT CANNOT SEE THE THING THE SESSION CHANGED IS NOT
+       A DIAGNOSTIC FOR THAT SESSION.
+       BOTH NUMBERS, ON PURPOSE. `cargoUsed` is a stored total and
+       holdUsed() walks the cargo object; CORE API §3.1 says plainly
+       that `cargoUsed` is the field that lies if a third mutation path
+       is ever added and forgets to update it. There are two paths today
+       — mktBuy and mktSell — and the walk is what would catch a third.
+       So the walk is printed only when it DISAGREES: a clean line stays
+       short, and a mismatch is impossible to read past.
+       Constraint 6: the commander's own record is never gated. */
+    "hold          "+holdReportLine()+"\n"+
     "boot          "+WORLD_BOOT_MS.toFixed(1)+" ms  (galaxy 0 only)\n"+
     "built         ";
   for(let g=0;g<8;g++) out += (World.isBuilt(g) ? "G"+g : "--")+" ";
