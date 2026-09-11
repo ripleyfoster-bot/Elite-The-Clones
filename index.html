@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 032a</title>
+<title>ELITE: THE CLONES — 034a</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -1942,7 +1942,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 032a — settings\n"+
+    "ELITE: THE CLONES 034a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -2026,6 +2026,66 @@ function holdReportLine(){
   return line;
 }
 
+/* SESSION 034, job A. WORLD MODEL v1.13 §13 [ASSUMED] 17 named
+   `state.system` as THE ONE PLACE A POSITION AND ITS DISPLAY CAN
+   DIVERGE: `commander.galaxy`/`.system` are the position, `state.system`
+   is a derived object written alongside them in doJump, and every panel
+   reads the derived object. Nothing has ever compared the two.
+
+   THE 018 FAULT — fuel deducted, location unchanged, one instance, never
+   reproduced in thirteen clean jumps — has three possible shapes, and
+   this line separates them:
+     1. commander did not move            -> `here` shows the old indices
+     2. commander moved, derived did not  -> THIS LINE FIRES
+     3. both moved, the screen did not    -> this line reads AGREES, and
+        the fault is in repaint, not state
+   Shape 3 is identified by elimination, which is still the first time in
+   fifteen sessions that a fault could be placed on one side or the other.
+
+   TWO TESTS, ON PURPOSE. The system object carries its own `galaxy` and
+   `index` (deriveSystem), so the first test is what the derived object
+   SAYS IT IS against what the commander says. The second is object
+   identity against the cache. A stale object with the right coordinates
+   is nearly impossible to produce and is exactly the case the first test
+   would read as clean, so it is worth one `!==`.
+
+   IT MUST NOT BUILD A GALAXY. `World.system()` builds lazily, so calling
+   it here on an ungenerated galaxy would change the `built` row printed
+   four lines below and add a timing entry — a diagnostic with a side
+   effect on its own report. Guarded by isBuilt, and the ungenerated case
+   is itself reported as a divergence: you cannot be standing in a galaxy
+   that has never been generated.
+
+   IT MUST NOT THROW. `World.galaxy()` throws RangeError outside 0-7. A
+   report that crashes when the state is broken is worthless precisely
+   when it is needed, so the indices are range-checked before any call.
+
+   PRINTED ALWAYS, not only on disagreement — the opposite of
+   holdReportLine(). The hold line has a visible numerator either way, so
+   a clean run still proves it is live. This one has no other output, and
+   an instrument that is silent when clean cannot be distinguished from
+   an instrument that is not running. Constraint 2: this is read from
+   state at write time, never stored. Constraint 6: it is the commander's
+   own record and is never gated. */
+function positionReportLine(){
+  const p = state.commander, s = state.system;
+  if(!s) return "*** DIVERGENCE *** state.system is "+(s===null?"null":String(s))+
+                " — commander says galaxy "+p.galaxy+" system "+p.system;
+  const faults = [];
+  if(s.galaxy !== p.galaxy || s.index !== p.system)
+    faults.push("state.system reports galaxy "+s.galaxy+" system "+s.index+" ("+s.name+")");
+  if(!Number.isInteger(p.galaxy) || p.galaxy < 0 || p.galaxy > 7 ||
+     !Number.isInteger(p.system) || p.system < 0 || p.system > 255){
+    faults.push("commander indices out of range");
+  } else if(!World.isBuilt(p.galaxy)){
+    faults.push("galaxy "+p.galaxy+" has never been generated");
+  } else if(World.system(p.galaxy, p.system) !== s){
+    faults.push("not the cached object for those indices");
+  }
+  return faults.length ? "*** DIVERGENCE *** "+faults.join("  ·  ")
+                       : "state.system agrees with commander";
+}
+
 function worldReport(){
   const s = state.system, p = state.commander;
   const g0 = g0Stats();
@@ -2038,6 +2098,10 @@ function worldReport(){
     "              star class "+s.starClass+", "+(s.scoopable?"scoopable":"not scoopable")+"\n"+
     "              pop "+(s.population/10).toFixed(1)+" bn · radius "+s.radiusKm+" km · "+s.species+"\n"+
     "              "+s.description+"\n"+
+    /* SESSION 034. Directly under the `here` block, because `here` is
+       what it is a verdict on: the eye reads the indices and then reads
+       whether the object those indices produced agrees with them. */
+    "position      "+positionReportLine()+"\n"+
     /* Session 024. Added because the 024b test had no report line to
        compare the dev Fuel slider against, and the instruction to compare
        it with "the report's fuel line" named a line that did not exist.
