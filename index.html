@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 030b</title>
+<title>ELITE: THE CLONES — 032a</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -1373,8 +1373,20 @@ const ENERGY_MAX = 100;   // [ASSUMED] displayed as four banks of 25
 const FUEL_MAX   = 70;    // World Model 2 - tenths of a light year
 
 const state = {
-  /* World Model §2.1 — settled. The index is the decision, not the name. */
-  position:  { galaxy:0, system:51 },
+  /* LOOP 76, session 032. `state.position = { galaxy, system }` is gone.
+     It was never a declared field: WORLD MODEL §9 has put `galaxy` and
+     `system` inside `commander` since v1.0, DECLARATIVE §4.1's whitelist
+     follows §9, and CORE API §3.1 declared neither. Three sources against
+     one and the one was the code, so the code moved.
+     THEY ARE FLAT FIELDS, NOT A `commander.position` OBJECT. §9's save
+     file has no `position` key at any level and neither does the
+     whitelist. Field order follows DECLARATIVE §4.1 — ...fuel, gameDay,
+     galaxy, system — so the two can be read against each other without
+     translating. CORE API §3.1 is still owed the declaration; that is a
+     document revision and not this session's job.
+     THE OBJECT IS DELETED, NOT ALIASED. Same discipline session 030 used
+     on CARGO_MAX: an alias is a second copy of a value that moves, which
+     is constraint 2's exact shape. */
   /* CORE API §3.1. Filled below from World, never copied or edited. */
   system:    null,
   /* hyperspaceTarget is NOT in CORE API §3.1 and is added here under
@@ -1382,7 +1394,8 @@ const state = {
      Target" row and Panel §6.2's Distance both require it and neither
      the API's state list nor its §3.2 command list defines it. Found
      by building, session 012. { galaxy, index } or null. */
-  commander: { credits:1000, legalStatus:0, fuel:70, gameDay:0, kills:0,
+  commander: { credits:1000, legalStatus:0, fuel:70, gameDay:0,
+               galaxy:0, system:51, kills:0,
                hyperspaceTarget:null },
   /* LOOP 75, session 030. `holdTonnes` was `CARGO_MAX`, a module
      constant in the market section, from session 016 to 029. WORLD
@@ -1419,7 +1432,7 @@ const state = {
 /* ---------- boot the world. Galaxy 0 only; 1-7 wait to be asked. ---------- */
 const WORLD_BOOT_MS = (function(){
   const t0 = performance.now();
-  state.system = World.system(state.position.galaxy, state.position.system);
+  state.system = World.system(state.commander.galaxy, state.commander.system);
   return performance.now() - t0;
 })();
 
@@ -1929,7 +1942,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 030b — settings\n"+
+    "ELITE: THE CLONES 032a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -2014,7 +2027,7 @@ function holdReportLine(){
 }
 
 function worldReport(){
-  const s = state.system, p = state.position;
+  const s = state.system, p = state.commander;
   const g0 = g0Stats();
   const six = g0.six, eight = g0.eight, hc = g0.hc, dull = g0.dull;
 
@@ -2534,7 +2547,8 @@ function doJump(){
   if(cost > state.commander.fuel) return;
 
   state.commander.fuel    -= cost;
-  state.position           = { galaxy:o.galaxy, system:o.index };
+  state.commander.galaxy   = o.galaxy;          /* LOOP 76 */
+  state.commander.system   = o.index;
   state.system             = World.system(o.galaxy, o.index);
   state.commander.gameDay += 1;               /* World Model §7.2 */
   state.commander.hyperspaceTarget = null;
