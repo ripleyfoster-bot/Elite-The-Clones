@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 037b</title>
+<title>ELITE: THE CLONES — 037d</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -1423,10 +1423,22 @@ const state = {
      THE VALUE IS UNCHANGED AT 20 AND IS STILL [ASSUMED] — WORLD MODEL
      §13 [ASSUMED] 10 and §9. This session moved it; it did not tune
      it. Nothing has been played against 20 tonnes.
-     NOTHING WRITES IT YET. The three verbs EQUIPMENT LIST §8.2 needs
-     do not exist in DECLARATIVE §5 — loop 79 — so today this is a
-     value that is read from state instead of from a constant, and
-     that is the whole of the change. */
+     NOTHING WRITES IT YET, AND THE REASON GIVEN HERE WAS FALSE FOR SIX
+     SESSIONS. This said the three verbs EQUIPMENT LIST §8.2 needs do
+     not exist in DECLARATIVE §5 — loop 79. DECLARATIVE v1.5 ADDED ALL
+     THREE IN SESSION 031: `equipment.fit`, `equipment.consume` and
+     `hold.add`, signed, with CORE API v1.5 carrying the matching
+     commands the same session. Loop 79 closed there.
+     WHAT IS STILL TRUE IS THE FIRST HALF. Nothing writes `holdTonnes`
+     in THIS BUILD, because there is no equipment panel, no rule
+     engine and no pack loader — the verbs exist on paper and nothing
+     here can issue one. So today this is a value read from state
+     instead of from a constant, and that is the whole of the change.
+     THAT SPLIT IS WHY IT SURVIVED. Failure mode 1: a sentence whose
+     true half carries its false half. Anyone reading it was checking
+     whether the hold gets written, saw correctly that it does not,
+     and had no reason to go and read DECLARATIVE. Sweep finding S53,
+     paid in 037. */
   ship: { hull:100, shieldFore:100, shieldAft:100, energy:100,
           cargoUsed:0, holdTonnes:20, speed:0, docked:false },
   /* WORLD MODEL §9's `cargo`, with Panel §3.3.1's average purchase
@@ -1956,7 +1968,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 037b — settings\n"+
+    "ELITE: THE CLONES 037d — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -3367,8 +3379,18 @@ gFindIn.addEventListener("blur", resetPageZoom);
    exactly this reason. What the BUY line prints is ROOM — the space
    being sold — which is the transaction, the same kind of figure as
    `Hold n/20` on a cargo row, and not a second copy of the gauge.
-   [ASSUMED], and the alternative was printing nothing and leaving the
-   stepper's cap unexplained.
+   [DECISION], RIPLEY, SESSION 037 — TAKEN AFTER SEEING IT ON DEVICE,
+   not from the argument. `room 3.3 LY` and instrument 5's `3.7 LY`
+   were on one screen together and the figure stays.
+   REJECTED: printing nothing and leaving the stepper's cap
+   unexplained. A control that stops for a reason the player cannot
+   see is loop 55's failure, and it is a worse constraint-2 outcome
+   than two related figures on one screen — one of which is the gauge
+   and one of which is the price of what you are about to buy.
+   WHAT THIS DOES NOT SETTLE. §4.1's rule stands for the chart header:
+   it forbids a second copy of the FUEL FIGURE, and `room` is the
+   complement rather than the figure. If a later panel wants to print
+   the tank itself, that is §4.1's question again and not this one.
 
    THIS BREACHES EQUIPMENT §7's DOCKED-ONLY RULE, DELIBERATELY AND
    TEMPORARILY. All four services there are docked-only and docked
