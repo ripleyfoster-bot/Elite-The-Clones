@@ -1011,6 +1011,23 @@ const BLOCK_REALWORLD = ("ANANKE ANCONA ANKARA ARANDA DAYANA NEBIRU BIANCA CAMIL
 "ZULEMA").split(" ");
 const BLOCK_WHOLE = new Set(BLOCK_ELITE.concat(BLOCK_REALWORLD));
 
+/* [DECISION], Ripley, session 039. THE LIST STAYS AT 77 — 9 + 17 + 60.
+   Loop 92 printed the fourteen names that the blocklist's own rejections
+   produced, and the three that read closest to real-world proper nouns
+   were ruled in: `Capasa` (an Italian surname), `Badiriya` (near a real
+   personal name) and `Sedima` (a company and a law-report case name).
+   ALL THREE ALLOWED. This is the `Solaar` precedent applied a second
+   time — blocking a surname or a company that happens to be assemblable
+   from the syllable table opens a category with no closable edge, and
+   each string is a plausible native name in this universe.
+   WHAT THIS COSTS: nothing today. No system is renamed, `BLOCK_WHOLE` is
+   unchanged, and every rejection count in the report holds at 14/11/3.
+   WHAT IT BUYS: the blocklist has no outstanding candidate against it,
+   which is the precondition for the freeze — WORD BANKS §9 [DECISION] 1.
+   The eleven other replacements were read by the assistant and not by
+   Ripley. §2.2.1 is explicit that the human read is the half a list
+   cannot do, so those eleven are [ASSUMED] clean, not [TESTED]. */
+
 const GOVERNMENT = ["Anarchy","Feudal","Multi-Government","Dictatorship","Communist","Confederacy","Democracy","Corporate State"];
 const ECONOMY = ["Rich Industrial","Average Industrial","Poor Industrial","Mainly Industrial",
                  "Mainly Agricultural","Rich Agricultural","Average Agricultural","Poor Agricultural"];
@@ -1091,13 +1108,33 @@ function blockedBy(raw) {
 /* §8.1 + Word Banks §2.1/§2.2. Rejection advances the draw on the sub-stream;
    the seed is never mutated. */
 function drawName(r, pairCount, tally) {
+  /* LOOP 92, session 039. `mine` is the rejections from THIS call. When a
+     draw finally passes, every rejection that led to it is stamped with
+     what the system is actually called now. Local, not a second tally:
+     rejections from other systems are already in tally.hits and must not
+     be stamped with this system's name. */
+  const mine = [];
   for (let attempt = 0; attempt < 64; attempt++) {
     let raw = "";
     for (let i = 0; i < pairCount; i++) raw += SYL[ri(r, SYL.length)];
     const hit = blockedBy(raw);
-    if (!hit) return raw.charAt(0) + raw.slice(1).toLowerCase();
-    if (tally) { tally.total++; tally[hit]++; tally.hits.push(raw); }
+    if (!hit) {
+      const final = raw.charAt(0) + raw.slice(1).toLowerCase();
+      for (const e of mine) e.became = final;
+      return final;
+    }
+    /* LOOP 91, session 039. `hits` has collected the rejected strings
+       since session 009 and NOTHING HAS EVER READ THE ARRAY. It now
+       carries the category with the string, because the count the report
+       prints is split three ways and a flat list of raws cannot be put
+       back on the right row. `blockedBy` already knows; it was thrown
+       away one line later. Word Banks §9 item 7. */
+    if (tally) { tally.total++; tally[hit]++;
+                 const e = { raw: raw, cat: hit, became: null };
+                 tally.hits.push(e); mine.push(e); }
   }
+  /* 64 attempts exhausted. `became` stays null on every rejection from
+     this call and the report prints it as `?` rather than guessing. */
   return "Unnamed";
 }
 /* Word Banks §2.3 */
@@ -1456,11 +1493,22 @@ const state = {
   cargo: {}
 };
 
-/* ---------- boot the world. Galaxy 0 only; 1-7 wait to be asked. ---------- */
-const WORLD_BOOT_MS = (function(){
-  const t0 = performance.now();
+/* ---------- boot the world. Galaxy 0 only; 1-7 wait to be asked. ----------
+   LOOP 90, session 039. THIS NO LONGER TIMES ANYTHING, AND THAT IS THE
+   POINT. It measured JIT warm-up, not generation: 32 · 18 · 7 · 3 · 3 ·
+   3 · 2 · 2 ms across one afternoon on `037e` — a 2.7x spread for the
+   same galaxy doing the same work. An instrument that varies 2.7x on one
+   build in one afternoon is not an instrument.
+   The per-galaxy table in the report is the real measurement. `World.ms[0]`
+   is THIS SAME CALL, timed inside galaxy(), and it was printed four lines
+   under the headline, unread, the whole time.
+   [DECISION], Ripley, session 038: remove the headline, keep the table.
+   The IIFE stays because its job is the side effect — galaxy 0 is built
+   here and `state.system` is written here. `WORLD_BOOT_MS` is deleted
+   rather than left computed-and-unprinted: a value nobody reads that
+   still looks like a measurement is exactly what S67 is about. */
+(function(){
   state.system = World.system(state.commander.galaxy, state.commander.system);
-  return performance.now() - t0;
 })();
 
 /* ---------- object field ---------- */
@@ -2040,6 +2088,33 @@ function chk(label,got,want){
          (String(want)+"          ").slice(0,10)+
          (ok?"OK":"FAIL")+"\n";
 }
+/* LOOP 91, session 039. Evidence block, not a check row — it has no
+   `want` column on purpose, see the call site.
+   SORTED, because the tally fills in galaxy build order and BUILD ALL 8
+   is not the only way to build a galaxy: visit galaxy 3 first and the
+   unsorted order changes while the set does not. An evidence line whose
+   order depends on where you have been cannot be compared between runs.
+   RAW, not title case, on the left. This is the form the blocklist
+   matched — a name is only lowercased after it passes.
+   LOOP 92, session 039. The right-hand name is what that system is
+   actually called. S68: every entry in the blocklist that postdates the
+   006 read renames a system to something the read never saw, and the
+   discharge of hard constraint 4 rests on that read. These are the names
+   that need a human eye.
+   Two to a row at 20 columns fits the 46-column report width. */
+function nameBlock(hits, cat){
+  const L = hits.filter(h => h.cat === cat)
+                .map(h => [h.raw, h.became || "?"])
+                .sort(function(a,b){ return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; });
+  if(!L.length) return "    none\n";
+  let s = "", row = "";
+  for(let i=0;i<L.length;i++){
+    row += (L[i][0]+"         ").slice(0,9) + "\u2192 " + (L[i][1]+"         ").slice(0,9);
+    if(i%2===1){ s += "    "+row.replace(/\s+$/,"")+"\n"; row = ""; }
+  }
+  if(row) s += "    "+row.replace(/\s+$/,"")+"\n";
+  return s;
+}
 /* Memoised. The world never changes once built, so these are computed once.
    Session 009: they were recomputed on every slider input event, which froze
    the panel after BUILD ALL 8. [TESTED] fault, [BUILT] fix. */
@@ -2189,7 +2264,10 @@ function worldReport(){
        short, and a mismatch is impossible to read past.
        Constraint 6: the commander's own record is never gated. */
     "hold          "+holdReportLine()+"\n"+
-    "boot          "+WORLD_BOOT_MS.toFixed(1)+" ms  (galaxy 0 only)\n"+
+    /* LOOP 90, session 039. The `boot` headline stood here and is gone.
+       See the boot IIFE for why. The `galaxy 0   n.n ms` row below is
+       the same work, timed inside galaxy(), and is the measurement:
+       ≈2–3 ms a galaxy, [TESTED] 038. */
     "built         ";
   for(let g=0;g<8;g++) out += (World.isBuilt(g) ? "G"+g : "--")+" ";
   out += "\n";
@@ -2231,6 +2309,28 @@ function worldReport(){
   out += chk("components", comps, 8);
   out += "\n  whole universe "+ms.toFixed(0)+" ms · "+
          (dupes.length?dupes[0]+" at "+nc[dupes[0]].join(" and "):"no duplicates")+"\n";
+
+  /* LOOP 91, session 039. WORD BANKS §9 item 7, open since v1.1 and one
+     of three blockers on freezing the blocklist. It needs exactly this:
+     the strings, not the count.
+     §2.2.2 models 0.14 whole-name rejections a universe and this build
+     counts 3 — a 21x divergence that the three rows above have printed
+     every run for thirty sessions without ever printing the one thing
+     that would explain it. The count matched, and the useful thing was
+     the absence beside it.
+     IT SITS IN THE UNIVERSE SECTION, not beside the rows it explains,
+     because the rows are a got/want grid and this is free text. It is
+     the same tally those rows count, so it must stay inside the
+     all-eight-galaxies gate or the strings would not add up to them.
+     PRINTED, NOT CHECKED. There is no `want` because nobody knows the
+     answer yet, and a `want` written from a prediction is a row that
+     passes by construction. When the strings are read and filed in WORD
+     BANKS §2.2.2, a chk row with a real want can replace this. */
+  out += "\nREJECTED NAMES — and what each became\n";
+  out += "  profanity ("+World.tally.name.profanity+")\n";
+  out += nameBlock(World.tally.name.hits, "profanity");
+  out += "  whole-name ("+World.tally.name.whole+")\n";
+  out += nameBlock(World.tally.name.hits, "whole");
   return out;
 }
 document.getElementById("bWorld").addEventListener("click",function(){
