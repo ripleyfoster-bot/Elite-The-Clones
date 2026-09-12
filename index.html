@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 039d</title>
+<title>ELITE: THE CLONES — 039e</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -2052,7 +2052,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 039d — settings\n"+
+    "ELITE: THE CLONES 039e — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -2275,11 +2275,29 @@ function worldReport(){
     /* LOOP 90, session 039. The `boot` headline stood here and is gone.
        See the boot IIFE for why. The `galaxy 0   n.n ms` row below is
        the same work, timed inside galaxy(), and is the measurement:
-       ≈2–3 ms a galaxy, [TESTED] 038. */
+       ≈2–3 ms a galaxy, [TESTED] 038.
+       S73, session 039, [TESTED] on device the same night: THAT
+       RATIONALE WAS TOO GENEROUS TO THE TABLE. Read 039d: 20 · 13 · 7 ·
+       4 · 4 · 7 · 2 · 3. A 10x spread — the same warm-up decay the
+       headline was retired for, and `galaxy 0` IS the retired figure,
+       because the boot IIFE builds galaxy 0 and writes `MS[0]`. The
+       number deleted from the headline is still printed four lines down
+       under another label.
+       The decision stands: the table shows the decay where the headline
+       hid it. But a reader has to be told which rows to believe, so the
+       caption below says it. */
     "built         ";
   for(let g=0;g<8;g++) out += (World.isBuilt(g) ? "G"+g : "--")+" ";
   out += "\n";
-  for(let g=0;g<8;g++) if(World.isBuilt(g)) out += "  galaxy "+g+"     "+World.ms[g].toFixed(1)+" ms\n";
+  let built = 0;
+  for(let g=0;g<8;g++) if(World.isBuilt(g)){ built++;
+    out += "  galaxy "+g+"     "+World.ms[g].toFixed(1)+" ms\n"; }
+  /* S73. Gated on two, because with one galaxy built there are no
+     later rows to point at and the caption would be a claim about
+     something not on screen. */
+  if(built > 1)
+    out += "  first rows are JIT warm-up, not cost.\n"+
+           "  the later rows are the generation figure\n";
 
   out += "\nSELF-CHECK — galaxy 0   got       want\n";
   out += chk("six / eight names", six+"/"+eight, "137/119");
