@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 037a</title>
+<title>ELITE: THE CLONES — 037b</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -791,22 +791,35 @@
 <button id="tuneBtn">TUNE</button>
 
 <div id="tuner">
-  <h1>TUNING — ALL VALUES [ASSUMED]</h1>
+  <!-- S62, session 037. This read ALL VALUES [ASSUMED] from session 002
+     and was false about four of the six values below it by the time it
+     was read: the three drag-pad numbers were flown and cleared on
+     30 Aug, and roll was flown and alternated in 034. A blanket marker
+     in a heading cannot age with the rows under it, so there is no
+     blanket marker any more — each row carries its own.
+     THE FAULT IS THE SHAPE, NOT THE WORD. A heading that asserts one
+     confidence over a list is a claim about every future row as well as
+     every present one, and nothing edits a heading when a row is flown.
+     This is S52 and S53's mechanism arriving on the screen rather than
+     in a comment, and it is worse there: it sits beside the control, on
+     the one panel PRIMER §8.1 calls the only trustworthy source for
+     what was actually flown, telling you a settled number is a guess. -->
+  <h1>TUNING — CONFIDENCE IS PER ROW, BELOW</h1>
 
   <div class="row">
     <label>Deadzone <i><span id="vDead"></span> px</i></label>
     <input type="range" id="sDead" min="0" max="20" step="1">
-    <div class="note">Spec §4.1 default 6. Raise if centre is twitchy, lower if it feels dead.</div>
+    <div class="note">Spec §4.1 default 6. <b>[TESTED]</b> 30 Aug — flown, unchanged. Raise if centre is twitchy, lower if it feels dead.</div>
   </div>
   <div class="row">
     <label>Full deflection <i><span id="vDefl"></span> px</i></label>
     <input type="range" id="sDefl" min="25" max="120" step="1">
-    <div class="note">Spec §4.1 default 55. Distance from origin to full rate.</div>
+    <div class="note">Spec §4.1 default 55. <b>[TESTED]</b> 30 Aug — flown, unchanged. Distance from origin to full rate.</div>
   </div>
   <div class="row">
     <label>Curve exponent <i><span id="vExp"></span></i></label>
     <input type="range" id="sExp" min="1" max="3" step="0.1">
-    <div class="note">Spec §4.1 default 1.6. Higher = finer near centre, vaguer overall.</div>
+    <div class="note">Spec §4.1 default 1.6. <b>[TESTED]</b> 30 Aug — flown, unchanged. Higher = finer near centre, vaguer overall.</div>
   </div>
 
   <div class="sep"></div>
@@ -814,16 +827,17 @@
   <div class="row">
     <label>Max pitch rate <i><span id="vPr"></span> °/s</i></label>
     <input type="range" id="sPr" min="15" max="180" step="5">
-    <div class="note">Session 002 setting: 60. [ASSUMED] — no spec value exists yet.</div>
+    <div class="note">SPEC 60. <b>[ASSUMED]</b> — 50 felt better in 034, one pass, never alternated, found while testing roll. Not flown under anything hostile.</div>
   </div>
   <div class="row">
     <label>Max roll rate <i><span id="vRr"></span> °/s</i></label>
     <input type="range" id="sRr" min="30" max="360" step="10">
-    <div class="note">Session 002 setting: 250. [ASSUMED] — 4:1 over pitch.</div>
+    <div class="note">SPEC 250. <b>[TESTED]</b> 034 — four alternated passes at max speed 200, against a stated prior preference for 280. <b>The 4:1 ratio was true of the 002 pairing</b>; at pitch 50 it is 5.0&times;.</div>
   </div>
   <div class="row">
     <label>Max speed <i><span id="vSp"></span></i></label>
     <input type="range" id="sSp" min="40" max="600" step="10">
+    <div class="note">SPEC 200. <b>[ASSUMED]</b> — never tested. The pitch fault appears <i>at speed</i>, so this number is implicated by the row above it.</div>
   </div>
 
   <div class="sep"></div>
@@ -1942,7 +1956,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 037a — settings\n"+
+    "ELITE: THE CLONES 037b — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
