@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 037d</title>
+<title>ELITE: THE CLONES — 037e</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -893,8 +893,9 @@
       no instrument holds a second copy. These sliders do: a slider position is a
       copy, refreshed when this panel opens and at no other moment. Nothing
       recharges: no recharge rate has been designed yet and inventing one here
-      would be a lie, so the only value that moves on its own is Fuel, and only
-      a jump moves it.</div>
+      would be a lie. <b>Fuel is the one value the game itself moves</b> — a jump
+      spends it and the market's Fuel service buys it, since 037. <b>This slider
+      buys it for nothing, and that is a dev control, not a price.</b> Loop 89.</div>
   </div>
 
   <div class="tunevals" id="tv"></div>
@@ -1899,7 +1900,34 @@ const map=[["sDead","vDead","dead",0],["sDefl","vDefl","defl",0],["sExp","vExp",
            ["sRad","vRad","radarRange",0],["sBlip","vBlip","blip",0]];
 
 /* Dev state sliders. These write to `state`, which the instruments read.
-   Not saved with the tuning, because they are not tuning. */
+   Not saved with the tuning, because they are not tuning.
+
+   LOOP 89, SESSION 037. THE FUEL SLIDER REFUELS FOR NOTHING. It writes
+   `commander.fuel` directly, 0–70 tenths, touching no credits, and has
+   done since session 003. IT IS NOT NEW AND 037 IS WHAT GAVE IT A
+   MEANING: until this session nothing restored fuel at all, so a
+   control that set the tank was the only source of one and there was
+   no price to bypass.
+
+   [DECISION], RIPLEY, SESSION 037: DEFERRED TO THE END OF THE BUILD,
+   DELIBERATELY. He is the only player, and a bypass that needs a dev
+   panel opened is not a balance fault. VERIFIED CHEAP TO DEFER rather
+   than assumed: nothing in the game reads a slider. They write the
+   same fields the market, the jump and any future save write, so the
+   coupling cannot grow — gating the block is a boolean, making Fuel
+   read-only is one entry out of `devMap`, and deleting DEV STATE at
+   ship is this block and the listener below. None of that gets more
+   expensive as the game grows. This is loop 28 — `TUNE` is a dev panel
+   on the shipping screen — with a reason to be answered at last.
+
+   THE ONE PART THAT DOES NOT DEFER CLEANLY, RECORDED AND NOT BUILT.
+   A dragged slider leaves no trace: the report prints `fuel 70 tenths`
+   identically whether it was earned, bought or dragged. So any figure
+   measured between now and the fix carries a doubt that cannot be
+   settled afterwards from a screenshot. An audit line naming the
+   sliders touched this session was offered and declined for now. It is
+   S51 and S52's shape — a value living in device state, in no
+   document, disagreeing with what the build would have produced. */
 const devMap=[["sSf","vSf","ship","shieldFore"],["sSa","vSa","ship","shieldAft"],
               ["sEn","vEn","ship","energy"],["sFu","vFu","commander","fuel"]];
 function syncDev(){
@@ -1968,7 +1996,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 037d — settings\n"+
+    "ELITE: THE CLONES 037e — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
