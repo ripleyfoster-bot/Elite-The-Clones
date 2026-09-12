@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 039e</title>
+<title>ELITE: THE CLONES — 039f</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -2052,7 +2052,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 039e — settings\n"+
+    "ELITE: THE CLONES 039f — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -2294,10 +2294,20 @@ function worldReport(){
     out += "  galaxy "+g+"     "+World.ms[g].toFixed(1)+" ms\n"; }
   /* S73. Gated on two, because with one galaxy built there are no
      later rows to point at and the caption would be a claim about
-     something not on screen. */
+     something not on screen.
+     S74, session 039, [TESTED] the same night on the second run. THE
+     FIRST VERSION OF THIS CAPTION READ *first rows are JIT warm-up*.
+     Two runs on 039e: 20 · 13 · 7 · 4 · 4 · 7 · 2 · 3, then 12 · 25 · 6
+     · 4 · 3 · 4 · 2 · 2. GALAXY 1 WAS SLOWER THAN GALAXY 0 ON THE
+     SECOND. There is no decay by row position, and *JIT warm-up* was a
+     cause asserted, not measured — the same fault as the `boot` headline
+     retired one hour earlier, reproduced inside the caption written to
+     fix it. What survives both runs is the tail: 2-4 ms. The caption now
+     says only that. */
   if(built > 1)
-    out += "  first rows are JIT warm-up, not cost.\n"+
-           "  the later rows are the generation figure\n";
+    out += "  early rows are unstable run to run and\n"+
+           "  are not a cost. the last rows hold at\n"+
+           "  2-4 ms and are the generation figure\n";
 
   out += "\nSELF-CHECK — galaxy 0   got       want\n";
   out += chk("six / eight names", six+"/"+eight, "137/119");
