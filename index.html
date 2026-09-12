@@ -7,7 +7,15 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 037e</title>
+<title>ELITE: THE CLONES — 039d</title>
+<!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
+     037e. 039a, 039b and 039c each changed the report function and none
+     bumped either marker, so S57's arrival check — read the header in
+     TUNE — could not have told any of them apart from the build before
+     them or from each other. Nothing in the file ties a code change to
+     the marker; the marker is two string literals 2,000 lines apart and
+     bumping them is remembered, not enforced. This is the same shape as
+     S67: a field that exists to be read, that nothing re-reads. -->
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -2044,7 +2052,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 037e — settings\n"+
+    "ELITE: THE CLONES 039d — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
