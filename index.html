@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 034a</title>
+<title>ELITE: THE CLONES — 037a</title>
 <!-- Loop 22. The title had read CONSOLE BAND — 003 since session 003, which
      misnamed the home screen icon. It is NOT a build marker: standalone mode
      shows no title bar, so it cannot be read from the icon. The marker that
@@ -1942,7 +1942,7 @@ document.getElementById("bReset").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 034a — settings\n"+
+    "ELITE: THE CLONES 037a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -2111,6 +2111,15 @@ function worldReport(){
        the commander's own record is never gated. */
     "fuel          "+state.commander.fuel+" tenths = "+
       (state.commander.fuel/10).toFixed(1)+" LY\n"+
+    /* LOOP 83, session 037. Directly under the tank, because it is
+       what it is a verdict on. The tank line says where the fuel is;
+       this says what the last purchase cost and what it lost, which
+       is the only part of [DECISION] 83 that cannot be read off the
+       gauge. Prints on every run rather than only after a purchase —
+       session 034's reason, and it is the same reason: a line with no
+       other output cannot be told apart from one that is not
+       running. */
+    "fuel buy      "+svcFuelReportLine()+"\n"+
     /* LOOP 81, session 030. Session 030 moved hold capacity into
        `state.ship.holdTonnes` and THE REPORT COULD NOT SEE IT. The only
        way to verify the build's own job was to open a game panel and
@@ -3299,6 +3308,111 @@ gFindIn.addEventListener("blur", resetPageZoom);
    acquired three names in the first place — DECLARATIVE v1.4's §9
    item 6 is that story. */
 
+/* ==================================================================
+   LOOP 83, session 037. FUEL, BOUGHT FROM THE MARKET PANEL.
+
+   WHAT THIS FIXES. Nothing restored fuel. WORLD MODEL §2.2 says so in
+   its own words — one tank is roughly one round trip and then you are
+   stranded — and session 018 finished on 0.4 LY with nowhere in range.
+   That is the whole of the reason this is 037's job.
+
+   FUEL IS NOT A COMMODITY AND IS NOT IN `COMMODITIES`. The loop is
+   named "fuel as a market commodity" and the name is wrong. Fuel does
+   not enter the hold, has no `{ qty, paid }` slot, cannot be sold, and
+   is written by `fuel.add` rather than `cargo.add` (DECLARATIVE §5).
+   Putting it in the table would also have been the one edit WORLD
+   MODEL §7.2 calls a migration rather than an edit: `marketFor` walks
+   `COMMODITIES` in table order drawing price then quantity from one
+   `mktRng`, so a row inserted anywhere but the end re-draws every
+   market in every galaxy. It is a SERVICE, rendered in the market
+   panel, drawing nothing from `mktRng`. The universe is untouched.
+
+   THE PRICE IS NOT INVENTED HERE. EQUIPMENT LIST §7.1: 2 tenths of a
+   credit per tenth of a light year, `minTech` 1 — every system sells
+   fuel. One unit is 1.0 LY, so a unit is 20 tenths and a full tank
+   from empty is 7 units at 140 tenths = 14.0 CR, which is PANEL §8's
+   anchored worked example to the tenth.
+
+   THE UNIT IS WHAT [DECISION] 83 DECIDES. The tank is tenths and a
+   market buy is whole units, and Ripley's call is PARTIAL FILLS
+   ALLOWED, REMAINDER LOST. That is what sets the cap at `ceil(space)`
+   rather than `floor(space)`: at 3.3 LY of room you may buy the
+   fourth unit, 0.3 lands and 0.7 is paid for and gone. Under `floor`
+   the last fraction of a tank could never be bought and the decision
+   would describe a state the code could not reach.
+
+   THE LOSS IS PRINTED BEFORE THE CONFIRM, NOT AFTER. Constraint 2: a
+   control that charges for something it will not deliver has to say
+   so while there is still a decision to make. This is loop 55's
+   lesson — one visible action must not have two outcomes told apart
+   by something the player cannot see.
+
+   NO TANK FIGURE ON THE ROW. Instrument 5 carries fuel live in the
+   console band, which stays on screen behind an in-flight panel
+   (PANEL §1), and PANEL §4.1 struck FUEL from the chart header for
+   exactly this reason. What the BUY line prints is ROOM — the space
+   being sold — which is the transaction, the same kind of figure as
+   `Hold n/20` on a cargo row, and not a second copy of the gauge.
+   [ASSUMED], and the alternative was printing nothing and leaving the
+   stepper's cap unexplained.
+
+   THIS BREACHES EQUIPMENT §7's DOCKED-ONLY RULE, DELIBERATELY AND
+   TEMPORARILY. All four services there are docked-only and docked
+   mode does not exist, which is the same position the Market itself
+   was in at session 017. The condition is written here as it is
+   written beside the nav strip: THE FUEL ROW MOVES TO PANEL §8 THE
+   SESSION DOCKED MODE LANDS. EQUIPMENT §7.1 and WORLD §7 are both
+   owed a revision saying so — recorded, not fixed, one chat one job.
+
+   NOT PERSISTED, BECAUSE NOTHING IS. `svcFuelLast` is module-local
+   diagnostic state and dies with the page, exactly like `mktTaken`.
+   Loop 87.
+   ================================================================== */
+const FUEL_UNIT_TENTHS = 10;   /* one unit = 1.0 LY */
+const FUEL_UNIT_PRICE  = 20;   /* tenths CR. EQUIPMENT §7.1, 2 per tenth */
+const FUEL_ROW_ID      = "svc:fuel";
+
+/* LOOP 81's lesson, applied before the fault rather than after it: a
+   diagnostic that cannot see what the session changed is not a
+   diagnostic for that session. The report's `fuel` line shows the
+   tank; it cannot show what a purchase did to it, and the remainder
+   rule is the one thing in this build that has to be read rather than
+   felt. Last purchase only — a running total would be a second copy
+   of state that nothing else keeps. */
+let svcFuelLast = null;
+
+function svcFuelSpace(){ return FUEL_MAX - state.commander.fuel; }
+
+function svcFuelMaxBuy(){
+  const byTank = Math.ceil(svcFuelSpace() / FUEL_UNIT_TENTHS);
+  const byCash = Math.floor(state.commander.credits / FUEL_UNIT_PRICE);
+  return Math.max(0, Math.min(byTank, byCash));
+}
+
+function svcFuelBuy(n){
+  if(n <= 0) return;
+  const cost = n * FUEL_UNIT_PRICE;
+  /* Provably dead given the cap above, and kept for WORLD §2.2's
+     reason: the button is display and this is state. If the cap is
+     ever rewritten, this is what stops a display bug becoming a
+     state bug. */
+  if(cost > state.commander.credits) return;
+  const before = state.commander.fuel;
+  const raw    = before + n * FUEL_UNIT_TENTHS;
+  state.commander.credits -= cost;
+  state.commander.fuel     = raw > FUEL_MAX ? FUEL_MAX : raw;
+  svcFuelLast = { units:n, cost:cost,
+                  landed: state.commander.fuel - before,
+                  lost:   raw > FUEL_MAX ? raw - FUEL_MAX : 0 };
+}
+
+function svcFuelReportLine(){
+  if(!svcFuelLast) return "none this session";
+  const f = svcFuelLast;
+  return f.units+" u  "+f.cost+" tenths CR  +"+f.landed+" tenths"+
+         (f.lost > 0 ? "  LOST "+f.lost : "  lost 0");
+}
+
 /* WORLD MODEL §7.1, transcribed. `bulk` is not in §7.1 — it is
    decision 3 above, expressed as a column so it is visible rather
    than buried in an if. */
@@ -3478,11 +3592,61 @@ function renderMarket(){
     if(open) h += mktExpansion(s, c, m.rows[c.id].price, avail, held, illegal);
   }
 
+  /* LOOP 83. SERVICES, below the three commodity blocks. It is drawn
+     last because PANEL §3.2 fixes the sort order and a learned list
+     must not move: appending cannot shift a row anyone has memorised.
+     IT IGNORES `HOLD ONLY`. That filter's job (§3.2) is to reduce the
+     cargo list to what you are carrying, and fuel is not cargo — a
+     service that vanished when the hold emptied would hide the one
+     thing that unstrands you at the moment you most need it.
+     [ASSUMED] — nothing observed chose it. */
+  h += '<div class="mcat">SERVICES</div>';
+  const fOpen = (mktOpen === FUEL_ROW_ID);
+  h += '<button class="mrow'+(fOpen?' on':'')+'" data-row="'+FUEL_ROW_ID+'">'+
+       '<span class="mn">Fuel</span>'+
+       '<span class="mp">'+cr(FUEL_UNIT_PRICE)+'</span>'+
+       '<span class="ma">\u2014</span>'+
+       '<span class="mh">\u2014</span>'+
+       '</button>';
+  if(fOpen) h += svcFuelExpansion();
+
   h += '<div class="phead">MUNGO\u2019S ASSESSMENT</div>';
   h += '<div class="pmungo">ai.mungo not installed \u2014 no assessment '+
        'available. The prices above are read from the world model and '+
        'are not opinions.</div>';
   mktBody.innerHTML = h;
+}
+
+/* LOOP 83. The fuel expansion. Same controls as a cargo row on
+   purpose — one stepper, one MAX, one CONFIRM — because a second
+   gesture for the most repeated purchase in the game is what
+   EQUIPMENT §7.1 rejected a slider for.
+   NO SELL SIDE. Fuel out of the tank is not a thing you hold.
+   THE FIGURE LINE CARRIES THE LOSS. `lost` is the tenths this
+   purchase will pay for and not deliver, shown while the CONFIRM is
+   still untapped. And when the stepper is at zero it says WHY —
+   a control that stops for an invisible reason is the fault
+   constraint 2 exists to prevent. */
+function svcFuelExpansion(){
+  const max   = svcFuelMaxBuy();
+  if(mktBuyQ > max) mktBuyQ = max;
+  const space = svcFuelSpace();
+  const lost  = Math.max(0, mktBuyQ * FUEL_UNIT_TENTHS - space);
+  const why   = max > 0 ? '' :
+                (space <= 0 ? ' \u00b7 tank full'
+                            : ' \u00b7 cannot afford 1.0 LY');
+  let h = '<div class="mexp">';
+  h += '<div class="mgrp"><div class="mline"><b>BUY</b>'+
+       '<button class="mstep" data-act="b-" '+(mktBuyQ<=0?'disabled':'')+'>\u2212</button>'+
+       '<span class="mqty">'+mktBuyQ+'</span>'+
+       '<button class="mstep" data-act="b+" '+(mktBuyQ>=max?'disabled':'')+'>+</button>'+
+       '<button class="mmax" data-act="bmax" '+(max<=0?'disabled':'')+'>MAX</button></div>'+
+       '<div class="mfig">Cost '+cr(mktBuyQ*FUEL_UNIT_PRICE)+' CR \u00b7 room '+
+       (space/10).toFixed(1)+' LY'+
+       (lost>0 ? ' \u00b7 '+(lost/10).toFixed(1)+' LY lost' : '')+why+'</div>'+
+       '<button class="mconf" data-act="buy" '+(mktBuyQ<=0?'disabled':'')+
+       '>CONFIRM PURCHASE</button></div>';
+  return h + '</div>';
 }
 
 /* §3.1: SELL sits above BUY in the same expansion when you hold stock. */
@@ -3586,6 +3750,23 @@ mktBody.addEventListener("click", function(e){
       /* An open row the filter is about to hide would stay open and
          invisible. Close on toggle — predictable, and one rule. */
       mktOpen = null; mktBuyQ = 0; mktSellQ = 0;
+      renderMarket();
+      return;
+    }
+    /* LOOP 83. Handled before the commodity lookup, exactly as the
+       filter is: the fuel row has no `COMMODITIES` entry, so the
+       lookup below would return undefined and swallow every tap.
+       INSTRUMENT 5 NEEDS NO CALL HERE. `paintConsole()` runs every
+       frame and the ship keeps flying under an in-flight panel, so
+       the gauge follows the tank without a second write path — which
+       is the only reason there is no copy of fuel to go stale. */
+    if(mktOpen === FUEL_ROW_ID){
+      const fa  = act.getAttribute("data-act");
+      const fmx = svcFuelMaxBuy();
+      if(fa === "b-")   mktBuyQ = Math.max(0, mktBuyQ-1);
+      if(fa === "b+")   mktBuyQ = Math.min(fmx, mktBuyQ+1);
+      if(fa === "bmax") mktBuyQ = fmx;
+      if(fa === "buy"){ svcFuelBuy(mktBuyQ); mktBuyQ = 0; }
       renderMarket();
       return;
     }
