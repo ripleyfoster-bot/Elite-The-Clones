@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 042b</title>
+<title>ELITE: THE CLONES — 043a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -1650,8 +1650,60 @@ const SAVE_KEY = "elite.clones.save";
 /* NOT versioned in the key, on purpose: a schema bump must be able to
    migrate the file in place. A key carrying the number orphans it. */
 
-const SAVE_SCHEMA = 1;                    /* WORLD MODEL §9 */
-const WORLD_MODEL_VERSION = "1.2.0";      /* WORLD MODEL §9 */
+/* SESSION 043. SCHEMA 1 -> 2, AND THIS IS THE FIRST BUMP THE PROJECT
+   HAS EVER MADE. WORLD MODEL v1.15 §9.5 rules what the field governs:
+   the ENVELOPE — key names, nesting, types, required fields. Loop 95
+   changes the form of every key in `cargo` and `equipment` from `ore`
+   to `core:ore`, which is a key-name change, which is the envelope.
+   A 042b file therefore REFUSES on this build, with a log line. That
+   is §9.5's provisional refusal exercised for the first time: it
+   refuses because no migration exists, not because the universe
+   differs. §9.5 also says the save key is deliberately unversioned so
+   that a migration CAN exist later, and nothing here forecloses one.
+   NOT WRITING A MIGRATION IS A CHOICE AND IT IS CHEAP TODAY: the only
+   file that can exist is a test save on one device, and loop 87 is not
+   [TESTED], so nothing is lost that anyone minds. THE DAY A SCHEMA
+   BUMP LANDS ON A PLAYED COMMANDER, THIS DECISION IS THE WRONG ONE. */
+const SAVE_SCHEMA = 2;                    /* WORLD MODEL §9.5 */
+const WORLD_MODEL_VERSION = "1.2.0";      /* WORLD MODEL §9.5 */
+
+/* ------------------------------------------------------------------
+   LOOP 95, session 043. SAVE-FILE IDs ARE QUALIFIED.
+   WORLD MODEL §13 [DECISION] 22, Ripley, session 027, and §9.6:
+   authoring is BARE, storage is QUALIFIED, and the loader is the
+   boundary. `042b` wrote bare keys and §9 had excused it "because it
+   has no loader and writes no save file — the two places the prefix is
+   real". 042 built both. S87.
+
+   THIS IS THE ONE-MODULE FORM AND IT SAYS SO. The prefix is a constant
+   because everything in this build belongs to `core`. The real answer
+   is a per-entity namespace read from a module registry, and there is
+   no registry — WORLD MODEL §11, §9.9 [ASSUMED] 22. A registry
+   replaces these two functions and nothing else.
+
+   AN UNQUALIFIED KEY IS REFUSED RATHER THAN TOLERATED. Accepting a
+   bare key would load a shape the spec forbids and say nothing, which
+   is exactly how bare keys survived from session 027 to session 042.
+   A NAMESPACE OTHER THAN `core:` IS ALSO REFUSED, and that is a REAL
+   LIMIT rather than caution: `state.cargo` is keyed bare, so two
+   modules shipping an `ore` would collide the moment both were
+   stripped. The refusal is honest about a gap the registry closes.
+------------------------------------------------------------------ */
+const ID_NS = "core";
+
+function qualifyMap(map){
+  const out = {};
+  for(const k of Object.keys(map)) out[ID_NS + ":" + k] = map[k];
+  return out;
+}
+/* Returns the bare id, or null if the key is not a legal stored id. */
+function bareId(k){
+  const i = k.indexOf(":");
+  if(i <= 0) return null;                       /* no namespace at all */
+  if(k.slice(0, i) !== ID_NS) return null;      /* a namespace nothing here can hold */
+  const b = k.slice(i + 1);
+  return b.length ? b : null;
+}
 
 /* §9's `modules` array, verbatim. NOTHING IN THIS BUILD VERIFIES THESE
    NUMBERS — there is no module registry, no loader and no code that
@@ -1710,8 +1762,10 @@ function saveGame(){
         hyperspaceTarget: p.hyperspaceTarget
       },
       ship:        ship,
-      cargo:       state.cargo,
-      equipment:   state.equipment,
+      /* LOOP 95. Qualified on the way out, stripped on the way in.
+         The two calls are the whole boundary. */
+      cargo:       qualifyMap(state.cargo),
+      equipment:   qualifyMap(state.equipment),
       visited:     state.visited,
       flags:       state.flags,
       moduleState: state.moduleState
@@ -1769,15 +1823,60 @@ function loadGame(){
      the player owns and leaves a credit balance that no longer has a
      history. */
   const cargo = {};
-  const src = (o.cargo && typeof o.cargo === "object") ? o.cargo : {};
-  for(const k of Object.keys(src)){
-    const s = src[k];
-    if(!s || typeof s !== "object" ||
-       !Number.isInteger(s.qty)  || s.qty  <= 0 ||
-       !Number.isInteger(s.paid) || s.paid <  0){
-      saveStatus = "REFUSED — cargo slot "+k+" is malformed"; return false; }
-    cargo[k] = { qty:s.qty, paid:s.paid };
+  if(o.cargo !== undefined){
+    if(!o.cargo || typeof o.cargo !== "object" || Array.isArray(o.cargo)){
+      saveStatus = "REFUSED — cargo is not an object"; return false; }
+    for(const k of Object.keys(o.cargo)){
+      const s = o.cargo[k];
+      if(!s || typeof s !== "object" ||
+         !Number.isInteger(s.qty)  || s.qty  <= 0 ||
+         !Number.isInteger(s.paid) || s.paid <  0){
+        saveStatus = "REFUSED — cargo slot "+k+" is malformed"; return false; }
+      /* LOOP 95. The boundary. A bare or foreign key refuses the file. */
+      const id = bareId(k);
+      if(id === null){
+        saveStatus = "REFUSED — cargo id not qualified: "+k; return false; }
+      cargo[id] = { qty:s.qty, paid:s.paid };
+    }
   }
+
+  /* equipment. LOOP 96, session 043. WORLD MODEL §9.7.
+     `042b` replaced a malformed `equipment` with {} and said nothing,
+     and never checked a slot at all. EQUIPMENT IS PLAYER PROPERTY IN
+     THE SAME SENSE CARGO IS, and the argument §9.7 gives for refusing
+     on a bad cargo slot applies to it word for word. S89.
+     THE SLOT OBJECT IS PRESERVED, NOT REBUILT. §9 says the room inside
+     it is where condition, mount position and fitted date go without
+     reshaping the field, so rebuilding it as { qty } would discard
+     exactly what that room is for. `qty` is validated; the rest rides.
+     ABSENT IS LEGAL AND MEANS NOTHING FITTED. Present-and-not-an-object
+     is not. */
+  const equipment = {};
+  if(o.equipment !== undefined){
+    if(!o.equipment || typeof o.equipment !== "object" || Array.isArray(o.equipment)){
+      saveStatus = "REFUSED — equipment is not an object"; return false; }
+    for(const k of Object.keys(o.equipment)){
+      const e = o.equipment[k];
+      if(!e || typeof e !== "object" || Array.isArray(e) ||
+         !Number.isInteger(e.qty) || e.qty <= 0){
+        saveStatus = "REFUSED — equipment slot "+k+" is malformed"; return false; }
+      const id = bareId(k);
+      if(id === null){
+        saveStatus = "REFUSED — equipment id not qualified: "+k; return false; }
+      equipment[id] = e;
+    }
+  }
+
+  /* flags and moduleState. §9.7: checked for being objects and no
+     further — this document does not define their contents. That is
+     the rule reaching the edge of what it knows, not an exception to
+     it, so a present-and-malformed value still refuses. */
+  if(o.flags !== undefined &&
+     (!o.flags || typeof o.flags !== "object" || Array.isArray(o.flags))){
+    saveStatus = "REFUSED — flags is not an object"; return false; }
+  if(o.moduleState !== undefined &&
+     (!o.moduleState || typeof o.moduleState !== "object" || Array.isArray(o.moduleState))){
+    saveStatus = "REFUSED — moduleState is not an object"; return false; }
 
   /* visited. Indices, never names — §9's reseed argument. */
   let visited = [];
@@ -1824,13 +1923,14 @@ function loadGame(){
 
   state.cargo       = cargo;
   state.visited     = visited;
-  state.equipment   = (o.equipment   && typeof o.equipment   === "object") ? o.equipment   : {};
-  state.flags       = (o.flags       && typeof o.flags       === "object") ? o.flags       : {};
-  state.moduleState = (o.moduleState && typeof o.moduleState === "object") ? o.moduleState : {};
+  state.equipment   = equipment;                       /* LOOP 96 */
+  state.flags       = o.flags       !== undefined ? o.flags       : {};
+  state.moduleState = o.moduleState !== undefined ? o.moduleState : {};
 
   saveStatus = "LOADED — galaxy "+c.galaxy+" system "+c.system+
                ", day "+c.gameDay+", "+c.credits+" tenths CR, fuel "+c.fuel+
-               ", "+Object.keys(cargo).length+" cargo slot(s)"+htNote;
+               ", "+Object.keys(cargo).length+" cargo slot(s), "+
+               state.visited.length+" visited"+htNote;
   return true;
 }
 
@@ -2491,7 +2591,7 @@ document.getElementById("bWipe").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 042b — settings\n"+
+    "ELITE: THE CLONES 043a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -2532,7 +2632,7 @@ function writeReport(){
     "last write    "+(saveLast ? new Date(saveLast).toTimeString().slice(0,8)
                                : "nothing written this session")+"\n"+
     "file on disk  "+saveFileLine()+"\n"+
-    "visited       "+state.visited.length+" system(s)  — INERT, loop 93\n"+
+    "visited       "+state.visited.length+" system(s)  — LIVE, loop 93 built 043\n"+
     "\n"+worldReport();
   document.getElementById("report").textContent = lastReport;
 }
@@ -3275,6 +3375,27 @@ function doJump(){
   state.system             = World.system(o.galaxy, o.index);
   state.commander.gameDay += 1;               /* World Model §7.2 */
   state.commander.hyperspaceTarget = null;
+
+  /* LOOP 93, session 043. THE ONE LINE WORLD MODEL §9 HAS BEEN WAITING
+     FOR SINCE v1.0. The field has been specified since the first
+     revision of that document, was excused every session on the ground
+     that it "waits on persistence", and persistence arrived in 042 —
+     after which the array round-tripped faithfully and still meant
+     nothing. §9.8: A FIELD THAT PERSISTS READS AS A FIELD THAT WORKS,
+     which is a worse state than the honest emptiness it replaced.
+     WRITTEN HERE AND IN TWO OTHER PLACES ONLY — the loader, and the
+     boot block on a cold start. A fourth writer would be a second copy
+     of the rule.
+     SHAPE IS WORLD MODEL §9's: BARE SYSTEM INDICES, NO GALAXY. That is
+     what §9 draws, what the loader validates and what is built here.
+     IT CANNOT DISTINGUISH GALAXIES: system 51 of galaxy 3 would mark
+     system 51 of galaxy 0 as seen. Galactic hyperdrive does not exist
+     — CONTROL §5, S18 — so every save that can be written today lives
+     in galaxy 0 and the shape is correct for all of them. RECORDED AS
+     S91 AND NOT FIXED HERE: widening it is a §9 shape decision and a
+     build does not get to take one. PANEL LAYOUT §4.4's visited mark
+     is the first thing that will read it. */
+  if(state.visited.indexOf(o.index) === -1) state.visited.push(o.index);
 
   /* The cursor follows the ship. [ASSUMED]. On arrival the strip then
      reads CURRENT SYSTEM, which is true and useful; leaving the cursor
