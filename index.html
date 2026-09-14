@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 042a</title>
+<title>ELITE: THE CLONES — 042b</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -1482,6 +1482,25 @@ const SHIELD_MAX = 100;   // [ASSUMED]
 const ENERGY_MAX = 100;   // [ASSUMED] displayed as four banks of 25
 const FUEL_MAX   = 70;    // World Model 2 - tenths of a light year
 
+/* SESSION 042b. THE STARTING VALUES ARE FUNCTIONS, NOT A LITERAL.
+   `WIPE SAVE FILE` has to rebuild them, and in 042a it did not — it
+   removed the file and left the played commander in memory, which is
+   the defect this build fixes. A second literal would have been a
+   second copy of every starting value: the CARGO_MAX fault, loop 75,
+   in the one place it would be hardest to spot, because a wrong
+   starting value looks exactly like a design choice.
+   THE STARTING SYSTEM IS galaxy 0 / system 51 — Vileze. PROJECT
+   PRIMER §3, settled in session 004. The index is the decision. */
+function freshCommander(){
+  return { credits:1000, legalStatus:0, fuel:70, gameDay:0,
+           galaxy:0, system:51, kills:0,
+           hyperspaceTarget:null };
+}
+function freshShip(){
+  return { hull:100, shieldFore:100, shieldAft:100, energy:100,
+           cargoUsed:0, holdTonnes:20, speed:0, docked:false };
+}
+
 const state = {
   /* LOOP 76, session 032. `state.position = { galaxy, system }` is gone.
      It was never a declared field: WORLD MODEL §9 has put `galaxy` and
@@ -1504,9 +1523,7 @@ const state = {
      Target" row and Panel §6.2's Distance both require it and neither
      the API's state list nor its §3.2 command list defines it. Found
      by building, session 012. { galaxy, index } or null. */
-  commander: { credits:1000, legalStatus:0, fuel:70, gameDay:0,
-               galaxy:0, system:51, kills:0,
-               hyperspaceTarget:null },
+  commander: freshCommander(),
   /* LOOP 75, session 030. `holdTonnes` was `CARGO_MAX`, a module
      constant in the market section, from session 016 to 029. WORLD
      MODEL §9 has said capacity is save-file state since v1.6 and CORE
@@ -1535,8 +1552,7 @@ const state = {
      whether the hold gets written, saw correctly that it does not,
      and had no reason to go and read DECLARATIVE. Sweep finding S53,
      paid in 037. */
-  ship: { hull:100, shieldFore:100, shieldAft:100, energy:100,
-          cargoUsed:0, holdTonnes:20, speed:0, docked:false },
+  ship: freshShip(),
   /* WORLD MODEL §9's `cargo`, with Panel §3.3.1's average purchase
      price folded into the slot. §9 draws this as { grain: 0, ore: 5 }
      — one number per commodity, with nowhere to keep a second value.
@@ -1839,9 +1855,64 @@ function saveFileLine(){
                                         : "g"+t.galaxy+" i"+t.index);
 }
 
+/* ==================================================================
+   THE WIPE — REWRITTEN IN 042b. WHAT 042a GOT WRONG.
+
+   042a's wipe removed the file and left the played commander in
+   memory, and the source comment argued that was deliberate: "the
+   reload is the player's." THAT REASONING WAS WRONG and it is worth
+   writing down rather than quietly replacing, because the argument
+   sounded good and the fault it caused is an exploit.
+
+   WHY IT WAS WRONG. Every mutation site calls saveGame(), and so do
+   `pagehide` and `visibilitychange`. So after a wipe the file is
+   recreated by the NEXT thing that happens — a jump, a trade, or
+   simply leaving the app to reload it. THE WIPE HAD A RACE AGAINST
+   THE AUTOSAVE AND LOST, and which one won depended on how the player
+   got back to the app. Ripley found it in one session: a wipe could
+   leave a commander standing at the start with the fuel, cargo and
+   credits of the run just wiped — a free trip home from anywhere.
+
+   THE GENERAL SHAPE, worth keeping: A DESTRUCTIVE ACTION THAT DOES
+   NOT ALSO RESET THE THING THAT WRITES THE FILE IS NOT DESTRUCTIVE.
+   It is a request that something else agrees to honour.
+
+   WHAT IT DOES NOW. Clears the file AND rebuilds the commander, the
+   ship, the hold and the derived system, from freshCommander() and
+   freshShip() — the same two functions the cold start uses, so there
+   is no second copy of a starting value. A save written a moment
+   later writes a legitimately new commander rather than resurrecting
+   the old one.
+
+   THE MODULE-LOCAL STATE IS RESET TOO. `chartSel`, the market
+   accordion and `mktTaken` are not in §9 and are not saved, but they
+   describe the run that has just been destroyed: a cursor pointing at
+   a system the new commander has never seen, and a market counter
+   holding the net trade of a commander who no longer exists.
+   ================================================================== */
 function wipeSave(){
-  try{ localStorage.removeItem(SAVE_KEY); saveStatus = "SAVE WIPED — reload for a new commander"; return true; }
+  try{ localStorage.removeItem(SAVE_KEY); }
   catch(e){ saveStatus = "WIPE FAILED — "+(e&&e.name||"unknown"); return false; }
+
+  state.commander   = freshCommander();
+  state.ship        = freshShip();
+  state.cargo       = {};
+  state.equipment   = {};
+  state.flags       = {};
+  state.moduleState = {};
+  /* Derived, in the same one place the boot block derives it. */
+  state.system  = World.system(state.commander.galaxy, state.commander.system);
+  state.visited = [state.commander.system];
+
+  chartSel    = state.system;
+  mktOpen     = null; mktBuyQ = 0; mktSellQ = 0;
+  mktTaken    = { key:"", by:{} };
+  svcFuelLast = null;
+
+  saveLast   = null;
+  saveStatus = "WIPED — new commander at "+state.system.name+
+               " (g"+state.commander.galaxy+" s"+state.commander.system+")";
+  return true;
 }
 
 /* THE LOAD ITSELF. Above the boot IIFE — see the note at the top. */
@@ -2401,11 +2472,18 @@ document.getElementById("bReset").addEventListener("click",function(){
   T=Object.assign({},SPEC); saveT(); syncUI();
 });
 /* LOOP 87. Two taps. The label carries the state, so the button is its
-   own confirmation dialogue and nothing has to be built for it. */
+   own confirmation dialogue and nothing has to be built for it.
+   042b: the repaint is part of the action. A wipe that leaves the old
+   commander on screen until a reload is a display disagreeing with
+   state — constraint 2 — and it is also what made 042a's fault hard
+   to see: the screen kept saying the run was still there. */
 let wipeArmed = false;
 document.getElementById("bWipe").addEventListener("click",function(){
   if(!wipeArmed){ wipeArmed = true; this.textContent = "TAP AGAIN TO DESTROY SAVE"; return; }
-  wipeSave(); wipeArmed = false; this.textContent = "WIPE SAVE FILE"; writeReport();
+  wipeSave(); wipeArmed = false; this.textContent = "WIPE SAVE FILE";
+  syncUI();
+  if(panelEl.classList.contains("open")) PANELS[panelCur].render();
+  refreshTune();
 });
 /* LOOP 64. The report text is kept as a string so COPY can write it to
    the clipboard directly. It used to be read back out of the textarea's
@@ -2413,7 +2491,7 @@ document.getElementById("bWipe").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 042a — settings\n"+
+    "ELITE: THE CLONES 042b — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
