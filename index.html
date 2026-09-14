@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 039f</title>
+<title>ELITE: THE CLONES — 042a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -933,6 +933,13 @@
        its own length, so anything below it is a scroll away and gets
        longer every time the report does. -->
   <div class="acts"><button id="bWorld">BUILD ALL 8 GALAXIES</button><button id="bCopy">COPY SETTINGS FOR REPORT</button></div>
+  <!-- LOOP 87, session 042. A save that cannot be cleared cannot be
+       tested twice, and there is no console on a phone. It is two taps
+       and the second one says the word, because this destroys the
+       commander. It does NOT reset the game in memory — only the file.
+       The reload is the player's, deliberately: a button that wipes and
+       reloads gives no moment to change your mind. -->
+  <div class="acts"><button id="bWipe">WIPE SAVE FILE</button></div>
   <pre id="report"></pre>
 </div>
 
@@ -1035,6 +1042,49 @@ const BLOCK_WHOLE = new Set(BLOCK_ELITE.concat(BLOCK_REALWORLD));
    The eleven other replacements were read by the assistant and not by
    Ripley. §2.2.1 is explicit that the human read is the half a list
    cannot do, so those eleven are [ASSUMED] clean, not [TESTED]. */
+
+/* ==================================================================
+   THE FREEZE — [DECISION], Ripley, session 040. WORD BANKS §2.2.
+   Landed in source session 042. Parked since 040; until now the only
+   enforcement was PROJECT PRIMER §6.1 check 4, which reads the
+   document. This is the half a builder reads.
+
+   CATEGORY 1 — BLOCK_PROFANITY   —  9 entries — FROZEN
+   CATEGORY 2 — BLOCK_ELITE       — 17 entries — FROZEN
+   CATEGORY 3 — BLOCK_REALWORLD   — 60 entries — OPEN
+
+   DO NOT ADD TO CATEGORY 1 OR 2. Category 1 closed on its arithmetic
+   in session 007 (§2.2.2); every producible candidate has been ruled
+   on. Category 2 is a finite list of someone else's names and nothing
+   can add to it but a copy of the original, which has not been
+   consulted and will not be.
+
+   CATEGORY 3 IS OPEN ON PURPOSE, and that is not an oversight. It is
+   the category carrying hard constraint 4, and §2.2.1 is explicit that
+   the list does not discharge the constraint — the READ does. Freezing
+   it would make the constraint the list's job. An open category with a
+   stated amendment rule is safer than a frozen one a future read
+   cannot amend without breaking a ruling.
+
+   THE CONDITION ON ANY CATEGORY-3 AMENDMENT, §2.2.1: re-read the names
+   the amendment CHANGES, not the set. Fourteen strings, not 2,048. The
+   self-check prints exactly that list.
+
+   WHAT AN AMENDMENT COSTS NOW THAT A SAVE FILE EXISTS — S77, and the
+   sentence that was wrong about it for thirty-three sessions. §2.2.2
+   read "expensive the day a save file exists", and "expensive" reads
+   as data loss. IT IS NOT. The save holds `commander.galaxy`,
+   `commander.system`, `visited` and `hyperspaceTarget` as INDICES —
+   see the persistence section below. An edit renames a system the
+   player may remember by name and touches nothing they own: no
+   credits, no cargo, no position. It is not a migration. That finding
+   is what made leaving category 3 open defensible.
+
+   IF YOU CHANGE A COUNT HERE, WORD BANKS §2.2 AND PRIMER CHECK 4 BOTH
+   BECOME FALSE. The document is where check 4 reads the numbers; this
+   is where a builder reads them. It needs both, and this was the half
+   that was owed. Rejected, §2.2: recording the freeze only in source.
+   ================================================================== */
 
 const GOVERNMENT = ["Anarchy","Feudal","Multi-Government","Dictatorship","Communist","Confederacy","Democracy","Corporate State"];
 const ECONOMY = ["Rich Industrial","Average Industrial","Poor Industrial","Mainly Industrial",
@@ -1498,8 +1548,304 @@ const state = {
      62, and paid. THE CLAIM THAT IT WAS OWED THEN SURVIVED IN FOUR
      PLACES IN THIS FILE FOR FIVE SESSIONS. A comment block is a
      document for sweep check 5 and had never been swept. Loop 73. */
-  cargo: {}
+  cargo: {},
+
+  /* SESSION 042. FOUR FIELDS WORLD MODEL §9 HAS SPECIFIED SINCE v1.0
+     AND THIS OBJECT HAS NEVER CARRIED. They are added because the save
+     file is §9's object, and a save that omits four of §9's keys is not
+     §9's object — it is a fifth shape, undocumented, discovered later.
+     NONE OF THEM IS WIRED TO ANYTHING, AND THAT IS STATED LOUDLY
+     RATHER THAN LEFT TO BE INFERRED. Failure mode 1: a field that is
+     present reads as implemented.
+
+     `equipment` — §9's { qty } slots. PANEL §8 sells them; there is no
+       equipment panel, no rule engine and no pack loader, so nothing
+       here can write one. Absent means not fitted; nothing writes
+       false and nothing writes qty: 0. Round-trips through the save
+       verbatim so a hand-edited or future file is not destroyed.
+     `flags`, `moduleState` — same: §9's keys, no writer, preserved.
+     `visited` — §9 has specified it since v1.0 and §9 itself says it
+       WAITS ON PERSISTENCE. Persistence has now arrived and the wait
+       is over, but wiring the tracking is a second job and is NOT done
+       here: nothing adds to this array. It is initialised to the
+       starting system and persists as it stands. LOOP 93.
+       PANEL LAYOUT §4.4's visited mark waits on loop 93, not on this. */
+  equipment:   {},
+  flags:       {},
+  moduleState: {},
+  /* EMPTY HERE ON PURPOSE. §9 draws it as `[51]` and copying that
+     literal would put the starting index in a second place — the
+     CARGO_MAX fault, loop 75. It has two writers and only two: the
+     loader, and the boot block below on a cold start. */
+  visited:     []
 };
+
+/* ==================================================================
+   PERSISTENCE — LOOP 87, session 042. The save file.
+   WORLD MODEL §9 is the single copy of the save-file shape. CORE API
+   §3.1 owns the load rule for `hyperspaceTarget`. Nothing here invents
+   a shape; where it invents a RULE that is said so, in capitals.
+
+   WHERE THE LOAD SITS, AND WHY IT MATTERS MORE THAN IT LOOKS.
+   It runs ABOVE the boot IIFE, which is the only writer of
+   `state.system` outside doJump. WORLD §2.2 names `state.system` as
+   THE ONE PLACE a position and its display can diverge, and the 041
+   handover predicted that the loaded save would become a SECOND such
+   place. IT DOES NOT, and the reason is ordering: the save restores
+   `commander.galaxy` and `commander.system` — indices only — and the
+   IIFE below derives `state.system` from them exactly as it does on a
+   cold start. There is one derivation site, not two. A load that
+   restored a derived object would have created the second site, which
+   is why the save does not carry one.
+
+   ONE RULE FOR BAD DATA, AND ONE SPECIFIED EXCEPTION.
+   Any failed check DISCARDS THE WHOLE SAVE and starts a new commander,
+   logged. Nothing is repaired to a nearby value. The exception is
+   `hyperspaceTarget`, which CORE API §3.1 specifies discards TO NULL
+   with the rest of the save intact — that asymmetry is specified, not
+   invented, and the reason is in §3.1: a course costs nothing, so
+   losing one loses nothing the player owns, while a clamped course is
+   one the player never set, presented as one they did.
+   WHY THE REST IS ALL-OR-NOTHING: a partial load is a commander the
+   player never had. Dropping one bad cargo slot silently takes goods
+   they own; dropping a bad credit balance invents a number.
+   [DECISION] — §9 does not rule on this. See the open items note.
+
+   THREE MISMATCHES REFUSE THE FILE, all for the same reason.
+   `schema`, `worldSeed` and `worldModelVersion`. §9: a save written
+   against a different seed or a different world model describes a
+   universe with different names, species and descriptions. §9 wrote no
+   migration path because no save existed. ONE EXISTS FROM TODAY, and
+   §9's own sentence — "a reseed is a migration and a betrayal rather
+   than an edit" — is the argument for refusing rather than loading.
+
+   WHAT `schema` GOVERNS — S82, open since v1.0, ANSWERED HERE AS A
+   PROPOSAL AND NOT AS A RULING. `schema` governs the ENVELOPE: the key
+   names and nesting of the save object itself. `worldModelVersion`
+   governs the GENERATED UNIVERSE. They move independently — a save
+   could gain a key without the universe changing, and the universe
+   could change without the shape moving. [DECISION] — WORLD MODEL §9
+   owns this and has never said. Recorded here because 042 writes the
+   first file that has ever carried the field, and a field written with
+   no stated meaning is how `stationTypeRaw` happened.
+   ================================================================== */
+
+const SAVE_KEY = "elite.clones.save";
+/* NOT versioned in the key, on purpose: a schema bump must be able to
+   migrate the file in place. A key carrying the number orphans it. */
+
+const SAVE_SCHEMA = 1;                    /* WORLD MODEL §9 */
+const WORLD_MODEL_VERSION = "1.2.0";      /* WORLD MODEL §9 */
+
+/* §9's `modules` array, verbatim. NOTHING IN THIS BUILD VERIFIES THESE
+   NUMBERS — there is no module registry, no loader and no code that
+   declares a version. They are [ASSUMED] and they are written because
+   §9's object carries them; a save that omits the key is not §9's
+   object. The day a loader exists, this constant is the thing it
+   replaces, and until then a version mismatch here cannot be detected
+   because there is nothing to compare against. */
+const SAVE_MODULES = [
+  { id:"core.world", version:"1.1.0" },
+  { id:"core.trade", version:"1.0.0" }
+];
+
+/* WHICH SHIP FIELDS PERSIST. §9 gives `holdTonnes` and then says "the
+   rest defined in ship module spec". THAT DOCUMENT DOES NOT EXIST, so
+   this list is [ASSUMED] and it is a list rather than a rule so that
+   the ship module spec can replace it in one edit.
+   OMITTED DELIBERATELY: `speed` and `docked` are runtime — a save that
+   restores you at speed 200 is a save that restores a moment, not a
+   commander. `cargoUsed` is stored but is RECONCILED against a walk of
+   the cargo after load, below; it is the field that lies. Loop 81. */
+const SHIP_SAVED = ["hull","shieldFore","shieldAft","energy","holdTonnes"];
+
+let saveStatus = "no save read this session";   /* for the TUNE report */
+let saveLast   = null;                          /* ms timestamp, display only */
+
+function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
+
+function saveGame(){
+  try{
+    const p = state.commander, sh = state.ship;
+    const ship = {};
+    for(const k of SHIP_SAVED) ship[k] = sh[k];
+    const obj = {
+      schema:            SAVE_SCHEMA,
+      worldModelVersion: WORLD_MODEL_VERSION,
+      worldSeed:         WORLD_SEED,
+      seedSource:        "canonical",
+      modules:           SAVE_MODULES,
+      commander: {
+        /* §9 carries `name` and marks it Not yet defined, §11. THIS
+           BUILD HAS NO COMMANDER NAME and the key is OMITTED rather
+           than written as a placeholder. Writing "JAMESON" is what §9
+           spent six sessions removing; writing "" invents an empty
+           name the player chose. An absent key is the honest spelling
+           of a field the project has not decided. */
+        credits:          p.credits,
+        legalStatus:      p.legalStatus,
+        fuel:             p.fuel,
+        gameDay:          p.gameDay,
+        galaxy:           p.galaxy,
+        system:           p.system,
+        kills:            p.kills,
+        /* §9: null is WRITTEN, never omitted. The empty state has one
+           spelling and it is a value. */
+        hyperspaceTarget: p.hyperspaceTarget
+      },
+      ship:        ship,
+      cargo:       state.cargo,
+      equipment:   state.equipment,
+      visited:     state.visited,
+      flags:       state.flags,
+      moduleState: state.moduleState
+    };
+    /* `cargoUsed` rides in `ship`? NO — it is not in SHIP_SAVED. It is
+       derived from cargo and is recomputed on load. A stored total
+       that disagrees with the thing it totals is loop 81's whole
+       subject, and writing it into a file makes the disagreement
+       survive a reload. */
+    localStorage.setItem(SAVE_KEY, JSON.stringify(obj));
+    saveLast = Date.now();
+    return true;
+  }catch(e){
+    /* iOS clears storage under pressure and throws when full. A failed
+       save must never take the running game down with it. */
+    saveStatus = "SAVE FAILED — " + (e && e.name ? e.name : "unknown");
+    return false;
+  }
+}
+
+function loadGame(){
+  let raw;
+  try{ raw = localStorage.getItem(SAVE_KEY); }
+  catch(e){ saveStatus = "storage unreadable — " + (e&&e.name||"unknown"); return false; }
+  if(!raw){ saveStatus = "no save on this device — new commander"; return false; }
+
+  let o;
+  try{ o = JSON.parse(raw); }
+  catch(e){ saveStatus = "REFUSED — file is not JSON"; return false; }
+  if(!o || typeof o !== "object"){ saveStatus = "REFUSED — file is not an object"; return false; }
+
+  /* --- the three refusals --- */
+  if(o.schema !== SAVE_SCHEMA){
+    saveStatus = "REFUSED — schema "+o.schema+", this build writes "+SAVE_SCHEMA; return false; }
+  if(o.worldSeed !== WORLD_SEED){
+    saveStatus = "REFUSED — worldSeed "+o.worldSeed+", this build is "+WORLD_SEED; return false; }
+  if(o.worldModelVersion !== WORLD_MODEL_VERSION){
+    saveStatus = "REFUSED — worldModelVersion "+o.worldModelVersion+
+                 ", this build is "+WORLD_MODEL_VERSION; return false; }
+
+  const c = o.commander;
+  if(!c || typeof c !== "object"){ saveStatus = "REFUSED — no commander"; return false; }
+
+  /* --- structural checks. Any failure discards the whole file. --- */
+  if(!isIdx(c.galaxy, 7)){   saveStatus = "REFUSED — galaxy out of range: "+c.galaxy; return false; }
+  if(!isIdx(c.system, 255)){ saveStatus = "REFUSED — system out of range: "+c.system; return false; }
+  if(!isIdx(c.fuel, FUEL_MAX)){ saveStatus = "REFUSED — fuel out of range: "+c.fuel; return false; }
+  if(!Number.isInteger(c.credits)     || c.credits     < 0){ saveStatus="REFUSED — credits: "+c.credits; return false; }
+  if(!Number.isInteger(c.gameDay)     || c.gameDay     < 0){ saveStatus="REFUSED — gameDay: "+c.gameDay; return false; }
+  if(!Number.isInteger(c.kills)       || c.kills       < 0){ saveStatus="REFUSED — kills: "+c.kills; return false; }
+  if(!Number.isInteger(c.legalStatus) || c.legalStatus < 0){ saveStatus="REFUSED — legalStatus: "+c.legalStatus; return false; }
+
+  /* cargo. An open-ended map, and every slot is checked. A bad slot
+     discards the FILE, not the slot — dropping it silently takes goods
+     the player owns and leaves a credit balance that no longer has a
+     history. */
+  const cargo = {};
+  const src = (o.cargo && typeof o.cargo === "object") ? o.cargo : {};
+  for(const k of Object.keys(src)){
+    const s = src[k];
+    if(!s || typeof s !== "object" ||
+       !Number.isInteger(s.qty)  || s.qty  <= 0 ||
+       !Number.isInteger(s.paid) || s.paid <  0){
+      saveStatus = "REFUSED — cargo slot "+k+" is malformed"; return false; }
+    cargo[k] = { qty:s.qty, paid:s.paid };
+  }
+
+  /* visited. Indices, never names — §9's reseed argument. */
+  let visited = [];
+  if(Array.isArray(o.visited)){
+    for(const v of o.visited){
+      if(!isIdx(v, 255)){ saveStatus = "REFUSED — visited entry out of range: "+v; return false; }
+      visited.push(v);
+    }
+  } else { visited = [c.system]; }
+
+  /* --- hyperspaceTarget. CORE API §3.1. THE ONE FIELD THAT DEGRADES
+     RATHER THAN REFUSING, and §3.1 says so explicitly: galaxy an
+     integer 0-7, index an integer 0-255, discarded to null on failure
+     with a log line, NEVER repaired to a nearby value.
+     An ABSENT key loads as null — WORLD §9, this revision. A missing
+     target is not a target in range, so it takes the same path as a
+     failed check rather than making the file malformed. --- */
+  let ht = null, htNote = "";
+  const t = c.hyperspaceTarget;
+  if(t === null || t === undefined){
+    ht = null;
+    if(t === undefined) htNote = "  (hyperspaceTarget key absent — loaded as null)";
+  } else if(t && typeof t === "object" && isIdx(t.galaxy, 7) && isIdx(t.index, 255)){
+    ht = { galaxy:t.galaxy, index:t.index };
+  } else {
+    ht = null;
+    htNote = "  (hyperspaceTarget discarded — out of range: "+JSON.stringify(t)+")";
+  }
+
+  /* --- commit. Nothing above this line has touched `state`, so a
+     refusal leaves a clean new commander rather than a half-loaded
+     one. --- */
+  state.commander.credits          = c.credits;
+  state.commander.legalStatus      = c.legalStatus;
+  state.commander.fuel             = c.fuel;
+  state.commander.gameDay          = c.gameDay;
+  state.commander.galaxy           = c.galaxy;
+  state.commander.system           = c.system;
+  state.commander.kills            = c.kills;
+  state.commander.hyperspaceTarget = ht;
+
+  const sh = (o.ship && typeof o.ship === "object") ? o.ship : {};
+  for(const k of SHIP_SAVED) if(Number.isInteger(sh[k])) state.ship[k] = sh[k];
+
+  state.cargo       = cargo;
+  state.visited     = visited;
+  state.equipment   = (o.equipment   && typeof o.equipment   === "object") ? o.equipment   : {};
+  state.flags       = (o.flags       && typeof o.flags       === "object") ? o.flags       : {};
+  state.moduleState = (o.moduleState && typeof o.moduleState === "object") ? o.moduleState : {};
+
+  saveStatus = "LOADED — galaxy "+c.galaxy+" system "+c.system+
+               ", day "+c.gameDay+", "+c.credits+" tenths CR, fuel "+c.fuel+
+               ", "+Object.keys(cargo).length+" cargo slot(s)"+htNote;
+  return true;
+}
+
+/* LOOP 87, session 042. THIS READS THE FILE BACK OFF DISK. It does not
+   report what `saveGame()` believes it wrote — that is the same class of
+   mistake as a handover stating Knowledge composition from memory (S81),
+   and this project has paid for it four times. A save that throws
+   silently, or that iOS evicts under storage pressure, is invisible to
+   every other line in this report. */
+function saveFileLine(){
+  let raw;
+  try{ raw = localStorage.getItem(SAVE_KEY); }
+  catch(e){ return "UNREADABLE — "+(e&&e.name||"unknown"); }
+  if(!raw) return "ABSENT";
+  let o; try{ o = JSON.parse(raw); }catch(e){ return raw.length+" bytes, NOT PARSEABLE"; }
+  const c = o && o.commander;
+  if(!c) return raw.length+" bytes, no commander";
+  const t = c.hyperspaceTarget;
+  return raw.length+" bytes  ·  g"+c.galaxy+" s"+c.system+
+         "  day "+c.gameDay+"  "+c.credits+" tenths CR  fuel "+c.fuel+
+         "  target "+(t===null ? "null" : t===undefined ? "KEY ABSENT"
+                                        : "g"+t.galaxy+" i"+t.index);
+}
+
+function wipeSave(){
+  try{ localStorage.removeItem(SAVE_KEY); saveStatus = "SAVE WIPED — reload for a new commander"; return true; }
+  catch(e){ saveStatus = "WIPE FAILED — "+(e&&e.name||"unknown"); return false; }
+}
+
+/* THE LOAD ITSELF. Above the boot IIFE — see the note at the top. */
+const SAVE_LOADED = loadGame();
 
 /* ---------- boot the world. Galaxy 0 only; 1-7 wait to be asked. ----------
    LOOP 90, session 039. THIS NO LONGER TIMES ANYTHING, AND THAT IS THE
@@ -1514,9 +1860,17 @@ const state = {
    The IIFE stays because its job is the side effect — galaxy 0 is built
    here and `state.system` is written here. `WORLD_BOOT_MS` is deleted
    rather than left computed-and-unprinted: a value nobody reads that
-   still looks like a measurement is exactly what S67 is about. */
+   still looks like a measurement is exactly what S67 is about.
+
+   SESSION 042. `state.system` is still derived HERE and only here, from
+   whatever indices the load left behind. That is the whole reason the
+   save carries indices and not a system object. */
 (function(){
   state.system = World.system(state.commander.galaxy, state.commander.system);
+  /* No save, so `visited` is the starting system rather than a literal
+     51 copied out of §9. The starting index has one home and it is
+     `commander.system` — the CARGO_MAX lesson, loop 75. */
+  if(!SAVE_LOADED) state.visited = [state.commander.system];
 })();
 
 /* ---------- object field ---------- */
@@ -2046,13 +2400,20 @@ document.getElementById("bClose").addEventListener("click",function(){
 document.getElementById("bReset").addEventListener("click",function(){
   T=Object.assign({},SPEC); saveT(); syncUI();
 });
+/* LOOP 87. Two taps. The label carries the state, so the button is its
+   own confirmation dialogue and nothing has to be built for it. */
+let wipeArmed = false;
+document.getElementById("bWipe").addEventListener("click",function(){
+  if(!wipeArmed){ wipeArmed = true; this.textContent = "TAP AGAIN TO DESTROY SAVE"; return; }
+  wipeSave(); wipeArmed = false; this.textContent = "WIPE SAVE FILE"; writeReport();
+});
 /* LOOP 64. The report text is kept as a string so COPY can write it to
    the clipboard directly. It used to be read back out of the textarea's
    .value via el.select(), which is what made the box focusable. */
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 039f — settings\n"+
+    "ELITE: THE CLONES 042a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -2080,7 +2441,21 @@ function writeReport(){
     "  of which tech "+(stripH ? techH+" px" : "not drawn")+"\n"+
     "fps           "+fpsShow.toFixed(0)+"\n"+
     "viewport      "+window.innerWidth+"x"+window.innerHeight+
-    "\n\n"+worldReport();
+    /* LOOP 87, session 042. CONSTRAINT 6: this is the commander's own
+       record and is never gated. CONSTRAINT 2: every value is read from
+       state at write time and none is stored for display.
+       PRINTED ALWAYS, not only on a fault — positionReportLine()'s rule.
+       An instrument that is silent when clean cannot be told apart from
+       an instrument that is not running, and a save is precisely the
+       kind of thing that silently stops working. */
+    "\n\nsave key      "+SAVE_KEY+"\n"+
+    "save schema   "+SAVE_SCHEMA+"  ·  world model "+WORLD_MODEL_VERSION+"\n"+
+    "load at boot  "+saveStatus+"\n"+
+    "last write    "+(saveLast ? new Date(saveLast).toTimeString().slice(0,8)
+                               : "nothing written this session")+"\n"+
+    "file on disk  "+saveFileLine()+"\n"+
+    "visited       "+state.visited.length+" system(s)  — INERT, loop 93\n"+
+    "\n"+worldReport();
   document.getElementById("report").textContent = lastReport;
 }
 
@@ -2755,6 +3130,13 @@ function setCourse(){
   if(!chartSel) return;
   state.commander.hyperspaceTarget = { galaxy:chartSel.galaxy, index:chartSel.index };
   PANELS[panelCur].render();
+  /* LOOP 87. [DECISION], Ripley, session 038: a committed course
+     SURVIVES A SAVE, so the act of committing one has to write it.
+     CORE API §3.1's argument is the device: on an iPhone PWA a reload
+     is usually iOS reclaiming the tab, and a player who loses a
+     deliberate action to an event they did not cause cannot tell it
+     apart from a bug. That argument only holds if the write is here. */
+  saveGame();
 }
 
 /* ==================================================================
@@ -2831,6 +3213,12 @@ function doJump(){
      A jump that leaves you looking at a chart of somewhere you no
      longer are is the wrong first thing to see. */
   closePanel();
+
+  /* LOOP 87, session 042. The jump moves position, fuel, gameDay and the
+     committed target in one act, so it is the most expensive thing in
+     the game to lose. WRITTEN AFTER closePanel(): the file must record
+     the state the player is left looking at, not the one mid-act. */
+  saveGame();
 }
 
 /* One button, two acts. The branch is on state, never on the label —
@@ -3604,6 +3992,10 @@ function svcFuelBuy(n){
   svcFuelLast = { units:n, cost:cost,
                   landed: state.commander.fuel - before,
                   lost:   raw > FUEL_MAX ? raw - FUEL_MAX : 0 };
+  /* LOOP 87. `svcFuelLast` is NOT saved and is not in §9 — it is the
+     receipt for the last purchase, diagnostic, and it dies with the
+     page like `mktTaken`. The credits and the fuel are the state. */
+  saveGame();
 }
 
 function svcFuelReportLine(){
@@ -3909,6 +4301,7 @@ function mktBuy(c, qty, price){
   state.commander.credits -= qty * price;
   mktTaken.by[c.id] = (mktTaken.by[c.id] || 0) + qty;
   state.ship.cargoUsed = holdUsed();
+  saveGame();   /* LOOP 87 */
 }
 function mktSell(c, qty, price){
   const slot = state.cargo[c.id];
@@ -3936,6 +4329,13 @@ function mktSell(c, qty, price){
      Uncapped on purpose — World §13 [ASSUMED] 13 says what to watch. */
   mktTaken.by[c.id] = (mktTaken.by[c.id] || 0) - qty;
   state.ship.cargoUsed = holdUsed();
+  /* LOOP 87, session 042. `mktTaken` is NOT saved. It is keyed on
+     system-and-gameDay and is documented as dying with the page. THE
+     CONSEQUENCE IS NEW AND IS NOT A BUG YET: reloading while docked at
+     a market resets your net trade at that market, so the availability
+     counter recovers across a reload while your cargo and credits do
+     not. Nothing in WORLD MODEL §9 carries it. Recorded as loop 94. */
+  saveGame();
 }
 
 mktBody.addEventListener("click", function(e){
@@ -4047,6 +4447,42 @@ async function wake(){
 }
 document.addEventListener("visibilitychange",function(){
   if(document.visibilityState==="visible") wake();
+});
+
+/* ---------- persistence, the two parts that must run last ----------
+   LOOP 87, session 042.
+
+   1. THE RECONCILE. `cargoUsed` is a stored total and is the field that
+      lies — loop 81. It is deliberately NOT in SHIP_SAVED, so after a
+      load it still holds whatever the fresh state object had. It cannot
+      be recomputed inside loadGame(): holdUsed() walks COMMODITIES,
+      which is a `const` declared far below the load site and is in its
+      temporal dead zone at boot. THAT IS WHY THIS IS DOWN HERE and not
+      up there. holdReportLine()'s comment records the same constraint
+      for the same reason.
+      THE MISMATCH BRANCH IN holdReportLine() HAS NEVER FIRED — the 041
+      handover lists it as unblocked and untriggered. It now has a
+      second way to be exercised: load a save with cargo, and the walk
+      and the stored total are computed at two different moments for
+      the first time in the project.
+
+   2. THE SAFETY NET. Every mutation site writes its own save, so this
+      is belt and braces rather than the mechanism. It matters on iOS
+      specifically: `pagehide` is the event that fires when Safari
+      reclaims the tab, and `visibilitychange` catches a home-swipe that
+      never becomes a pagehide. `beforeunload` is NOT used — it is
+      unreliable on iOS and is the one every desktop tutorial reaches
+      for first. */
+if(SAVE_LOADED){
+  const walk = holdUsed();
+  if(state.ship.cargoUsed !== walk){
+    saveStatus += "  (cargoUsed reconciled "+state.ship.cargoUsed+" -> "+walk+")";
+    state.ship.cargoUsed = walk;
+  }
+}
+window.addEventListener("pagehide", saveGame);
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState === "hidden") saveGame();
 });
 
 /* ---------- go ---------- */
