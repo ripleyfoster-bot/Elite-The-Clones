@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 043a</title>
+<title>ELITE: THE CLONES — 045a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -936,9 +936,27 @@
   <!-- LOOP 87, session 042. A save that cannot be cleared cannot be
        tested twice, and there is no console on a phone. It is two taps
        and the second one says the word, because this destroys the
-       commander. It does NOT reset the game in memory — only the file.
-       The reload is the player's, deliberately: a button that wipes and
-       reloads gives no moment to change your mind. -->
+       commander.
+
+       THE SECOND HALF OF THIS COMMENT WAS WRONG UNTIL 043b AND IS
+       CORRECTED HERE, NOT DELETED. 042a read: "It does NOT reset the
+       game in memory — only the file. The reload is the player's,
+       deliberately." That was the reasoning behind the exploit Ripley
+       found the same day: every mutation site and both unload events
+       call saveGame(), so the autosave recreated the file before any
+       reload, and a wipe could leave a new commander at the start line
+       holding the fuel, cargo and credits of the run just destroyed.
+       042b rewrote wipeSave() AND LEFT THIS COMMENT STANDING.
+
+       WHAT IT DOES: clears the file AND rebuilds the commander from
+       freshCommander()/freshShip(), re-derives state.system, resets the
+       module-local run state, and repaints. THE WIPE block in the
+       script carries the full reasoning. S86.
+
+       S92, 043b. A corrected decision left standing at the point of
+       use. The comment a reader reaches first outranks the one eight
+       hundred lines below it, and PROJECT PRIMER Part B reads these
+       comments as the only source for sessions 036-042. -->
   <div class="acts"><button id="bWipe">WIPE SAVE FILE</button></div>
   <pre id="report"></pre>
 </div>
@@ -1039,9 +1057,10 @@ const BLOCK_WHOLE = new Set(BLOCK_ELITE.concat(BLOCK_REALWORLD));
    unchanged, and every rejection count in the report holds at 14/11/3.
    WHAT IT BUYS: the blocklist has no outstanding candidate against it,
    which is the precondition for the freeze — WORD BANKS §9 [DECISION] 1.
-   The eleven other replacements were read by the assistant and not by
-   Ripley. §2.2.1 is explicit that the human read is the half a list
-   cannot do, so those eleven are [ASSUMED] clean, not [TESTED]. */
+   ALL FOURTEEN REPLACEMENTS WERE READ BY RIPLEY ON DEVICE — [DECISION]
+   13, Ripley, session 044. WORD BANKS §2.2.1's [TESTED] stands. S97,
+   045a: this said the other eleven were read by the assistant and were
+   [ASSUMED] clean. That was wrong. */
 
 /* ==================================================================
    THE FREEZE — [DECISION], Ripley, session 040. WORD BANKS §2.2.
@@ -1577,22 +1596,24 @@ const state = {
      `equipment` — §9's { qty } slots. PANEL §8 sells them; there is no
        equipment panel, no rule engine and no pack loader, so nothing
        here can write one. Absent means not fitted; nothing writes
-       false and nothing writes qty: 0. Round-trips through the save
-       verbatim so a hand-edited or future file is not destroyed.
+       false and nothing writes qty: 0. Each slot's `qty` is VALIDATED
+       ON LOAD and a bad slot refuses the file — WORLD §9.7, loop 96,
+       043a. S92, 045a: this said "round-trips verbatim so a hand-edited
+       or future file is not destroyed", which is the rationale §9.7
+       rejected by name.
      `flags`, `moduleState` — same: §9's keys, no writer, preserved.
-     `visited` — §9 has specified it since v1.0 and §9 itself says it
-       WAITS ON PERSISTENCE. Persistence has now arrived and the wait
-       is over, but wiring the tracking is a second job and is NOT done
-       here: nothing adds to this array. It is initialised to the
-       starting system and persists as it stands. LOOP 93.
-       PANEL LAYOUT §4.4's visited mark waits on loop 93, not on this. */
+     `visited` — appended by doJump since 043a, LOOP 93 closed. S92,
+       045a: this said "nothing adds to this array", written in 042 and
+       false from 043a. PANEL LAYOUT §4.4's visited mark is the first
+       reader and waits on WORLD [DECISION] 28, not on this. */
   equipment:   {},
   flags:       {},
   moduleState: {},
   /* EMPTY HERE ON PURPOSE. §9 draws it as `[51]` and copying that
      literal would put the starting index in a second place — the
-     CARGO_MAX fault, loop 75. It has two writers and only two: the
-     loader, and the boot block below on a cold start. */
+     CARGO_MAX fault, loop 75. FOUR WRITERS AND ONLY FOUR: the loader,
+     the boot block on a cold start, doJump (loop 93), and wipeSave().
+     S92, 045a: this said "two writers and only two". */
   visited:     []
 };
 
@@ -1625,7 +1646,8 @@ const state = {
    WHY THE REST IS ALL-OR-NOTHING: a partial load is a commander the
    player never had. Dropping one bad cargo slot silently takes goods
    they own; dropping a bad credit balance invents a number.
-   [DECISION] — §9 does not rule on this. See the open items note.
+   RULED — WORLD MODEL §9.7, [DECISION], Ripley, session 043. S92,
+   045a: this said "§9 does not rule on this".
 
    THREE MISMATCHES REFUSE THE FILE, all for the same reason.
    `schema`, `worldSeed` and `worldModelVersion`. §9: a save written
@@ -1635,13 +1657,14 @@ const state = {
    §9's own sentence — "a reseed is a migration and a betrayal rather
    than an edit" — is the argument for refusing rather than loading.
 
-   WHAT `schema` GOVERNS — S82, open since v1.0, ANSWERED HERE AS A
-   PROPOSAL AND NOT AS A RULING. `schema` governs the ENVELOPE: the key
+   WHAT `schema` GOVERNS — S82. RULED IN WORLD MODEL §9.5, [DECISION],
+   Ripley, session 043; see the 043 comment below. S92, 045a: this
+   said "a proposal and not a ruling". `schema` governs the ENVELOPE: the key
    names and nesting of the save object itself. `worldModelVersion`
    governs the GENERATED UNIVERSE. They move independently — a save
    could gain a key without the universe changing, and the universe
-   could change without the shape moving. [DECISION] — WORLD MODEL §9
-   owns this and has never said. Recorded here because 042 writes the
+   could change without the shape moving. §9.5 owns this and now says
+   so. Recorded here first because 042 wrote the
    first file that has ever carried the field, and a field written with
    no stated meaning is how `stationTypeRaw` happened.
    ================================================================== */
@@ -1661,8 +1684,9 @@ const SAVE_KEY = "elite.clones.save";
    differs. §9.5 also says the save key is deliberately unversioned so
    that a migration CAN exist later, and nothing here forecloses one.
    NOT WRITING A MIGRATION IS A CHOICE AND IT IS CHEAP TODAY: the only
-   file that can exist is a test save on one device, and loop 87 is not
-   [TESTED], so nothing is lost that anyone minds. THE DAY A SCHEMA
+   file that can exist is a test save on one device, so nothing is lost
+   that anyone minds. Loop 87 was [TESTED] on device the same afternoon,
+   14 Sep, 043a. S92, 045a: this said "loop 87 is not [TESTED]". THE DAY A SCHEMA
    BUMP LANDS ON A PLAYED COMMANDER, THIS DECISION IS THE WRONG ONE. */
 const SAVE_SCHEMA = 2;                    /* WORLD MODEL §9.5 */
 const WORLD_MODEL_VERSION = "1.2.0";      /* WORLD MODEL §9.5 */
@@ -1723,9 +1747,19 @@ const SAVE_MODULES = [
    the ship module spec can replace it in one edit.
    OMITTED DELIBERATELY: `speed` and `docked` are runtime — a save that
    restores you at speed 200 is a save that restores a moment, not a
-   commander. `cargoUsed` is stored but is RECONCILED against a walk of
-   the cargo after load, below; it is the field that lies. Loop 81. */
+   commander. `cargoUsed` is NOT STORED — WORLD MODEL §9.4 — and is
+   recomputed from a walk of the cargo after load, below. Loop 81.
+   S92, 045a: this said "`cargoUsed` is stored but is reconciled". */
 const SHIP_SAVED = ["hull","shieldFore","shieldAft","energy","holdTonnes"];
+
+/* LOOP 94, session 045. WORLD MODEL §9.8, S90: `mktTaken` is saved in
+   `moduleState` under `core.trade`. THE COUNTER'S ONLY RUNTIME COPY IS
+   `mktTaken`, declared with the market far below. It is in its
+   temporal dead zone when the loader runs — the COMMODITIES constraint
+   again — so the loader parks a validated counter here and the market
+   declaration picks it up. Nothing else reads this. */
+const TRADE_NS = "core.trade";
+let tradeLoaded = null;
 
 let saveStatus = "no save read this session";   /* for the TUNE report */
 let saveLast   = null;                          /* ms timestamp, display only */
@@ -1768,7 +1802,14 @@ function saveGame(){
       equipment:   qualifyMap(state.equipment),
       visited:     state.visited,
       flags:       state.flags,
-      moduleState: state.moduleState
+      /* LOOP 94. `core.trade` is written from `mktTaken`, its one
+         runtime copy, and is never held in state.moduleState — that
+         would be a second copy. Ids are qualified like `cargo`:
+         WORLD §13 [DECISION] 22 is about the file, not the field. */
+      moduleState: Object.assign({}, state.moduleState, {
+        [TRADE_NS]: { mktTaken: { key: mktTaken.key,
+                                  by:  qualifyMap(mktTaken.by) } }
+      })
     };
     /* `cargoUsed` rides in `ship`? NO — it is not in SHIP_SAVED. It is
        derived from cargo and is recomputed on load. A stored total
@@ -1878,6 +1919,65 @@ function loadGame(){
      (!o.moduleState || typeof o.moduleState !== "object" || Array.isArray(o.moduleState))){
     saveStatus = "REFUSED — moduleState is not an object"; return false; }
 
+  /* ship. LOOP 97, session 045. WORLD MODEL §9.7, S94.
+     043b copied a field only when it was an integer and KEPT THE FRESH
+     DEFAULT OTHERWISE: an absent `ship` loaded a full-health ship and
+     nothing was range-checked. That is a partial load, which §9.7
+     forbids. NOW: `ship` must be an object, and every SHIP_SAVED field
+     must be present, an integer and in range, or the file refuses.
+     RANGES are the build's own constants, not new numbers:
+     shields 0-SHIELD_MAX, energy 0-ENERGY_MAX. HULL HAS NO CONSTANT and
+     its ceiling is freshShip()'s 100 — [ASSUMED]; a damage model
+     replaces it. `holdTonnes` is 1 or more with no ceiling, because
+     EQUIPMENT can raise it — [ASSUMED]. */
+  if(!o.ship || typeof o.ship !== "object" || Array.isArray(o.ship)){
+    saveStatus = "REFUSED — ship is missing or not an object"; return false; }
+  const shipMax = { hull: freshShip().hull, shieldFore: SHIELD_MAX,
+                    shieldAft: SHIELD_MAX, energy: ENERGY_MAX };
+  const ship = {};
+  for(const k of SHIP_SAVED){
+    const v = o.ship[k];
+    const ok = k === "holdTonnes" ? (Number.isInteger(v) && v >= 1)
+                                  : isIdx(v, shipMax[k]);
+    if(!ok){ saveStatus = "REFUSED — ship."+k+": "+v; return false; }
+    ship[k] = v;
+  }
+
+  /* moduleState.core.trade. LOOP 94, session 045. WORLD MODEL §9.8.
+     §9.7 checks moduleState for being an object and no further, because
+     §9 does not define module contents. `core.trade` is THIS BUILD'S
+     OWN BAG, so it is checked like `cargo` and a malformed one refuses
+     the file. [ASSUMED] — the reading of §9.7 applied to a bag this
+     build writes.
+     ABSENT LOADS AS AN EMPTY COUNTER. Every 043 file lacks it and
+     §9.8 says no schema bump is owed, so absence is legal. [ASSUMED].
+     `by` values are net trade and may be negative — §7.2, no floor.
+     A stale `key` is not checked: mktAvail discards a counter whose key
+     is not today's market, which is how it expires on the next jump. */
+  let trade = null;
+  let moduleState = {};
+  if(o.moduleState !== undefined){
+    moduleState = Object.assign({}, o.moduleState);
+    const tb = moduleState[TRADE_NS];
+    delete moduleState[TRADE_NS];      /* mktTaken is its only copy */
+    if(tb !== undefined){
+      const mt = tb && typeof tb === "object" && !Array.isArray(tb) ? tb.mktTaken : undefined;
+      if(!mt || typeof mt !== "object" || typeof mt.key !== "string" ||
+         !mt.by || typeof mt.by !== "object" || Array.isArray(mt.by)){
+        saveStatus = "REFUSED — moduleState."+TRADE_NS+" is malformed"; return false; }
+      const by = {};
+      for(const k of Object.keys(mt.by)){
+        if(!Number.isInteger(mt.by[k])){
+          saveStatus = "REFUSED — mktTaken entry "+k+": "+mt.by[k]; return false; }
+        const id = bareId(k);
+        if(id === null){
+          saveStatus = "REFUSED — mktTaken id not qualified: "+k; return false; }
+        by[id] = mt.by[k];
+      }
+      trade = { key: mt.key, by: by };
+    }
+  }
+
   /* visited. Indices, never names — §9's reseed argument. */
   let visited = [];
   if(Array.isArray(o.visited)){
@@ -1918,19 +2018,20 @@ function loadGame(){
   state.commander.kills            = c.kills;
   state.commander.hyperspaceTarget = ht;
 
-  const sh = (o.ship && typeof o.ship === "object") ? o.ship : {};
-  for(const k of SHIP_SAVED) if(Number.isInteger(sh[k])) state.ship[k] = sh[k];
+  for(const k of SHIP_SAVED) state.ship[k] = ship[k];   /* LOOP 97 */
 
   state.cargo       = cargo;
   state.visited     = visited;
   state.equipment   = equipment;                       /* LOOP 96 */
   state.flags       = o.flags       !== undefined ? o.flags       : {};
-  state.moduleState = o.moduleState !== undefined ? o.moduleState : {};
+  state.moduleState = moduleState;                     /* LOOP 94 */
+  tradeLoaded       = trade;
 
   saveStatus = "LOADED — galaxy "+c.galaxy+" system "+c.system+
                ", day "+c.gameDay+", "+c.credits+" tenths CR, fuel "+c.fuel+
                ", "+Object.keys(cargo).length+" cargo slot(s), "+
-               state.visited.length+" visited"+htNote;
+               state.visited.length+" visited, market counter "+
+               (trade ? Object.keys(trade.by).length+" entr(ies)" : "none")+htNote;
   return true;
 }
 
@@ -1984,8 +2085,9 @@ function saveFileLine(){
    later writes a legitimately new commander rather than resurrecting
    the old one.
 
-   THE MODULE-LOCAL STATE IS RESET TOO. `chartSel`, the market
-   accordion and `mktTaken` are not in §9 and are not saved, but they
+   THE MODULE-LOCAL STATE IS RESET TOO. `chartSel` and the market
+   accordion are not in §9 and are not saved; `mktTaken` IS saved from
+   045a, in moduleState (loop 94), and is reset for the same reason. They
    describe the run that has just been destroyed: a cursor pointing at
    a system the new commander has never seen, and a market counter
    holding the net trade of a commander who no longer exists.
@@ -2007,6 +2109,7 @@ function wipeSave(){
   chartSel    = state.system;
   mktOpen     = null; mktBuyQ = 0; mktSellQ = 0;
   mktTaken    = { key:"", by:{} };
+  tradeLoaded = null;
   svcFuelLast = null;
 
   saveLast   = null;
@@ -2591,7 +2694,7 @@ document.getElementById("bWipe").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 043a — settings\n"+
+    "ELITE: THE CLONES 045a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -2819,8 +2922,10 @@ function worldReport(){
        BOTH NUMBERS, ON PURPOSE. `cargoUsed` is a stored total and
        holdUsed() walks the cargo object; CORE API §3.1 says plainly
        that `cargoUsed` is the field that lies if a third mutation path
-       is ever added and forgets to update it. There are two paths today
-       — mktBuy and mktSell — and the walk is what would catch a third.
+       is ever added and forgets to update it. FOUR PATHS WRITE IT
+       TODAY — mktBuy, mktSell, the boot reconcile after a load, and
+       wipeSave() — and the walk is what would catch a fifth. S92, 045a:
+       this said "two paths today — mktBuy and mktSell".
        So the walk is printed only when it DISAGREES: a clean line stays
        short, and a mismatch is impossible to read past.
        Constraint 6: the commander's own record is never gated. */
@@ -3341,11 +3446,10 @@ function setCourse(){
 
    FUEL. Cost is ceil(distance x 10) tenths, so fractional travel is
    never free. [DECISION], Ripley, session 018. The tank is 70 tenths
-   (World Model §2) and NOTHING REFUELS, so one tank is roughly one
-   round trip to the nearest neighbour and then you are stranded.
-   That is known, it is not a bug, and it is not a playable game:
-   refuelling is a separate job. Nothing persists, so a reload
-   resets the tank.
+   (World Model §2). Fuel is bought at the fuel service since 037
+   (loop 83), and the tank is saved since 042 (loop 87), so a reload
+   keeps it. S92, 045a: this said "nothing refuels; nothing persists,
+   so a reload resets the tank", true when written in 018.
 
    gameDay += 1 PER JUMP, regardless of distance. WORLD MODEL §7.2.
    Settled there, not decided here.
@@ -3383,9 +3487,10 @@ function doJump(){
      after which the array round-tripped faithfully and still meant
      nothing. §9.8: A FIELD THAT PERSISTS READS AS A FIELD THAT WORKS,
      which is a worse state than the honest emptiness it replaced.
-     WRITTEN HERE AND IN TWO OTHER PLACES ONLY — the loader, and the
-     boot block on a cold start. A fourth writer would be a second copy
-     of the rule.
+     WRITTEN HERE AND IN THREE OTHER PLACES ONLY — the loader, the boot
+     block on a cold start, and wipeSave(). A fifth writer would be a
+     second copy of the rule. S92, 045a: this said "two other places
+     only" and missed the wipe on the day it was written.
      SHAPE IS WORLD MODEL §9's: BARE SYSTEM INDICES, NO GALAXY. That is
      what §9 draws, what the loader validates and what is built here.
      IT CANNOT DISTINGUISH GALAXIES: system 51 of galaxy 3 would mark
@@ -4151,9 +4256,11 @@ gFindIn.addEventListener("blur", resetPageZoom);
    SESSION DOCKED MODE LANDS. EQUIPMENT §7.1 and WORLD §7 are both
    owed a revision saying so — recorded, not fixed, one chat one job.
 
-   NOT PERSISTED, BECAUSE NOTHING IS. `svcFuelLast` is module-local
-   diagnostic state and dies with the page, exactly like `mktTaken`.
-   Loop 87.
+   `svcFuelLast` IS NOT SAVED. It is module-local diagnostic state, a
+   receipt, and dies with the page; §9 does not carry it. The tank and
+   the credits it changed are saved. S92, 045a: this said "not
+   persisted, because nothing is", false since 042, and compared it to
+   `mktTaken`, which is saved from 045a — loop 94.
    ================================================================== */
 const FUEL_UNIT_TENTHS = 10;   /* one unit = 1.0 LY */
 const FUEL_UNIT_PRICE  = 20;   /* tenths CR. EQUIPMENT §7.1, 2 per tenth */
@@ -4193,7 +4300,8 @@ function svcFuelBuy(n){
                   lost:   raw > FUEL_MAX ? raw - FUEL_MAX : 0 };
   /* LOOP 87. `svcFuelLast` is NOT saved and is not in §9 — it is the
      receipt for the last purchase, diagnostic, and it dies with the
-     page like `mktTaken`. The credits and the fuel are the state. */
+     page. The credits and the fuel are the state. (`mktTaken` is saved
+     from 045a, loop 94, so it is no longer the comparison.) */
   saveGame();
 }
 
@@ -4297,9 +4405,14 @@ function marketFor(sys, gameDay){
    you sit at a station and different when you come back. It does not
    say whether buying reduces what is left on the counter. It must —
    an unlimited counter is not a market — so purchases are held here,
-   module-local, keyed to the system-day and NOT persisted. A jump
-   clears it because the key changes. [ASSUMED]. */
-let mktTaken = { key:"", by:{} };
+   keyed to the system-day. A jump clears it because the key changes.
+   [ASSUMED].
+   LOOP 94, session 045. SAVED, in moduleState under `core.trade` —
+   WORLD MODEL §9.8, S90. This variable is the one runtime copy; the
+   loader parks a restored counter in `tradeLoaded` because this line
+   is below it. S92 item 11, 045a: the 042 note in mktSell said "nothing
+   in §9 carries it", false since 043. */
+let mktTaken = tradeLoaded || { key:"", by:{} };
 function mktAvail(sys, c){
   const m = marketFor(sys, state.commander.gameDay);
   if(mktTaken.key !== m.key){ mktTaken = { key:m.key, by:{} }; }
@@ -4528,12 +4641,9 @@ function mktSell(c, qty, price){
      Uncapped on purpose — World §13 [ASSUMED] 13 says what to watch. */
   mktTaken.by[c.id] = (mktTaken.by[c.id] || 0) - qty;
   state.ship.cargoUsed = holdUsed();
-  /* LOOP 87, session 042. `mktTaken` is NOT saved. It is keyed on
-     system-and-gameDay and is documented as dying with the page. THE
-     CONSEQUENCE IS NEW AND IS NOT A BUG YET: reloading while docked at
-     a market resets your net trade at that market, so the availability
-     counter recovers across a reload while your cargo and credits do
-     not. Nothing in WORLD MODEL §9 carries it. Recorded as loop 94. */
+  /* LOOP 94, 045a. `mktTaken` is now in the save, so a reload keeps
+     your net trade at this market. Until 045a it was lost on reload and
+     a thin market could be drained twice. See the market declaration. */
   saveGame();
 }
 
