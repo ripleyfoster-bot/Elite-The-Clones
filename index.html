@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 045a</title>
+<title>ELITE: THE CLONES — 045b</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -1649,8 +1649,12 @@ const state = {
    RULED — WORLD MODEL §9.7, [DECISION], Ripley, session 043. S92,
    045a: this said "§9 does not rule on this".
 
-   THREE MISMATCHES REFUSE THE FILE, all for the same reason.
-   `schema`, `worldSeed` and `worldModelVersion`. §9: a save written
+   THREE MISMATCHES REFUSE THE FILE, AND NOT FOR THE SAME REASON —
+   WORLD MODEL §9.5. `worldSeed` and `worldModelVersion` are TERMINAL:
+   a different universe is a different game. `schema` is PROVISIONAL:
+   it refuses only because no migration exists yet. S102, 045b: this
+   said "all for the same reason"; §9.5 ruled that wrong in 043.
+   The original reasoning for the two terminal refusals follows. §9: a save written
    against a different seed or a different world model describes a
    universe with different names, species and descriptions. §9 wrote no
    migration path because no save existed. ONE EXISTS FROM TODAY, and
@@ -2694,7 +2698,7 @@ document.getElementById("bWipe").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 045a — settings\n"+
+    "ELITE: THE CLONES 045b — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -3159,12 +3163,12 @@ function renderSystemData(){
    and never defined. It needs a CORE API revision and it is logged as
    an open loop, not fixed here. One chat, one job.
 
-   VISITED SYSTEMS ARE NOT MARKED, DELIBERATELY. §4 asks for the mark.
-   Nothing persists and nothing jumps, so the only system that could
-   ever be marked visited is the one already drawn as current. A
-   session-only mark would be a mark that lies after a reload, which is
-   worse on an instrument panel than no mark. It waits for the save
-   file. Logged.
+   VISITED SYSTEMS ARE NOT MARKED. §4 asks for the mark. The save file
+   exists (loop 87, 042) and `visited` is written by doJump (loop 93,
+   043), so the mark is no longer waiting on either. It waits on WORLD
+   [DECISION] 28 — `visited` holds no galaxy, S91 — and is loop 34.
+   S100, 045b: this said "nothing persists and nothing jumps ... it
+   waits for the save file", true when written and false since 043.
 ================================================================== */
 const CHART = {
   /* Scale. Fitted rather than fixed so the fuel circle is the same
@@ -4769,11 +4773,14 @@ document.addEventListener("visibilitychange",function(){
       temporal dead zone at boot. THAT IS WHY THIS IS DOWN HERE and not
       up there. holdReportLine()'s comment records the same constraint
       for the same reason.
-      THE MISMATCH BRANCH IN holdReportLine() HAS NEVER FIRED — the 041
-      handover lists it as unblocked and untriggered. It now has a
-      second way to be exercised: load a save with cargo, and the walk
-      and the stored total are computed at two different moments for
-      the first time in the project.
+      THE MISMATCH BRANCH IN holdReportLine() HAS NEVER FIRED — loop 81.
+      A LOAD WITH CARGO DOES NOT EXERCISE IT. This reconcile runs first
+      and clears the one disagreement a load could show, so by the time
+      the report runs, the walk and the stored total agree. The
+      `(cargoUsed reconciled a -> b)` suffix is THIS block, not
+      MISMATCH, and it appears on every load with cargo. S101, 045b:
+      this said a load with cargo was "a second way to be exercised".
+      S93 disproved it in 044.
 
    2. THE SAFETY NET. Every mutation site writes its own save, so this
       is belt and braces rather than the mechanism. It matters on iOS
