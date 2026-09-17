@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 047c</title>
+<title>ELITE: THE CLONES — 050a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -308,8 +308,7 @@
 
      THE LABEL IS "HOLD ONLY", NOT "HELD ONLY". [DECISION], Ripley,
      session 016. The ship's compartment is THE HOLD — a noun — and
-     the filter shows what is in it. PANEL §3.2 SAYS "HELD ONLY" AND
-     IS OWED THE CORRECTION; the document is wrong, not this file.
+     the filter shows what is in it. PANEL §3.2 agrees since v1.8.
      The bar therefore reads HOLD n/20 on the left and HOLD ONLY on
      the right: one word doing two jobs, which was the argument
      against it and was overruled. Both refer to the same compartment,
@@ -488,8 +487,7 @@
      government AND tech as ONE run; the ellipsis ate the end of that
      run, and tech was the end of it. Same symptom, different
      mechanism. §4.6 also draws SET COURSE as a fourth stacked row. It
-     is beside the text and always has been. The spec is owed a
-     correction; this file is not the place to make it.
+     is beside the text and always has been. PANEL §4.6 agrees since v1.5.
 
      THE RULE, applied to the strip that exists. Two rows, each with a
      reserved height that does not depend on the string:
@@ -1542,18 +1540,13 @@ const state = {
      file has no `position` key at any level and neither does the
      whitelist. Field order follows DECLARATIVE §4.1 — ...fuel, gameDay,
      galaxy, system — so the two can be read against each other without
-     translating. CORE API §3.1 is still owed the declaration; that is a
-     document revision and not this session's job.
+     translating. CORE API §3.1 declares both since v1.6.
      THE OBJECT IS DELETED, NOT ALIASED. Same discipline session 030 used
      on CARGO_MAX: an alias is a second copy of a value that moves, which
      is constraint 2's exact shape. */
   /* CORE API §3.1. Filled below from World, never copied or edited. */
   system:    null,
-  /* hyperspaceTarget is NOT in CORE API §3.1 and is added here under
-     protest — see the chart section's header. Panel §7's "Hyperspace
-     Target" row and Panel §6.2's Distance both require it and neither
-     the API's state list nor its §3.2 command list defines it. Found
-     by building, session 012. { galaxy, index } or null. */
+  /* hyperspaceTarget: CORE API §3.1 declares it since v1.6. { galaxy, index } or null. */
   commander: freshCommander(),
   /* LOOP 75, session 030. `holdTonnes` was `CARGO_MAX`, a module
      constant in the market section, from session 016 to 029. WORLD
@@ -1614,7 +1607,7 @@ const state = {
        or future file is not destroyed", which is the rationale §9.7
        rejected by name.
      `flags`, `moduleState` — same: §9's keys, no writer, preserved.
-     `visited` — appended by doJump since 043a, LOOP 93 closed. S92,
+     `visited` — appended by jump() since 043a, LOOP 93 closed. S92,
        045a: this said "nothing adds to this array", written in 042 and
        false from 043a. PANEL LAYOUT §4.4's visited mark is the first
        reader and waits on WORLD [DECISION] 28, not on this. */
@@ -1624,7 +1617,7 @@ const state = {
   /* EMPTY HERE ON PURPOSE. §9 draws it as `[51]` and copying that
      literal would put the starting index in a second place — the
      CARGO_MAX fault, loop 75. FOUR WRITERS AND ONLY FOUR: the loader,
-     the boot block on a cold start, doJump (loop 93), and wipeSave().
+     the boot block on a cold start, jump() (loop 93), and wipe().
      S92, 045a: this said "two writers and only two". */
   visited:     []
 };
@@ -1637,7 +1630,7 @@ const state = {
 
    WHERE THE LOAD SITS, AND WHY IT MATTERS MORE THAN IT LOOKS.
    It runs ABOVE the boot IIFE, which is the only writer of
-   `state.system` outside doJump. WORLD §2.2 names `state.system` as
+   `state.system` outside jump(). WORLD §2.2 names `state.system` as
    THE ONE PLACE a position and its display can diverge, and the 041
    handover predicted that the loaded save would become a SECOND such
    place. IT DOES NOT, and the reason is ordering: the save restores
@@ -1781,6 +1774,25 @@ let saveStatus = "no save read this session";   /* for the TUNE report */
 let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
+
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 050a. Each action:
+   validate → write state → saveGame() once → stateChanged(name) →
+   return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
+   presentation maps them to words and does its own view follow-up.
+   No listeners are registered in 050a. A listener may read and repaint;
+   issuing an action from one throws (§3.5, constraint 5 in code). */
+const stateListeners = [];
+let signalling = false;
+function onStateChanged(fn){ stateListeners.push(fn); }
+function stateChanged(name){
+  signalling = true;
+  try{ for(const fn of stateListeners) fn(name); }
+  finally{ signalling = false; }
+}
+function noCascade(){
+  if(signalling) throw new Error("action issued from a stateChanged listener — §3.5");
+}
+function fail(reasons){ return { ok:false, reasons:reasons }; }
 
 function saveGame(){
   try{
@@ -2101,16 +2113,14 @@ function saveFileLine(){
    later writes a legitimately new commander rather than resurrecting
    the old one.
 
-   THE MODULE-LOCAL STATE IS RESET TOO. `chartSel` and the market
-   accordion are not in §9 and are not saved; `mktTaken` IS saved from
-   045a, in moduleState (loop 94), and is reset for the same reason. They
-   describe the run that has just been destroyed: a cursor pointing at
-   a system the new commander has never seen, and a market counter
-   holding the net trade of a commander who no longer exists.
+   VIEW STATE IS NOT RESET HERE. 050a: the cursor and the market
+   accordion are presentation's, reset by the bWipe handler on ok.
+   `mktTaken` and the fuel receipt are core and are reset here.
    ================================================================== */
-function wipeSave(){
+function wipe(){
+  noCascade();
   try{ localStorage.removeItem(SAVE_KEY); }
-  catch(e){ saveStatus = "WIPE FAILED — "+(e&&e.name||"unknown"); return false; }
+  catch(e){ saveStatus = "WIPE FAILED — "+(e&&e.name||"unknown"); return fail(["storage"]); }
 
   state.commander   = freshCommander();
   state.ship        = freshShip();
@@ -2118,12 +2128,9 @@ function wipeSave(){
   state.equipment   = {};
   state.flags       = {};
   state.moduleState = {};
-  /* Derived, in the same one place the boot block derives it. */
   state.system  = World.system(state.commander.galaxy, state.commander.system);
   state.visited = [state.commander.system];
 
-  chartSel    = state.system;
-  mktOpen     = null; mktBuyQ = 0; mktSellQ = 0;
   mktTaken    = { key:"", by:{} };
   tradeLoaded = null;
   svcFuelLast = null;
@@ -2131,7 +2138,9 @@ function wipeSave(){
   saveLast   = null;
   saveStatus = "WIPED — new commander at "+state.system.name+
                " (g"+state.commander.galaxy+" s"+state.commander.system+")";
-  return true;
+  /* Signals and does NOT save — a save would recreate the file (§3.4). */
+  stateChanged("wipe");
+  return { ok:true };
 }
 
 /* THE LOAD ITSELF. Above the boot IIFE — see the note at the top. */
@@ -2690,16 +2699,13 @@ document.getElementById("bClose").addEventListener("click",function(){
 document.getElementById("bReset").addEventListener("click",function(){
   T=Object.assign({},SPEC); saveT(); syncUI();
 });
-/* LOOP 87. Two taps. The label carries the state, so the button is its
-   own confirmation dialogue and nothing has to be built for it.
-   042b: the repaint is part of the action. A wipe that leaves the old
-   commander on screen until a reload is a display disagreeing with
-   state — constraint 2 — and it is also what made 042a's fault hard
-   to see: the screen kept saying the run was still there. */
+/* LOOP 87: two taps, the label is the confirmation. 042b: the repaint belongs here. */
 let wipeArmed = false;
 document.getElementById("bWipe").addEventListener("click",function(){
   if(!wipeArmed){ wipeArmed = true; this.textContent = "TAP AGAIN TO DESTROY SAVE"; return; }
-  wipeSave(); wipeArmed = false; this.textContent = "WIPE SAVE FILE";
+  const r = wipe();
+  if(r.ok){ chartSel = state.system; mktOpen = null; mktBuyQ = 0; mktSellQ = 0; }
+  wipeArmed = false; this.textContent = "WIPE SAVE FILE";
   syncUI();
   if(panelEl.classList.contains("open")) PANELS[panelCur].render();
   refreshTune();
@@ -2710,7 +2716,7 @@ document.getElementById("bWipe").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 047c — settings\n"+
+    "ELITE: THE CLONES 050a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -2838,7 +2844,7 @@ function holdReportLine(){
 /* SESSION 034, job A. WORLD MODEL v1.13 §13 [ASSUMED] 17 named
    `state.system` as THE ONE PLACE A POSITION AND ITS DISPLAY CAN
    DIVERGE: `commander.galaxy`/`.system` are the position, `state.system`
-   is a derived object written alongside them in doJump, and every panel
+   is a derived object written alongside them in jump(), and every panel
    reads the derived object. Nothing has ever compared the two.
 
    THE 018 FAULT — fuel deducted, location unchanged, one instance, never
@@ -2939,8 +2945,8 @@ function worldReport(){
        holdUsed() walks the cargo object; CORE API §3.1 says plainly
        that `cargoUsed` is the field that lies if a third mutation path
        is ever added and forgets to update it. FOUR PATHS WRITE IT
-       TODAY — mktBuy, mktSell, the boot reconcile after a load, and
-       wipeSave() — and the walk is what would catch a fifth. S92, 045a:
+       TODAY — buy(), sell(), the boot reconcile after a load, and
+       wipe() — and the walk is what would catch a fifth. S92, 045a:
        this said "two paths today — mktBuy and mktSell".
        So the walk is printed only when it DISAGREES: a clean line stays
        short, and a mismatch is impossible to read past.
@@ -3176,7 +3182,7 @@ function renderSystemData(){
    an open loop, not fixed here. One chat, one job.
 
    VISITED SYSTEMS ARE NOT MARKED. §4 asks for the mark. The save file
-   exists (loop 87, 042) and `visited` is written by doJump (loop 93,
+   exists (loop 87, 042) and `visited` is written by jump() (loop 93,
    043), so the mark is no longer waiting on either. It waits on WORLD
    [DECISION] 28 — `visited` holds no galaxy, S91 — and is loop 34.
    S100, 045b: this said "nothing persists and nothing jumps ... it
@@ -3423,19 +3429,18 @@ chartCv.addEventListener("pointerdown", function(e){
   if(best){ chartSel = best; renderChart(); }
 }, {passive:true});
 
-/* The one writer of `state.commander.hyperspaceTarget` (§4.1), now
-   reached from either chart. Re-renders whichever panel is open. */
-function setCourse(){
-  if(!chartSel) return;
-  state.commander.hyperspaceTarget = { galaxy:chartSel.galaxy, index:chartSel.index };
-  PANELS[panelCur].render();
-  /* LOOP 87. [DECISION], Ripley, session 038: a committed course
-     SURVIVES A SAVE, so the act of committing one has to write it.
-     CORE API §3.1's argument is the device: on an iPhone PWA a reload
-     is usually iOS reclaiming the tab, and a player who loses a
-     deliberate action to an event they did not cause cannot tell it
-     apart from a bug. That argument only holds if the write is here. */
-  saveGame();
+/* The one writer of `state.commander.hyperspaceTarget` (PANEL §4.1). Action, §3.4. */
+function canSetCourse(galaxy, index){
+  return (isIdx(galaxy, 7) && isIdx(index, 255)) ? { ok:true } : fail(["index"]);
+}
+function setCourse(galaxy, index){
+  noCascade();
+  const v = canSetCourse(galaxy, index);
+  if(!v.ok) return v;
+  state.commander.hyperspaceTarget = { galaxy:galaxy, index:index };
+  saveGame();   /* LOOP 87: a committed course survives a reload — [DECISION] 038. */
+  stateChanged("setCourse");
+  return { ok:true };
 }
 
 /* ==================================================================
@@ -3479,15 +3484,19 @@ function setCourse(){
    ================================================================== */
 function jumpCostTenths(d){ return Math.ceil(d * 10); }
 
-function doJump(){
+function canJump(){
   const s = state.system, o = targetSystem();
-  if(!s || !o) return;
-  const cost = jumpCostTenths(World.distLY(s, o));
-  /* The button is already disabled out of range. This is checked again
-     because the button is display and this is state — constraint 2
-     cuts both ways, and an instrument must never be the thing that
-     decides. */
-  if(cost > state.commander.fuel) return;
+  if(!s || !o) return fail(["noTarget"]);
+  /* Checked here as well as on the button: the button is display, this is state. */
+  if(jumpCostTenths(World.distLY(s, o)) > state.commander.fuel) return fail(["range"]);
+  return { ok:true };
+}
+function jump(){
+  noCascade();
+  const v = canJump();
+  if(!v.ok) return v;
+  const o = targetSystem();
+  const cost = jumpCostTenths(World.distLY(state.system, o));
 
   state.commander.fuel    -= cost;
   state.commander.galaxy   = o.galaxy;          /* LOOP 76 */
@@ -3496,58 +3505,28 @@ function doJump(){
   state.commander.gameDay += 1;               /* World Model §7.2 */
   state.commander.hyperspaceTarget = null;
 
-  /* LOOP 93, session 043. THE ONE LINE WORLD MODEL §9 HAS BEEN WAITING
-     FOR SINCE v1.0. The field has been specified since the first
-     revision of that document, was excused every session on the ground
-     that it "waits on persistence", and persistence arrived in 042 —
-     after which the array round-tripped faithfully and still meant
-     nothing. §9.8: A FIELD THAT PERSISTS READS AS A FIELD THAT WORKS,
-     which is a worse state than the honest emptiness it replaced.
-     WRITTEN HERE AND IN THREE OTHER PLACES ONLY — the loader, the boot
-     block on a cold start, and wipeSave(). A fifth writer would be a
-     second copy of the rule. S92, 045a: this said "two other places
-     only" and missed the wipe on the day it was written.
-     SHAPE IS WORLD MODEL §9's: BARE SYSTEM INDICES, NO GALAXY. That is
-     what §9 draws, what the loader validates and what is built here.
-     IT CANNOT DISTINGUISH GALAXIES: system 51 of galaxy 3 would mark
-     system 51 of galaxy 0 as seen. Galactic hyperdrive does not exist
-     — CONTROL §5, S18 — so every save that can be written today lives
-     in galaxy 0 and the shape is correct for all of them. RECORDED AS
-     S91 AND NOT FIXED HERE: widening it is a §9 shape decision and a
-     build does not get to take one. PANEL LAYOUT §4.4's visited mark
-     is the first thing that will read it. */
+  /* LOOP 93: `visited` writers are here, the loader, cold-start boot and wipe(). Bare indices, S91. */
   if(state.visited.indexOf(o.index) === -1) state.visited.push(o.index);
 
-  /* The cursor follows the ship. [ASSUMED]. On arrival the strip then
-     reads CURRENT SYSTEM, which is true and useful; leaving the cursor
-     where it was would point at a system you are now standing in, and
-     clearing it to NO SELECTION is also true and says less. */
-  chartSel = state.system;
-
-  /* The open accordion row belongs to the market you left. Neither the
-     price table nor the counter needs clearing: marketFor and mktAvail
-     are both keyed on system-and-gameDay and both halves just moved. */
-  mktOpen = null; mktBuyQ = 0; mktSellQ = 0;
-
-  /* Arrival returns you to the view. [DECISION], Ripley, session 018.
-     A jump that leaves you looking at a chart of somewhere you no
-     longer are is the wrong first thing to see. */
-  closePanel();
-
-  /* LOOP 87, session 042. The jump moves position, fuel, gameDay and the
-     committed target in one act, so it is the most expensive thing in
-     the game to lose. WRITTEN AFTER closePanel(): the file must record
-     the state the player is left looking at, not the one mid-act. */
-  saveGame();
+  saveGame();   /* LOOP 87 */
+  stateChanged("jump");
+  return { ok:true };
 }
 
-/* One button, two acts. The branch is on state, never on the label —
-   a handler that read the button's own text would make the label the
-   decision, and the label is display. */
+/* One button, two acts. The branch is on state, never on the label.
+   View follow-up is presentation's (§3.2): after a jump the cursor follows
+   the ship [ASSUMED], the market accordion closes, and arrival returns to
+   the view — [DECISION], Ripley, 018. */
 function courseButton(){
   if(!chartSel) return;
-  if(sameSys(targetSystem(), chartSel)) doJump();
-  else setCourse();
+  if(sameSys(targetSystem(), chartSel)){
+    if(!jump().ok) return;
+    chartSel = state.system;
+    mktOpen = null; mktBuyQ = 0; mktSellQ = 0;
+    closePanel();
+  } else {
+    if(setCourse(chartSel.galaxy, chartSel.index).ok) PANELS[panelCur].render();
+  }
 }
 document.getElementById("cCourse").addEventListener("click", courseButton);
 document.getElementById("gCourse").addEventListener("click", courseButton);
@@ -4293,32 +4272,42 @@ let svcFuelLast = null;
 
 function svcFuelSpace(){ return FUEL_MAX - state.commander.fuel; }
 
-function svcFuelMaxBuy(){
-  const byTank = Math.ceil(svcFuelSpace() / FUEL_UNIT_TENTHS);
-  const byCash = Math.floor(state.commander.credits / FUEL_UNIT_PRICE);
-  return Math.max(0, Math.min(byTank, byCash));
+/* One home for the fuel limits (§2.2): the stepper cap and the action's
+   validation both read these. */
+function fuelBounds(){
+  return { tank: Math.ceil(svcFuelSpace() / FUEL_UNIT_TENTHS),
+           cash: Math.floor(state.commander.credits / FUEL_UNIT_PRICE) };
+}
+function maxBuyFuel(){
+  const b = fuelBounds(), reasons = [];
+  if(b.tank < 1) reasons.push("tank");
+  if(b.cash < 1) reasons.push("fuelCredits");
+  return { max: Math.max(0, Math.min(b.tank, b.cash)), reasons:reasons };
+}
+function canBuyFuel(units){
+  if(!Number.isInteger(units) || units <= 0) return fail(["qty"]);
+  const b = fuelBounds(), reasons = [];
+  if(units > b.tank) reasons.push("tank");
+  if(units > b.cash) reasons.push("fuelCredits");
+  return reasons.length ? fail(reasons) : { ok:true };
 }
 
-function svcFuelBuy(n){
-  if(n <= 0) return;
-  const cost = n * FUEL_UNIT_PRICE;
-  /* Provably dead given the cap above, and kept for WORLD §2.2's
-     reason: the button is display and this is state. If the cap is
-     ever rewritten, this is what stops a display bug becoming a
-     state bug. */
-  if(cost > state.commander.credits) return;
+function buyFuel(units){
+  noCascade();
+  const v = canBuyFuel(units);
+  if(!v.ok) return v;
+  const cost   = units * FUEL_UNIT_PRICE;
   const before = state.commander.fuel;
-  const raw    = before + n * FUEL_UNIT_TENTHS;
+  const raw    = before + units * FUEL_UNIT_TENTHS;
   state.commander.credits -= cost;
   state.commander.fuel     = raw > FUEL_MAX ? FUEL_MAX : raw;
-  svcFuelLast = { units:n, cost:cost,
+  /* The receipt: not saved, dies with the page. */
+  svcFuelLast = { units:units, cost:cost,
                   landed: state.commander.fuel - before,
                   lost:   raw > FUEL_MAX ? raw - FUEL_MAX : 0 };
-  /* LOOP 87. `svcFuelLast` is NOT saved and is not in §9 — it is the
-     receipt for the last purchase, diagnostic, and it dies with the
-     page. The credits and the fuel are the state. (`mktTaken` is saved
-     from 045a, loop 94, so it is no longer the comparison.) */
-  saveGame();
+  saveGame();   /* LOOP 87 */
+  stateChanged("buyFuel");
+  return { ok:true };
 }
 
 function svcFuelReportLine(){
@@ -4454,13 +4443,41 @@ let mktOpen = null, mktBuyQ = 0, mktSellQ = 0;
 let mktHoldOnly = false;
 const mktBody = document.getElementById("mktBody");
 
-function mktMaxBuy(sys, c){
+/* One home for the market limits (§2.2, S114): the stepper cap, the
+   figure-line reasons and the action's validation all read buyBounds. */
+function commodityById(id){ return COMMODITIES.find(x => x.id === id); }
+function buyBounds(c){
+  const sys = state.system;
   const price = marketFor(sys, state.commander.gameDay).rows[c.id].price;
-  const byCash  = price > 0 ? Math.floor(state.commander.credits / price) : 0;
-  const byStock = mktAvail(sys, c);
-  const byHold  = c.bulk === 0 ? Infinity :
-                  (state.ship.holdTonnes - holdUsed());
-  return Math.max(0, Math.min(byCash, byStock, byHold));
+  return { cash:  price > 0 ? Math.floor(state.commander.credits / price) : 0,
+           stock: mktAvail(sys, c),
+           hold:  c.bulk === 0 ? Infinity : (state.ship.holdTonnes - holdUsed()) };
+}
+function maxBuy(id){
+  const c = commodityById(id);
+  if(!c || !state.system) return { max:0, reasons:["id"] };
+  const b = buyBounds(c), reasons = [];
+  if(b.hold  < 1) reasons.push("hold");
+  if(b.stock < 1) reasons.push("stock");
+  if(b.cash  < 1) reasons.push("credits");
+  return { max: Math.max(0, Math.min(b.cash, b.stock, b.hold)), reasons:reasons };
+}
+function canBuy(id, qty){
+  const c = commodityById(id);
+  if(!c || !state.system) return fail(["id"]);
+  if(!Number.isInteger(qty) || qty <= 0) return fail(["qty"]);
+  const b = buyBounds(c), reasons = [];
+  if(qty > b.hold)  reasons.push("hold");
+  if(qty > b.stock) reasons.push("stock");
+  if(qty > b.cash)  reasons.push("credits");
+  return reasons.length ? fail(reasons) : { ok:true };
+}
+function canSell(id, qty){
+  const c = commodityById(id);
+  if(!c || !state.system) return fail(["id"]);
+  if(!Number.isInteger(qty) || qty <= 0) return fail(["qty"]);
+  if(qty > heldQty(id)) return fail(["held"]);   /* S114 */
+  return { ok:true };
 }
 
 function renderMarket(){
@@ -4548,13 +4565,12 @@ function renderMarket(){
    a control that stops for an invisible reason is the fault
    constraint 2 exists to prevent. */
 function svcFuelExpansion(){
-  const max   = svcFuelMaxBuy();
+  const mf    = maxBuyFuel(), max = mf.max;
   if(mktBuyQ > max) mktBuyQ = max;
   const space = svcFuelSpace();
   const lost  = Math.max(0, mktBuyQ * FUEL_UNIT_TENTHS - space);
-  const why   = max > 0 ? '' :
-                (space <= 0 ? ' \u00b7 tank full'
-                            : ' \u00b7 cannot afford 1.0 LY');
+  const why   = mf.reasons.indexOf("tank")        !== -1 ? ' \u00b7 tank full' :
+                mf.reasons.indexOf("fuelCredits") !== -1 ? ' \u00b7 cannot afford 1.0 LY' : '';
   let h = '<div class="mexp">';
   h += '<div class="mgrp"><div class="mline"><b>BUY</b>'+
        '<button class="mstep" data-act="b-" '+(mktBuyQ<=0?'disabled':'')+'>\u2212</button>'+
@@ -4591,33 +4607,12 @@ function mktExpansion(s, c, price, avail, held, illegal){
          '>CONFIRM SALE</button></div>';
   }
 
-  const max = mktMaxBuy(s, c);
+  const mb = maxBuy(c.id), max = mb.max;
   if(mktBuyQ > max) mktBuyQ = max;
-  /* LOOP 98, session 047. A full hold greyed the BUY stepper and said
-     nothing, because `mktMaxBuy` returns 0 and the figure line only ever
-     explained an empty counter. The fuel row already names its stop
-     (` · tank full`); this copies that precedent onto the same line.
-     WORDING AND PLACEMENT: [DECISION], Ripley, 047 — ` · hold full`, on
-     the BUY figure line after `Hold n/n`. PANEL LAYOUT SPEC is NOT yet
-     revised to say so; that is owed to the next documents session.
-     GOODS WITH bulk 0 NEVER SHOW IT — they take no hold space, and
-     say so instead (047b, below).
-     `>=` rather than `===`: a hold over capacity is still full.
-     NOT HANDLED HERE: a stepper stopped by credits is still silent on
-     cargo rows (fuel says ` · cannot afford 1.0 LY`). Logged as a
-     candidate loop, not built — one chat, one job. */
-  const holdFull = c.bulk !== 0 && holdUsed() >= state.ship.holdTonnes;
-  /* 047b. GOODS WITH bulk 0 used to read `· — no hold space`, meaning
-     *takes* none. Once 047a put `· hold full` on the bulk rows, Ripley
-     read it on device as *the hold has no room* — at 19/20, where it was
-     plainly false as read. Right code, wrong words.
-     [DECISION], Ripley, 047: show the hold like every other row, then say
-     this good does not count toward it. PANEL is owed this with loop 98.
-     FIT, [ASSUMED]: measured from his 047a screenshots at ~6 CSS px a
-     character and ~60 characters a line at 402 wide. The usual line is
-     ~47–50 and fits. With `· none on the counter` added it is ~70 and
-     WRAPS to a second line — it does not clip, because .mfig does not
-     forbid wrapping. Not yet seen on device. */
+  /* LOOP 98, 047: a stopped stepper says why — PANEL §3.6 since v1.9.
+     `credits` has no words yet: loop 99, PANEL [DECISION] 33. */
+  const holdFull = mb.reasons.indexOf("hold") !== -1;
+  /* 047b: bulk-0 goods show the hold, then say they take none — [DECISION], Ripley, 047. */
   const room = 'Hold '+holdUsed()+'/'+state.ship.holdTonnes+
                (c.bulk === 0 ? ' \u00b7 takes no hold space' :
                 (holdFull ? ' \u00b7 hold full' : ''));
@@ -4627,66 +4622,52 @@ function mktExpansion(s, c, price, avail, held, illegal){
        '<button class="mstep" data-act="b+" '+(mktBuyQ>=max?'disabled':'')+'>+</button>'+
        '<button class="mmax" data-act="bmax" '+(max<=0?'disabled':'')+'>MAX</button></div>'+
        '<div class="mfig">Cost '+cr(mktBuyQ*price)+' CR \u00b7 '+room+
-       (avail<=0 ? ' \u00b7 none on the counter' : '')+'</div>'+
+       (mb.reasons.indexOf("stock") !== -1 ? ' \u00b7 none on the counter' : '')+'</div>'+
        '<button class="mconf" data-act="buy" '+(mktBuyQ<=0?'disabled':'')+
        '>CONFIRM PURCHASE</button></div>';
 
   return h + '</div>';
 }
 
-/* §3.3.1's accounting table, applied literally. */
-function mktBuy(c, qty, price){
-  if(qty <= 0) return;
-  const slot = state.cargo[c.id];
-  /* LOOP 61, session 022. This stored a ROUNDED unit price and rounded
-     it again on every part-buy: 10t at 24 and 10t at 31 stored 28
-     against a true 27.5, and the sale reported +50.0 CR against a real
-     51.0. Credits were never wrong; the profit line was. A slot now
-     carries `paid` — total paid, integer tenths — and the average is
-     divided out at display, where cr() rounds it to a tenth anyway.
-     Storage stops rounding; only the pixels do. World Model §9,
-     §13 [DECISION] 18. §9 carries it, v1.9 — loop 62, closed in 023. */
+/* §3.3.1's accounting table, applied literally. Actions, ARCH §3.4. */
+function buy(id, qty){
+  noCascade();
+  const v = canBuy(id, qty);
+  if(!v.ok) return v;
+  const price = marketFor(state.system, state.commander.gameDay).rows[id].price;
+  const slot = state.cargo[id];
+  /* LOOP 61: a slot carries total `paid` in tenths; the average is divided out at display. */
   if(!slot){
-    state.cargo[c.id] = { qty:qty, paid:qty*price };
+    state.cargo[id] = { qty:qty, paid:qty*price };
   } else {
     slot.paid += qty * price;
     slot.qty  += qty;
   }
   state.commander.credits -= qty * price;
-  mktTaken.by[c.id] = (mktTaken.by[c.id] || 0) + qty;
+  mktTaken.by[id] = (mktTaken.by[id] || 0) + qty;
   state.ship.cargoUsed = holdUsed();
   saveGame();   /* LOOP 87 */
+  stateChanged("buy");
+  return { ok:true };
 }
-function mktSell(c, qty, price){
-  const slot = state.cargo[c.id];
-  if(!slot || qty <= 0) return;
-  /* §3.3.1: partial sale leaves avgPaid unchanged; a full sale clears
-     the slot and discards it. */
+function sell(id, qty){
+  noCascade();
+  const v = canSell(id, qty);
+  if(!v.ok) return v;
+  const price = marketFor(state.system, state.commander.gameDay).rows[id].price;
+  const slot = state.cargo[id];
   const before = slot.qty;
   slot.qty -= qty;
   state.commander.credits += qty * price;
-  if(slot.qty <= 0) delete state.cargo[c.id];
-  /* LOOP 61. §3.3.1 is LOCKED: a partial sale leaves the average
-     unchanged, so `paid` scales with what is left. That ratio is not
-     an integer, so ONE rounding survives — here, on partial sales
-     only, bounded at half a tenth on the whole slot rather than half
-     a tenth per tonne per buy. [ASSUMED], Ripley, session 022. */
+  if(slot.qty <= 0) delete state.cargo[id];
+  /* LOOP 61: partial sale keeps the average, so `paid` scales — one rounding, [ASSUMED] 022. */
   else slot.paid = Math.round(slot.paid * slot.qty / before);
-  /* LOOP 55, session 020. This was Math.max(0, ...). The floor meant
-     selling cargo bought ELSEWHERE moved the counter not at all, while
-     selling cargo bought HERE restored it — one visible action, two
-     outcomes, told apart by provenance the player cannot see. That is
-     the constraint-2 failure, and it is why WORLD MODEL §7.2 decided
-     the counter is supply on the pad: your net trade, no floor.
-     [DECISION], Ripley, session 019. `taken` now goes negative and
-     mktAvail adds it back, so a 23t market you sell 20t into reads 43t.
-     Uncapped on purpose — World §13 [ASSUMED] 13 says what to watch. */
-  mktTaken.by[c.id] = (mktTaken.by[c.id] || 0) - qty;
+  /* LOOP 55: the counter is net trade, no floor — [DECISION], Ripley, 019. */
+  mktTaken.by[id] = (mktTaken.by[id] || 0) - qty;
   state.ship.cargoUsed = holdUsed();
-  /* LOOP 94, 045a. `mktTaken` is now in the save, so a reload keeps
-     your net trade at this market. Until 045a it was lost on reload and
-     a thin market could be drained twice. See the market declaration. */
-  saveGame();
+  saveGame();   /* LOOP 87, 94 */
+  stateChanged("sell");
+  return { ok:true };
 }
 
 mktBody.addEventListener("click", function(e){
@@ -4713,26 +4694,25 @@ mktBody.addEventListener("click", function(e){
        is the only reason there is no copy of fuel to go stale. */
     if(mktOpen === FUEL_ROW_ID){
       const fa  = act.getAttribute("data-act");
-      const fmx = svcFuelMaxBuy();
+      const fmx = maxBuyFuel().max;
       if(fa === "b-")   mktBuyQ = Math.max(0, mktBuyQ-1);
       if(fa === "b+")   mktBuyQ = Math.min(fmx, mktBuyQ+1);
       if(fa === "bmax") mktBuyQ = fmx;
-      if(fa === "buy"){ svcFuelBuy(mktBuyQ); mktBuyQ = 0; }
+      if(fa === "buy"){ buyFuel(mktBuyQ); mktBuyQ = 0; }
       renderMarket();
       return;
     }
     const c = COMMODITIES.find(x => x.id === mktOpen);
     if(!c) return;
-    const price = marketFor(s, state.commander.gameDay).rows[c.id].price;
     const a = act.getAttribute("data-act");
     if(a === "b-")   mktBuyQ = Math.max(0, mktBuyQ-1);
-    if(a === "b+")   mktBuyQ = Math.min(mktMaxBuy(s,c), mktBuyQ+1);
-    if(a === "bmax") mktBuyQ = mktMaxBuy(s,c);
+    if(a === "b+")   mktBuyQ = Math.min(maxBuy(c.id).max, mktBuyQ+1);
+    if(a === "bmax") mktBuyQ = maxBuy(c.id).max;
     if(a === "s-")   mktSellQ = Math.max(0, mktSellQ-1);
     if(a === "s+")   mktSellQ = Math.min(heldQty(c.id), mktSellQ+1);
     if(a === "sall") mktSellQ = heldQty(c.id);
-    if(a === "buy"){  mktBuy(c, mktBuyQ, price);  mktBuyQ = 0; }
-    if(a === "sell"){ mktSell(c, mktSellQ, price); mktSellQ = 0; }
+    if(a === "buy"){  buy(c.id, mktBuyQ);   mktBuyQ = 0; }
+    if(a === "sell"){ sell(c.id, mktSellQ); mktSellQ = 0; }
     renderMarket();
     return;
   }
