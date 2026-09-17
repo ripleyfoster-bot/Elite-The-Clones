@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 047b</title>
+<title>ELITE: THE CLONES — 047c</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -292,6 +292,18 @@
      is the one panel that would otherwise want a number field on every
      row. Steppers cost taps and avoid both faults outright. */
   .pbody.mktbody{padding-top:0;}
+  /* LOOP 88, session 047 (build 047c). The empty band between the fuel
+     row and MUNGO'S ASSESSMENT was two rules 20px apart: the last row's
+     border-bottom (.mrow, or .mexp when fuel is open) and .phead's own
+     margin-top plus border-top. On the market the heading always follows
+     a row that already draws a rule, so here it draws none and adds no
+     margin — one rule, then the heading's own 11px padding.
+     SCOPED TO THE MARKET ONLY. .phead is also used by the panel at the
+     other call site, where nothing above it draws a rule; changing .phead
+     globally would remove that panel's only divider.
+     ONE CHAT, ONE JOB WAS OVERRIDDEN to build this: [DECISION], Ripley,
+     047, after loop 98 closed. Recorded in the 047 close-out. */
+  .pbody.mktbody .phead{margin-top:0;border-top:0;}
   /* §3.2's HOLD ONLY toggle lives in here rather than in the flow.
 
      THE LABEL IS "HOLD ONLY", NOT "HELD ONLY". [DECISION], Ripley,
@@ -2698,7 +2710,7 @@ document.getElementById("bWipe").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 047b — settings\n"+
+    "ELITE: THE CLONES 047c — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
