@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 045b</title>
+<title>ELITE: THE CLONES — 047a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -2698,7 +2698,7 @@ document.getElementById("bWipe").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 045b — settings\n"+
+    "ELITE: THE CLONES 047a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -4581,8 +4581,23 @@ function mktExpansion(s, c, price, avail, held, illegal){
 
   const max = mktMaxBuy(s, c);
   if(mktBuyQ > max) mktBuyQ = max;
+  /* LOOP 98, session 047. A full hold greyed the BUY stepper and said
+     nothing, because `mktMaxBuy` returns 0 and the figure line only ever
+     explained an empty counter. The fuel row already names its stop
+     (` · tank full`); this copies that precedent onto the same line.
+     WORDING AND PLACEMENT: [DECISION], Ripley, 047 — ` · hold full`, on
+     the BUY figure line after `Hold n/n`. PANEL LAYOUT SPEC is NOT yet
+     revised to say so; that is owed to the next documents session.
+     GOODS WITH bulk 0 NEVER SHOW IT — they take no hold space, and
+     ` — no hold space` already means that on those rows.
+     `>=` rather than `===`: a hold over capacity is still full.
+     NOT HANDLED HERE: a stepper stopped by credits is still silent on
+     cargo rows (fuel says ` · cannot afford 1.0 LY`). Logged as a
+     candidate loop, not built — one chat, one job. */
+  const holdFull = c.bulk !== 0 && holdUsed() >= state.ship.holdTonnes;
   const room = c.bulk === 0 ? '\u2014 no hold space' :
-               ('Hold '+holdUsed()+'/'+state.ship.holdTonnes);
+               ('Hold '+holdUsed()+'/'+state.ship.holdTonnes+
+                (holdFull ? ' \u00b7 hold full' : ''));
   h += '<div class="mgrp"><div class="mline"><b>BUY</b>'+
        '<button class="mstep" data-act="b-" '+(mktBuyQ<=0?'disabled':'')+'>\u2212</button>'+
        '<span class="mqty">'+mktBuyQ+'</span>'+
