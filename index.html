@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 050a</title>
+<title>ELITE: THE CLONES — 052a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -1594,9 +1594,13 @@ const state = {
      AND THIS OBJECT HAS NEVER CARRIED. They are added because the save
      file is §9's object, and a save that omits four of §9's keys is not
      §9's object — it is a fifth shape, undocumented, discovered later.
-     NONE OF THEM IS WIRED TO ANYTHING, AND THAT IS STATED LOUDLY
-     RATHER THAN LEFT TO BE INFERRED. Failure mode 1: a field that is
-     present reads as implemented.
+     WHICH OF THEM IS WIRED IS STATED PER FIELD BELOW, LOUDLY RATHER
+     THAN LEFT TO BE INFERRED. Failure mode 1: a field that is present
+     reads as implemented.
+     S128/S132, 052: this said NONE OF THEM IS WIRED TO ANYTHING. It
+     was written in 042 when that was true of all four; `visited` went
+     live in 043 and `moduleState` in 045, and the header outlived both
+     while the lines beneath it were corrected one at a time.
 
      `equipment` — §9's { qty } slots. PANEL §8 sells them; there is no
        equipment panel, no rule engine and no pack loader, so nothing
@@ -1606,7 +1610,24 @@ const state = {
        043a. S92, 045a: this said "round-trips verbatim so a hand-edited
        or future file is not destroyed", which is the rationale §9.7
        rejected by name.
-     `flags`, `moduleState` — same: §9's keys, no writer, preserved.
+     `flags` — §9's key, round-tripped and EMPTY BY CONSTRUCTION. The
+       loader restores it, wipe() clears it and saveGame() persists it,
+       so it is not unwritten — but NOTHING EVER SETS A FLAG. No
+       reader, no writer of a member, no meaning. S126.
+     `moduleState` — NOT THE SAME, AND HAS NOT BEEN SINCE 045. It
+       carries `core.trade` — saveGame() writes the counter into it,
+       the loader validates and restores it, LOOP 94, WORLD §9.8. It
+       is live state, not a preserved empty.
+       S128, 052: these two were one line reading "same: §9's keys, no
+       writer, preserved", written in 042 and false from 045. It is
+       S92's pattern one line along — the block's other rows were
+       corrected in 045a and this one was read past.
+       S132, 052: "no writer" was the wrong word for BOTH. The loader
+       and wipe() assign each field and saveGame() persists each. The
+       distinction that matters is whether anything puts MEANING in,
+       and only `moduleState` does. A field that is assigned but never
+       meant reads as implemented — failure mode 1 in the sentence
+       written to warn about it.
      `visited` — appended by jump() since 043a, LOOP 93 closed. S92,
        045a: this said "nothing adds to this array", written in 042 and
        false from 043a. PANEL LAYOUT §4.4's visited mark is the first
@@ -1621,6 +1642,84 @@ const state = {
      S92, 045a: this said "two writers and only two". */
   visited:     []
 };
+
+/* ------------------------------------------------------------------
+   LOOP 104, session 052. THESE TWO BLOCKS MOVED UP HERE FROM THE
+   MARKET, AND NOTHING ELSE ABOUT THEM CHANGED.
+
+   WHY. Core used to depend on the order its own declarations appear
+   in. `COMMODITIES` is a `const`, so it is in its temporal dead zone
+   while loadGame() runs, and holdUsed() walks it — which meant the
+   `cargoUsed` reconcile could not run inside the loader and was
+   deferred to a block at the very bottom of the file. `mktTaken` had
+   the same problem and was worked around with a second variable.
+   TWO WORKAROUNDS FOR ONE CAUSE, in different shapes, neither of them
+   findable from the other.
+
+   THE FIX IS THE ORDER, NOT ANOTHER WORKAROUND. Moving the data above
+   the loader lets the loader finish its own job: it reconciles
+   `cargoUsed` itself and assigns `mktTaken` itself.
+
+   BEHAVIOUR-NEUTRAL BY CONSTRUCTION, AND THAT IS THE CLAIM TO TEST.
+   `cargoUsed` is not in SHIP_SAVED, so it is not written to the file
+   and the save stays byte-identical. The reconcile computes the same
+   walk from the same cargo; only the moment moved, from after boot to
+   inside the load. `COMMODITIES` is a self-contained literal and
+   depends on nothing above or below it.
+   ------------------------------------------------------------------ */
+
+/* WORLD MODEL §7.1, transcribed. `bulk` is not in §7.1 — it is
+   decision 3 above, expressed as a column so it is visible rather
+   than buried in an if. */
+const COMMODITIES = [
+  { id:"grain",     name:"Grain Staples",        unit:"t",  base:76,   ef:-8,  sw:4,   bq:6,  sq:3,  legal:"L", bulk:1, cat:"AGRICULTURAL" },
+  { id:"produce",   name:"Hydroponic Produce",   unit:"t",  base:96,   ef:-10, sw:6,   bq:12, sq:7,  legal:"L", bulk:1, cat:"AGRICULTURAL" },
+  { id:"protein",   name:"Vat Protein",          unit:"t",  base:120,  ef:-12, sw:8,   bq:8,  sq:7,  legal:"L", bulk:1, cat:"AGRICULTURAL" },
+  { id:"fibre",     name:"Textile Fibres",       unit:"t",  base:80,   ef:-4,  sw:12,  bq:10, sq:7,  legal:"L", bulk:1, cat:"AGRICULTURAL" },
+  { id:"timber",    name:"Biopolymer Timber",    unit:"t",  base:108,  ef:-6,  sw:8,   bq:9,  sq:7,  legal:"L", bulk:1, cat:"AGRICULTURAL" },
+  { id:"spirits",   name:"Distilled Spirits",    unit:"t",  base:340,  ef:-20, sw:60,  bq:5,  sq:7,  legal:"R", bulk:1, cat:"AGRICULTURAL" },
+  { id:"hides",     name:"Exotic Hides",         unit:"t",  base:700,  ef:-28, sw:32,  bq:4,  sq:3,  legal:"R", bulk:1, cat:"AGRICULTURAL" },
+  /* LOOP 56, session 020. ef was -2, which put this row under
+     AGRICULTURAL by the derivation in mktCategory below. Nothing chose
+     that. WORLD MODEL §7.1 moves it to Minerals and sets ef to 0 —
+     [DECISION], Ripley, session 019, both halves. sw stays 6: World §13
+     [DECISION] 16 is open and the category question does not license
+     inventing a volatility number. Cost, measured in §7.1: the price
+     spread falls 2.0 CR -> 0.6 CR and ice stops being worth carrying. */
+  { id:"ice",       name:"Water Ice",            unit:"t",  base:44,   ef:0,   sw:6,   bq:14, sq:15, legal:"L", bulk:1, cat:"MINERALS" },
+  { id:"ore",       name:"Raw Ore",              unit:"t",  base:60,   ef:0,   sw:12,  bq:12, sq:15, legal:"L", bulk:1, cat:"MINERALS" },
+  { id:"gold",      name:"Gold",                 unit:"kg", base:400,  ef:0,   sw:24,  bq:6,  sq:7,  legal:"L", bulk:0, cat:"MINERALS" },
+  { id:"platinum",  name:"Platinum",             unit:"kg", base:780,  ef:0,   sw:40,  bq:4,  sq:7,  legal:"L", bulk:0, cat:"MINERALS" },
+  { id:"gems",      name:"Gemstones",            unit:"g",  base:1400, ef:0,   sw:100, bq:3,  sq:3,  legal:"L", bulk:0, cat:"MINERALS" },
+  { id:"alloys",    name:"Refined Alloys",       unit:"t",  base:160,  ef:6,   sw:12,  bq:10, sq:7,  legal:"L", bulk:1, cat:"INDUSTRIAL" },
+  { id:"tools",     name:"Machine Tools",        unit:"t",  base:228,  ef:12,  sw:16,  bq:8,  sq:7,  legal:"L", bulk:1, cat:"INDUSTRIAL" },
+  { id:"cells",     name:"Fusion Cells",         unit:"t",  base:260,  ef:14,  sw:20,  bq:7,  sq:7,  legal:"R", bulk:1, cat:"INDUSTRIAL" },
+  { id:"medicals",  name:"Nano-Medicals",        unit:"t",  base:520,  ef:18,  sw:36,  bq:4,  sq:3,  legal:"L", bulk:1, cat:"INDUSTRIAL" },
+  { id:"cores",     name:"Computer Cores",       unit:"t",  base:620,  ef:22,  sw:40,  bq:5,  sq:7,  legal:"L", bulk:1, cat:"INDUSTRIAL" },
+  { id:"drones",    name:"Combat Drones",        unit:"t",  base:1000, ef:24,  sw:60,  bq:3,  sq:3,  legal:"I", bulk:1, cat:"INDUSTRIAL" },
+  { id:"stims",     name:"Neuro-Stimulants",     unit:"t",  base:1880, ef:32,  sw:480, bq:3,  sq:3,  legal:"I", bulk:1, cat:"INDUSTRIAL" },
+  { id:"contracts", name:"Indentured Contracts", unit:"t",  base:380,  ef:20,  sw:40,  bq:5,  sq:7,  legal:"I", bulk:1, cat:"INDUSTRIAL" },
+  { id:"salvage",   name:"Xeno Salvage",         unit:"t",  base:1200, ef:0,   sw:200, bq:0,  sq:0,  legal:"S", bulk:1, cat:"SALVAGE" }
+];
+
+/* NOT SPECIFIED AND NECESSARY. §7.2 says the market is stable while
+   you sit at a station and different when you come back. It does not
+   say whether buying reduces what is left on the counter. It must —
+   an unlimited counter is not a market — so purchases are held here,
+   keyed to the system-day. A jump clears it because the key changes.
+   [ASSUMED].
+   LOOP 94, session 045. SAVED, in moduleState under `core.trade` —
+   WORLD MODEL §9.8, S90. This variable is the ONE runtime copy.
+   S92 item 11, 045a: the 042 note in mktSell said "nothing in §9
+   carries it", false since 043.
+   LOOP 104, session 052: this declaration used to sit with the market,
+   far below the loader, so the loader could not assign it and parked a
+   validated counter in a second variable, `tradeLoaded`, for this line
+   to pick up. IT IS DECLARED HERE NOW, ABOVE THE LOADER, AND THE
+   LOADER ASSIGNS IT DIRECTLY. `tradeLoaded` is deleted. There is one
+   runtime copy again, and the handover variable that existed only to
+   defeat a declaration order is gone with the order. */
+let mktTaken = { key:"", by:{} };
 
 /* ==================================================================
    PERSISTENCE — LOOP 87, session 042. The save file.
@@ -1762,24 +1861,26 @@ const SAVE_MODULES = [
 const SHIP_SAVED = ["hull","shieldFore","shieldAft","energy","holdTonnes"];
 
 /* LOOP 94, session 045. WORLD MODEL §9.8, S90: `mktTaken` is saved in
-   `moduleState` under `core.trade`. THE COUNTER'S ONLY RUNTIME COPY IS
-   `mktTaken`, declared with the market far below. It is in its
-   temporal dead zone when the loader runs — the COMMODITIES constraint
-   again — so the loader parks a validated counter here and the market
-   declaration picks it up. Nothing else reads this. */
+   `moduleState` under `core.trade`.
+   LOOP 104, session 052: `let tradeLoaded = null;` stood here. It
+   existed only because `mktTaken` was declared with the market, below
+   the loader, and so was in its temporal dead zone when the loader
+   ran — the COMMODITIES constraint again. The loader parked a
+   validated counter here and the market declaration picked it up.
+   BOTH DECLARATIONS ARE ABOVE THE LOADER NOW and the loader assigns
+   `mktTaken` directly, so the handover variable is deleted. */
 const TRADE_NS = "core.trade";
-let tradeLoaded = null;
 
 let saveStatus = "no save read this session";   /* for the TUNE report */
 let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 050a. Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 052a. Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
-   No listeners are registered in 050a. A listener may read and repaint;
+   No listeners are registered in 052a. A listener may read and repaint;
    issuing an action from one throws (§3.5, constraint 5 in code). */
 const stateListeners = [];
 let signalling = false;
@@ -2053,13 +2154,29 @@ function loadGame(){
   state.equipment   = equipment;                       /* LOOP 96 */
   state.flags       = o.flags       !== undefined ? o.flags       : {};
   state.moduleState = moduleState;                     /* LOOP 94 */
-  tradeLoaded       = trade;
+  mktTaken          = trade || { key:"", by:{} };      /* LOOP 104 */
+
+  /* THE RECONCILE, LOOP 104. `cargoUsed` is a stored total and is the
+     field that lies — loop 81. It is deliberately NOT in SHIP_SAVED,
+     so without this it holds whatever freshShip() put there. Until 052
+     this could not run here: holdUsed() walks COMMODITIES, which was a
+     `const` declared far below and in its temporal dead zone at boot,
+     so the work was deferred to a block at the bottom of the file.
+     COMMODITIES IS ABOVE THIS NOW and the loader does its own job.
+     THE BRANCH IS STILL THE ONE THAT FIRES ON EVERY LOAD WITH CARGO —
+     S93, loop 81. It is not the MISMATCH branch in holdReportLine(),
+     which has never fired and is not made reachable by this move. */
+  const walk = holdUsed();
+  const reconciled = state.ship.cargoUsed !== walk
+    ? "  (cargoUsed reconciled "+state.ship.cargoUsed+" -> "+walk+")" : "";
+  state.ship.cargoUsed = walk;
 
   saveStatus = "LOADED — galaxy "+c.galaxy+" system "+c.system+
                ", day "+c.gameDay+", "+c.credits+" tenths CR, fuel "+c.fuel+
                ", "+Object.keys(cargo).length+" cargo slot(s), "+
                state.visited.length+" visited, market counter "+
-               (trade ? Object.keys(trade.by).length+" entr(ies)" : "none")+htNote;
+               (trade ? Object.keys(trade.by).length+" entr(ies)" : "none")+
+               htNote+reconciled;
   return true;
 }
 
@@ -2113,7 +2230,7 @@ function saveFileLine(){
    later writes a legitimately new commander rather than resurrecting
    the old one.
 
-   VIEW STATE IS NOT RESET HERE. 050a: the cursor and the market
+   VIEW STATE IS NOT RESET HERE. 052a: the cursor and the market
    accordion are presentation's, reset by the bWipe handler on ok.
    `mktTaken` and the fuel receipt are core and are reset here.
    ================================================================== */
@@ -2132,7 +2249,6 @@ function wipe(){
   state.visited = [state.commander.system];
 
   mktTaken    = { key:"", by:{} };
-  tradeLoaded = null;
   svcFuelLast = null;
 
   saveLast   = null;
@@ -2716,7 +2832,7 @@ document.getElementById("bWipe").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 050a — settings\n"+
+    "ELITE: THE CLONES 052a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -2830,9 +2946,16 @@ function uniStats(){
     dupes, nc, moves, comps, uniq, ms };
 }
 /* LOOP 81, session 030. Kept as its own function rather than inlined
-   so the disagreement test is readable. holdUsed() and COMMODITIES are
-   declared in the MARKET section further down the file; this runs only
-   when TUNE is opened, long after parse, so both exist. */
+   so the disagreement test is readable. holdUsed() is declared in the
+   MARKET section further down the file; this runs only when TUNE is
+   opened, long after parse, so it exists.
+   S133, 052: this said "holdUsed() and COMMODITIES are declared in the
+   MARKET section further down the file". LOOP 104 MOVED COMMODITIES
+   ABOVE THE LOADER, so half of it went false in the session that moved
+   it. Found by sweep check 15 while writing the move, which is the
+   project's normal mechanism — the comment that records a constraint
+   is a second place the constraint is written down, and removing the
+   constraint does not visit it. */
 function holdReportLine(){
   const stored = state.ship.cargoUsed;
   const walk   = holdUsed();
@@ -3175,11 +3298,28 @@ function renderSystemData(){
    which is what Panel §6.2's Distance and Panel §7's Hyperspace Target
    row read.
 
-   THAT FIELD IS NOT IN THE API. CORE API §3.1's state list has no
-   selected or target system and §3.2 has no command to write one, yet
-   two panels are specified against it. Failure mode 2 — a thing named
-   and never defined. It needs a CORE API revision and it is logged as
-   an open loop, not fixed here. One chat, one job.
+   THAT FIELD IS DECLARED. CORE API §3.1 declares
+   `commander.hyperspaceTarget` as `{ galaxy, index } | null` and as
+   save-file state — [DECISION], Ripley, session 038, CORE API v1.6 —
+   and §3.1 gives the load rule: range-checked, discarded TO NULL, never
+   repaired. The persistence block above implements exactly that.
+
+   §3.2 STILL HAS NO COMMAND THAT WRITES IT, AND THAT IS NOT A GAP.
+   `setCourse` is a core ACTION — ARCHITECTURE AND MODULES §3 — and
+   CORE API v1.7 §3.2 says in terms that actions are not commands and
+   were deliberately left off that list. Do not read the absence as a
+   missing command and do not add one.
+
+   S127, 052: this block read "THAT FIELD IS NOT IN THE API ... §3.1's
+   state list has no selected or target system", true when written in
+   012 and false from 038 — thirteen sessions. Sweep check 10 in its
+   second direction.
+   S131, 052: it was wrong in two further places nobody had recorded.
+   It said §3.2 has no command "yet two panels are specified against
+   it", offering the true half as evidence of a fault — it is not one,
+   for the reason above. And it said the debt "is logged as an open
+   loop": that is LOOP 35, CLOSED 038, primer §7.1.1. A closed loop
+   cited as a live debt is how a paid thing gets paid twice.
 
    VISITED SYSTEMS ARE NOT MARKED. §4 asks for the mark. The save file
    exists (loop 87, 042) and `visited` is written by jump() (loop 93,
@@ -4317,39 +4457,6 @@ function svcFuelReportLine(){
          (f.lost > 0 ? "  LOST "+f.lost : "  lost 0");
 }
 
-/* WORLD MODEL §7.1, transcribed. `bulk` is not in §7.1 — it is
-   decision 3 above, expressed as a column so it is visible rather
-   than buried in an if. */
-const COMMODITIES = [
-  { id:"grain",     name:"Grain Staples",        unit:"t",  base:76,   ef:-8,  sw:4,   bq:6,  sq:3,  legal:"L", bulk:1, cat:"AGRICULTURAL" },
-  { id:"produce",   name:"Hydroponic Produce",   unit:"t",  base:96,   ef:-10, sw:6,   bq:12, sq:7,  legal:"L", bulk:1, cat:"AGRICULTURAL" },
-  { id:"protein",   name:"Vat Protein",          unit:"t",  base:120,  ef:-12, sw:8,   bq:8,  sq:7,  legal:"L", bulk:1, cat:"AGRICULTURAL" },
-  { id:"fibre",     name:"Textile Fibres",       unit:"t",  base:80,   ef:-4,  sw:12,  bq:10, sq:7,  legal:"L", bulk:1, cat:"AGRICULTURAL" },
-  { id:"timber",    name:"Biopolymer Timber",    unit:"t",  base:108,  ef:-6,  sw:8,   bq:9,  sq:7,  legal:"L", bulk:1, cat:"AGRICULTURAL" },
-  { id:"spirits",   name:"Distilled Spirits",    unit:"t",  base:340,  ef:-20, sw:60,  bq:5,  sq:7,  legal:"R", bulk:1, cat:"AGRICULTURAL" },
-  { id:"hides",     name:"Exotic Hides",         unit:"t",  base:700,  ef:-28, sw:32,  bq:4,  sq:3,  legal:"R", bulk:1, cat:"AGRICULTURAL" },
-  /* LOOP 56, session 020. ef was -2, which put this row under
-     AGRICULTURAL by the derivation in mktCategory below. Nothing chose
-     that. WORLD MODEL §7.1 moves it to Minerals and sets ef to 0 —
-     [DECISION], Ripley, session 019, both halves. sw stays 6: World §13
-     [DECISION] 16 is open and the category question does not license
-     inventing a volatility number. Cost, measured in §7.1: the price
-     spread falls 2.0 CR -> 0.6 CR and ice stops being worth carrying. */
-  { id:"ice",       name:"Water Ice",            unit:"t",  base:44,   ef:0,   sw:6,   bq:14, sq:15, legal:"L", bulk:1, cat:"MINERALS" },
-  { id:"ore",       name:"Raw Ore",              unit:"t",  base:60,   ef:0,   sw:12,  bq:12, sq:15, legal:"L", bulk:1, cat:"MINERALS" },
-  { id:"gold",      name:"Gold",                 unit:"kg", base:400,  ef:0,   sw:24,  bq:6,  sq:7,  legal:"L", bulk:0, cat:"MINERALS" },
-  { id:"platinum",  name:"Platinum",             unit:"kg", base:780,  ef:0,   sw:40,  bq:4,  sq:7,  legal:"L", bulk:0, cat:"MINERALS" },
-  { id:"gems",      name:"Gemstones",            unit:"g",  base:1400, ef:0,   sw:100, bq:3,  sq:3,  legal:"L", bulk:0, cat:"MINERALS" },
-  { id:"alloys",    name:"Refined Alloys",       unit:"t",  base:160,  ef:6,   sw:12,  bq:10, sq:7,  legal:"L", bulk:1, cat:"INDUSTRIAL" },
-  { id:"tools",     name:"Machine Tools",        unit:"t",  base:228,  ef:12,  sw:16,  bq:8,  sq:7,  legal:"L", bulk:1, cat:"INDUSTRIAL" },
-  { id:"cells",     name:"Fusion Cells",         unit:"t",  base:260,  ef:14,  sw:20,  bq:7,  sq:7,  legal:"R", bulk:1, cat:"INDUSTRIAL" },
-  { id:"medicals",  name:"Nano-Medicals",        unit:"t",  base:520,  ef:18,  sw:36,  bq:4,  sq:3,  legal:"L", bulk:1, cat:"INDUSTRIAL" },
-  { id:"cores",     name:"Computer Cores",       unit:"t",  base:620,  ef:22,  sw:40,  bq:5,  sq:7,  legal:"L", bulk:1, cat:"INDUSTRIAL" },
-  { id:"drones",    name:"Combat Drones",        unit:"t",  base:1000, ef:24,  sw:60,  bq:3,  sq:3,  legal:"I", bulk:1, cat:"INDUSTRIAL" },
-  { id:"stims",     name:"Neuro-Stimulants",     unit:"t",  base:1880, ef:32,  sw:480, bq:3,  sq:3,  legal:"I", bulk:1, cat:"INDUSTRIAL" },
-  { id:"contracts", name:"Indentured Contracts", unit:"t",  base:380,  ef:20,  sw:40,  bq:5,  sq:7,  legal:"I", bulk:1, cat:"INDUSTRIAL" },
-  { id:"salvage",   name:"Xeno Salvage",         unit:"t",  base:1200, ef:0,   sw:200, bq:0,  sq:0,  legal:"S", bulk:1, cat:"SALVAGE" }
-];
 
 /* LOOP 59, session 020. This derived category from the sign of ef and
    special-cased salvage by id. WORLD MODEL §7.1 says category is world
@@ -4406,18 +4513,6 @@ function marketFor(sys, gameDay){
   return mktCache;
 }
 
-/* NOT SPECIFIED AND NECESSARY. §7.2 says the market is stable while
-   you sit at a station and different when you come back. It does not
-   say whether buying reduces what is left on the counter. It must —
-   an unlimited counter is not a market — so purchases are held here,
-   keyed to the system-day. A jump clears it because the key changes.
-   [ASSUMED].
-   LOOP 94, session 045. SAVED, in moduleState under `core.trade` —
-   WORLD MODEL §9.8, S90. This variable is the one runtime copy; the
-   loader parks a restored counter in `tradeLoaded` because this line
-   is below it. S92 item 11, 045a: the 042 note in mktSell said "nothing
-   in §9 carries it", false since 043. */
-let mktTaken = tradeLoaded || { key:"", by:{} };
 function mktAvail(sys, c){
   const m = marketFor(sys, state.commander.gameDay);
   if(mktTaken.key !== m.key){ mktTaken = { key:m.key, by:{} }; }
@@ -4780,40 +4875,32 @@ document.addEventListener("visibilitychange",function(){
   if(document.visibilityState==="visible") wake();
 });
 
-/* ---------- persistence, the two parts that must run last ----------
+/* ---------- persistence, the part that must run last ----------
    LOOP 87, session 042.
 
-   1. THE RECONCILE. `cargoUsed` is a stored total and is the field that
-      lies — loop 81. It is deliberately NOT in SHIP_SAVED, so after a
-      load it still holds whatever the fresh state object had. It cannot
-      be recomputed inside loadGame(): holdUsed() walks COMMODITIES,
-      which is a `const` declared far below the load site and is in its
-      temporal dead zone at boot. THAT IS WHY THIS IS DOWN HERE and not
-      up there. holdReportLine()'s comment records the same constraint
-      for the same reason.
-      THE MISMATCH BRANCH IN holdReportLine() HAS NEVER FIRED — loop 81.
-      A LOAD WITH CARGO DOES NOT EXERCISE IT. This reconcile runs first
-      and clears the one disagreement a load could show, so by the time
-      the report runs, the walk and the stored total agree. The
-      `(cargoUsed reconciled a -> b)` suffix is THIS block, not
-      MISMATCH, and it appears on every load with cargo. S101, 045b:
-      this said a load with cargo was "a second way to be exercised".
-      S93 disproved it in 044.
+   THE RECONCILE USED TO BE HERE AND IS NOT ANY MORE — LOOP 104,
+   session 052. It sat at the bottom of the file because holdUsed()
+   walks COMMODITIES, which was a `const` declared below loadGame() and
+   in its temporal dead zone at boot. COMMODITIES IS NOW ABOVE THE
+   LOADER and the reconcile runs inside loadGame(), where it belongs.
+   Nothing about what it computes changed; only where. The
+   `(cargoUsed reconciled a -> b)` suffix is now built in the loader
+   and appended to the LOADED line rather than concatenated onto
+   saveStatus afterwards, so the status line is written once.
+   STILL TRUE AND WORTH KEEPING: the MISMATCH branch in
+   holdReportLine() HAS NEVER FIRED — loop 81 — and this move does not
+   make it reachable. A load with cargo exercises the reconcile, not
+   MISMATCH; the reconcile clears the one disagreement a load could
+   show before any report runs. S101, 045b said a load with cargo was
+   "a second way to be exercised"; S93 disproved it in 044.
 
-   2. THE SAFETY NET. Every mutation site writes its own save, so this
-      is belt and braces rather than the mechanism. It matters on iOS
-      specifically: `pagehide` is the event that fires when Safari
-      reclaims the tab, and `visibilitychange` catches a home-swipe that
-      never becomes a pagehide. `beforeunload` is NOT used — it is
-      unreliable on iOS and is the one every desktop tutorial reaches
-      for first. */
-if(SAVE_LOADED){
-  const walk = holdUsed();
-  if(state.ship.cargoUsed !== walk){
-    saveStatus += "  (cargoUsed reconciled "+state.ship.cargoUsed+" -> "+walk+")";
-    state.ship.cargoUsed = walk;
-  }
-}
+   THE SAFETY NET. Every mutation site writes its own save, so this
+   is belt and braces rather than the mechanism. It matters on iOS
+   specifically: `pagehide` is the event that fires when Safari
+   reclaims the tab, and `visibilitychange` catches a home-swipe that
+   never becomes a pagehide. `beforeunload` is NOT used — it is
+   unreliable on iOS and is the one every desktop tutorial reaches
+   for first. */
 window.addEventListener("pagehide", saveGame);
 document.addEventListener("visibilitychange", function(){
   if(document.visibilityState === "hidden") saveGame();
