@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 052a</title>
+<title>ELITE: THE CLONES — 052b</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -1368,6 +1368,18 @@ function describe(sys, r, tally) {
 /* ============================================================
    GALAXY ASSEMBLY — World Spec §3.6
    ============================================================ */
+/* MAX FUEL — THE ONE AUTHORED COPY. WORLD MODEL §2. S113, session 052.
+   Everything that needs a maximum fuel figure derives from this line:
+   `FUEL_MAX` below is `MAX_FUEL_LY * 10`, and freshCommander() starts
+   the tank at `FUEL_MAX`. THERE WERE THREE COPIES UNTIL 052 — this
+   one, a literal `70` at the constants block, and a second literal
+   `70` inside freshCommander(). Changing the tank meant finding all
+   three, and nothing said so at any of them.
+   IT LIVES HERE RATHER THAN WITH THE CONSTANTS because LY is the
+   world model's unit and tenths is only how the save stores it. The
+   derived figure follows the authored one, not the other way round.
+   TARGET_LY IS NOT THIS. It is §3.6's assembly target and moves
+   independently; the two being near each other is not a relationship. */
 const MAX_FUEL_LY = 7.0, TARGET_LY = 6.9;
 function distLY(a, b) {
   const dx = a.x - b.x, dy = (a.y - b.y) / 2;
@@ -1500,6 +1512,9 @@ let speed=0, throttle=0;
    display. Speed is written once per frame from the integrator.
    Maxima: fuel 70 tenths is WORLD MODEL 2. The other TWO are
    [ASSUMED] - the ship module spec does not exist yet.
+   S113, 052: FUEL IS NO LONGER AUTHORED HERE. It is derived from
+   `World.MAX_FUEL_LY`. Still three constants; one of them now reads
+   its value from somewhere else, which is the point.
    SAID "THREE" FROM THE DAY IT WAS WRITTEN AND THERE HAVE ALWAYS BEEN
    THREE CONSTANTS, ONE OF THEM FUEL. Found session 030 while adding
    holdTonnes to `state` two lines below - a count nobody restated
@@ -1509,7 +1524,11 @@ let speed=0, throttle=0;
 ------------------------------------------------------------------- */
 const SHIELD_MAX = 100;   // [ASSUMED]
 const ENERGY_MAX = 100;   // [ASSUMED] displayed as four banks of 25
-const FUEL_MAX   = 70;    // World Model 2 - tenths of a light year
+/* S113, 052. Was a literal `70`. DERIVED, so the tank has one author.
+   Math.round because the multiply is float: 7.0*10 is exact, but 6.9*10
+   is 68.99999999999999 and the next person to tune this will not be
+   using a whole number. WORLD MODEL §2 owns the LY figure. */
+const FUEL_MAX   = Math.round(World.MAX_FUEL_LY * 10);   // tenths of a light year
 
 /* SESSION 042b. THE STARTING VALUES ARE FUNCTIONS, NOT A LITERAL.
    `WIPE SAVE FILE` has to rebuild them, and in 042a it did not — it
@@ -1519,9 +1538,14 @@ const FUEL_MAX   = 70;    // World Model 2 - tenths of a light year
    in the one place it would be hardest to spot, because a wrong
    starting value looks exactly like a design choice.
    THE STARTING SYSTEM IS galaxy 0 / system 51 — Vileze. PROJECT
-   PRIMER §3, settled in session 004. The index is the decision. */
+   PRIMER §3, settled in session 004. The index is the decision.
+   S113, 052: THIS BLOCK WARNED ABOUT A SECOND COPY OF A STARTING
+   VALUE AND THEN WROTE ONE, TWO LINES DOWN — `fuel:70`, a third copy
+   of the maximum. It is `FUEL_MAX` now. A warning sitting above the
+   thing it warns about does not read as a warning; it reads as a
+   heading. The fix is the derivation, not a louder comment. */
 function freshCommander(){
-  return { credits:1000, legalStatus:0, fuel:70, gameDay:0,
+  return { credits:1000, legalStatus:0, fuel:FUEL_MAX, gameDay:0,
            galaxy:0, system:51, kills:0,
            hyperspaceTarget:null };
 }
@@ -1876,11 +1900,11 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 052a. Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 052b. Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
-   No listeners are registered in 052a. A listener may read and repaint;
+   No listeners are registered in 052b. A listener may read and repaint;
    issuing an action from one throws (§3.5, constraint 5 in code). */
 const stateListeners = [];
 let signalling = false;
@@ -2230,7 +2254,7 @@ function saveFileLine(){
    later writes a legitimately new commander rather than resurrecting
    the old one.
 
-   VIEW STATE IS NOT RESET HERE. 052a: the cursor and the market
+   VIEW STATE IS NOT RESET HERE. 052b: the cursor and the market
    accordion are presentation's, reset by the bWipe handler on ok.
    `mktTaken` and the fuel receipt are core and are reset here.
    ================================================================== */
@@ -2832,7 +2856,7 @@ document.getElementById("bWipe").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 052a — settings\n"+
+    "ELITE: THE CLONES 052b — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
