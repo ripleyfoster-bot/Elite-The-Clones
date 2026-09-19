@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 052b</title>
+<title>ELITE: THE CLONES — 055a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -1900,11 +1900,11 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 052b. Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 055a. Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
-   No listeners are registered in 052b. A listener may read and repaint;
+   No listeners are registered in 055a. A listener may read and repaint;
    issuing an action from one throws (§3.5, constraint 5 in code). */
 const stateListeners = [];
 let signalling = false;
@@ -2254,7 +2254,7 @@ function saveFileLine(){
    later writes a legitimately new commander rather than resurrecting
    the old one.
 
-   VIEW STATE IS NOT RESET HERE. 052b: the cursor and the market
+   VIEW STATE IS NOT RESET HERE. 055a: the cursor and the market
    accordion are presentation's, reset by the bWipe handler on ok.
    `mktTaken` and the fuel receipt are core and are reset here.
    ================================================================== */
@@ -2856,7 +2856,7 @@ document.getElementById("bWipe").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 052b — settings\n"+
+    "ELITE: THE CLONES 055a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -2882,6 +2882,14 @@ function writeReport(){
        session and any number here would be a lie. */
     "strip row     "+(stripH ? stripH+" px" : "not drawn")+"\n"+
     "  of which tech "+(stripH ? techH+" px" : "not drawn")+"\n"+
+    /* LOOP 99, session 055. The open market row's BUY figure line.
+       Chars is what PANEL §3.6 counts; the two px figures are what
+       decides whether it wrapped, and WRAPPED is printed as a word so
+       the answer is not an arithmetic exercise on a phone. */
+    "mkt figure    "+(mfigChars
+       ? mfigChars+" chars · "+mfigH+" px of "+mfigLineH+" px · "+
+         (mfigH > mfigLineH ? "WRAPPED" : "one line")
+       : "not opened")+"\n"+
     "fps           "+fpsShow.toFixed(0)+"\n"+
     "viewport      "+window.innerWidth+"x"+window.innerHeight+
     /* LOOP 87, session 042. CONSTRAINT 6: this is the commander's own
@@ -4599,6 +4607,9 @@ function canSell(id, qty){
   return { ok:true };
 }
 
+/* LOOP 104 is the standing warning about declaration order, so these
+   sit above their only writer rather than beside it. */
+let mfigChars = 0, mfigH = 0, mfigLineH = 0;
 function renderMarket(){
   const s = state.system;
   if(!s){ mktBody.innerHTML = '<div class="pname">NO SYSTEM</div>'; return; }
@@ -4671,6 +4682,38 @@ function renderMarket(){
        'available. The prices above are read from the world model and '+
        'are not opinions.</div>';
   mktBody.innerHTML = h;
+  measureMfig();                                   /* LOOP 99, session 055 */
+}
+
+/* LOOP 99, session 055. THE FIGURE LINE'S OWN WIDTH, MEASURED.
+   This session put a fourth suffix on a line whose fit is PANEL §3.6's
+   "about 60 characters at 402px", read off an `047a` screenshot at
+   roughly 6 CSS px a character — §10 item 34. Item 35 says the
+   sold-out precious good wraps and has never been seen.
+   LOOP 81'S RULE: a diagnostic that cannot see the thing the session
+   changed is not a diagnostic for that session. There was no way to
+   read this off TUNE, so the session's own test could only have been
+   a photograph, and §10 item 12 says what those are worth.
+   CACHED AT RENDER, NOT READ AT REPORT TIME. TUNE is an overlay and a
+   panel that is not open measures zero — a zero here would read as
+   "it fits".
+   IT MEASURES THE OPEN ROW'S BUY FIGURE LINE, WHICHEVER ROW THAT IS,
+   FUEL INCLUDED. The last .mgrp in the expansion is always BUY; SELL
+   sits above it when you hold stock.
+   "not opened" is the `chart canvas` rule, loop 51: no row has been
+   expanded this session and any number here would be a lie. */
+function measureMfig(){
+  const grps = mktBody.querySelectorAll('.mexp .mgrp');
+  if(!grps.length) return;                  /* no row open: keep the last reading */
+  const el = grps[grps.length-1].querySelector('.mfig');
+  if(!el) return;
+  const hpx = el.getBoundingClientRect().height;
+  if(hpx <= 0) return;                      /* rendered while the panel was closed */
+  const cs = getComputedStyle(el);
+  mfigChars = el.textContent.length;
+  mfigH     = Math.round(hpx);
+  mfigLineH = Math.round(parseFloat(cs.lineHeight) +
+                         parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom));
 }
 
 /* LOOP 83. The fuel expansion. Same controls as a cargo row on
@@ -4729,12 +4772,26 @@ function mktExpansion(s, c, price, avail, held, illegal){
   const mb = maxBuy(c.id), max = mb.max;
   if(mktBuyQ > max) mktBuyQ = max;
   /* LOOP 98, 047: a stopped stepper says why — PANEL §3.6 since v1.9.
-     `credits` has no words yet: loop 99, PANEL [DECISION] 33. */
-  const holdFull = mb.reasons.indexOf("hold") !== -1;
+     LOOP 99, 055: `credits` now has words. ' · cannot afford 1t' —
+     [DECISION], Ripley, 054, carrying the fuel row's ' · cannot
+     afford 1.0 LY' across. PANEL [DECISION] 33 is answered; PANEL
+     §3.6's table row and §10 item 33 are owed the edit and this
+     comment is not the payment.
+     THE SUFFIXES ARE NOT EXCLUSIVE AND NEVER HAVE BEEN. `hold`,
+     `stock` and `credits` are independent bounds in maxBuy(), so a
+     broke commander at a sold-out counter with a full hold prints
+     three. That is the point: the stepper stopped for three reasons
+     and naming one would misreport the other two — constraint 2.
+     ORDER: hold, then credits, then counter. Hold and credits are
+     facts about YOU; the counter is a fact about the pad, and it has
+     been last since 016. */
+  const holdFull = mb.reasons.indexOf("hold")    !== -1;
+  const noCash   = mb.reasons.indexOf("credits") !== -1;
   /* 047b: bulk-0 goods show the hold, then say they take none — [DECISION], Ripley, 047. */
   const room = 'Hold '+holdUsed()+'/'+state.ship.holdTonnes+
                (c.bulk === 0 ? ' \u00b7 takes no hold space' :
-                (holdFull ? ' \u00b7 hold full' : ''));
+                (holdFull ? ' \u00b7 hold full' : ''))+
+               (noCash ? ' \u00b7 cannot afford 1t' : '');
   h += '<div class="mgrp"><div class="mline"><b>BUY</b>'+
        '<button class="mstep" data-act="b-" '+(mktBuyQ<=0?'disabled':'')+'>\u2212</button>'+
        '<span class="mqty">'+mktBuyQ+'</span>'+
