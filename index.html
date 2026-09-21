@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 055a</title>
+<title>ELITE: THE CLONES — 061a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -1900,11 +1900,11 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 055a. Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 061a. Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
-   No listeners are registered in 055a. A listener may read and repaint;
+   No listeners are registered in 061a. A listener may read and repaint;
    issuing an action from one throws (§3.5, constraint 5 in code). */
 const stateListeners = [];
 let signalling = false;
@@ -2856,7 +2856,7 @@ document.getElementById("bWipe").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 055a — settings\n"+
+    "ELITE: THE CLONES 061a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -2885,9 +2885,10 @@ function writeReport(){
     /* LOOP 99, session 055. The open market row's BUY figure line.
        Chars is what PANEL §3.6 counts; the two px figures are what
        decides whether it wrapped, and WRAPPED is printed as a word so
-       the answer is not an arithmetic exercise on a phone. */
+       the answer is not an arithmetic exercise on a phone.
+       061a: names the row first — S145, PANEL §10 item 38. */
     "mkt figure    "+(mfigChars
-       ? mfigChars+" chars · "+mfigH+" px of "+mfigLineH+" px · "+
+       ? mfigRow+" · "+mfigChars+" chars · "+mfigH+" px of "+mfigLineH+" px · "+
          (mfigH > mfigLineH ? "WRAPPED" : "one line")
        : "not opened")+"\n"+
     "fps           "+fpsShow.toFixed(0)+"\n"+
@@ -4609,7 +4610,7 @@ function canSell(id, qty){
 
 /* LOOP 104 is the standing warning about declaration order, so these
    sit above their only writer rather than beside it. */
-let mfigChars = 0, mfigH = 0, mfigLineH = 0;
+let mfigChars = 0, mfigH = 0, mfigLineH = 0, mfigRow = "";
 function renderMarket(){
   const s = state.system;
   if(!s){ mktBody.innerHTML = '<div class="pname">NO SYSTEM</div>'; return; }
@@ -4686,10 +4687,8 @@ function renderMarket(){
 }
 
 /* LOOP 99, session 055. THE FIGURE LINE'S OWN WIDTH, MEASURED.
-   This session put a fourth suffix on a line whose fit is PANEL §3.6's
-   "about 60 characters at 402px", read off an `047a` screenshot at
-   roughly 6 CSS px a character — §10 item 34. Item 35 says the
-   sold-out precious good wraps and has never been seen.
+   061a: measured in 055; PANEL v1.11 §3.6 holds the figures and closed
+   §10 items 34–35 (S150). Open: item 37, the 87-char line never rendered.
    LOOP 81'S RULE: a diagnostic that cannot see the thing the session
    changed is not a diagnostic for that session. There was no way to
    read this off TUNE, so the session's own test could only have been
@@ -4698,7 +4697,8 @@ function renderMarket(){
    panel that is not open measures zero — a zero here would read as
    "it fits".
    IT MEASURES THE OPEN ROW'S BUY FIGURE LINE, WHICHEVER ROW THAT IS,
-   FUEL INCLUDED. The last .mgrp in the expansion is always BUY; SELL
+   FUEL INCLUDED, and caches the row's name with it (061a, S145).
+   The last .mgrp in the expansion is always BUY; SELL
    sits above it when you hold stock.
    "not opened" is the `chart canvas` rule, loop 51: no row has been
    expanded this session and any number here would be a lie. */
@@ -4711,6 +4711,7 @@ function measureMfig(){
   if(hpx <= 0) return;                      /* rendered while the panel was closed */
   const cs = getComputedStyle(el);
   mfigChars = el.textContent.length;
+  mfigRow   = mktOpen === FUEL_ROW_ID ? "Fuel" : (commodityById(mktOpen)||{name:"?"}).name; /* 061a S145 */
   mfigH     = Math.round(hpx);
   mfigLineH = Math.round(parseFloat(cs.lineHeight) +
                          parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom));
@@ -4774,9 +4775,8 @@ function mktExpansion(s, c, price, avail, held, illegal){
   /* LOOP 98, 047: a stopped stepper says why — PANEL §3.6 since v1.9.
      LOOP 99, 055: `credits` now has words. ' · cannot afford 1t' —
      [DECISION], Ripley, 054, carrying the fuel row's ' · cannot
-     afford 1.0 LY' across. PANEL [DECISION] 33 is answered; PANEL
-     §3.6's table row and §10 item 33 are owed the edit and this
-     comment is not the payment.
+     afford 1.0 LY' across. Paid in PANEL v1.11 (056): §3.6 row, §10
+     item 33 — 061a, S150.
      THE SUFFIXES ARE NOT EXCLUSIVE AND NEVER HAVE BEEN. `hold`,
      `stock` and `credits` are independent bounds in maxBuy(), so a
      broke commander at a sold-out counter with a full hold prints
