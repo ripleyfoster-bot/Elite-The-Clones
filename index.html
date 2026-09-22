@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 061a</title>
+<title>ELITE: THE CLONES — 065a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -1499,8 +1499,17 @@ function qrot(q,v){
 }
 
 /* ---------- ship state ---------- */
-let q=[1,0,0,0];
-let pos=[0,0,0];
+/* LOOP 105, session 065. THE SYSTEM-START POSE, ONE COPY. WORLD §9.3.
+   Read in 065 before a line was written: the pose is `q`, an array in
+   [w,x,y,z] order (qmul's convention), and `pos`, [x,y,z]. Boot sets
+   both here and NOTHING ELSE EVER RESETS THEM — jump() does not touch
+   the pose, so the frame is continuous across jumps and is NOT
+   system-local. WORLD [ASSUMED] 26 is false against this build: S191.
+   The boot, the NaN guard and wipe() all read these two constants. */
+const POSE_START_Q   = Object.freeze([1,0,0,0]);
+const POSE_START_POS = Object.freeze([0,0,0]);
+let q=POSE_START_Q.slice();
+let pos=POSE_START_POS.slice();
 let speed=0, throttle=0;
 
 /* ------------------------------------------------------------------
@@ -1780,7 +1789,8 @@ let mktTaken = { key:"", by:{} };
    THREE MISMATCHES REFUSE THE FILE, AND NOT FOR THE SAME REASON —
    WORLD MODEL §9.5. `worldSeed` and `worldModelVersion` are TERMINAL:
    a different universe is a different game. `schema` is PROVISIONAL:
-   it refuses only because no migration exists yet. S102, 045b: this
+   it refuses only because no migration exists yet. 065, loop 105: one
+   now exists, from 2 to 3; 1 and unknown numbers still refuse. S102, 045b: this
    said "all for the same reason"; §9.5 ruled that wrong in 043.
    The original reasoning for the two terminal refusals follows. §9: a save written
    against a different seed or a different world model describes a
@@ -1820,7 +1830,21 @@ const SAVE_KEY = "elite.clones.save";
    that anyone minds. Loop 87 was [TESTED] on device the same afternoon,
    14 Sep, 043a. S92, 045a: this said "loop 87 is not [TESTED]". THE DAY A SCHEMA
    BUMP LANDS ON A PLAYED COMMANDER, THIS DECISION IS THE WRONG ONE. */
-const SAVE_SCHEMA = 2;                    /* WORLD MODEL §9.5 */
+/* LOOP 105, session 065. SCHEMA 2 -> 3, AND THE FIRST MIGRATION.
+   WORLD MODEL v1.19 §9.5. `ship.pose` is a required key in 3, and
+   required fields are the envelope. THE DAY THE COMMENT ABOVE WARNED
+   ABOUT HAS ARRIVED: Ripley's save is a played commander, so the
+   provisional refusal is NOT used for 2. A 2 file loads with every
+   045a check unchanged and the ship at the system-start pose. The
+   file is NOT rewritten at load; the next save writes 3. 1 still
+   refuses. Anything else refuses — provisional, a newer file. */
+const SAVE_SCHEMA = 3;                    /* WORLD MODEL §9.5 — what this build WRITES */
+const SAVE_SCHEMA_READS = [2, 3];         /* WORLD MODEL §9.5 — what it READS */
+/* LOOP 105. The refused-file copy. WORLD §13 [DECISION] 31, answered by
+   Ripley in 064 per the 065 handover and NOT YET RECORDED IN WORLD —
+   S192. A refusal copies the raw file here before anything can save
+   over it. FIRST COPY WINS: an existing copy is never overwritten. */
+const SAVE_REFUSED_KEY = SAVE_KEY + ".refused";
 const WORLD_MODEL_VERSION = "1.2.0";      /* WORLD MODEL §9.5 */
 
 /* ------------------------------------------------------------------
@@ -1900,11 +1924,11 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 061a. Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 065a (unchanged since 061a). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
-   No listeners are registered in 061a. A listener may read and repaint;
+   No listeners are registered in 065a. A listener may read and repaint;
    issuing an action from one throws (§3.5, constraint 5 in code). */
 const stateListeners = [];
 let signalling = false;
@@ -1919,11 +1943,56 @@ function noCascade(){
 }
 function fail(reasons){ return { ok:false, reasons:reasons }; }
 
+/* LOOP 105, session 065. WORLD §9.3. The save boundary for the pose:
+   the build's arrays in, §9.3's named components out, as qualifyMap()
+   is for ids. FULL PRECISION — JSON.stringify writes the shortest
+   string that round-trips a double, so nothing is rounded.
+   THE NaN GUARD, S188. JSON.stringify writes NaN and Infinity as null,
+   and a null refuses the file on its next load (§9.7), which loses the
+   whole commander. So a non-finite pose is never written: the start
+   pose goes in its place and the fact is logged on TUNE. 065 also
+   guards a zero-length orientation, which would refuse for the same
+   reason — [ASSUMED], an extension of S188's argument. THE LIVE POSE
+   IS NOT TOUCHED: this is a guard on the writer, not a repair. */
+let poseGuard = "";                         /* for the TUNE report */
+function poseFinite(a){ for(const v of a) if(!Number.isFinite(v)) return false; return true; }
+function posePack(){
+  const qn = Math.hypot(q[0],q[1],q[2],q[3]);
+  let qq = q, pp = pos;
+  if(!poseFinite(q) || !poseFinite(pos) || !(qn > 0)){
+    poseGuard = "FIRED "+new Date().toTimeString().slice(0,8)+
+                " — pose not finite, start pose written";
+    qq = POSE_START_Q; pp = POSE_START_POS;
+  }
+  return { position:    { x:pp[0], y:pp[1], z:pp[2] },
+           orientation: { w:qq[0], x:qq[1], y:qq[2], z:qq[3] } };
+}
+/* WORLD §9.7. Returns [q, pos] arrays, or a string naming the fault.
+   Seven numbers, orientation not all zero, orientation normalised.
+   Rebuilt from its seven numbers: anything else in the object is
+   discarded — `cargo`'s rule. No length tolerance ([ASSUMED] 30), no
+   position bound. */
+function poseRead(p){
+  if(!p || typeof p !== "object" || Array.isArray(p)) return "ship.pose is missing or not an object";
+  const P = p.position, O = p.orientation;
+  if(!P || typeof P !== "object" || Array.isArray(P)) return "ship.pose.position is missing";
+  if(!O || typeof O !== "object" || Array.isArray(O)) return "ship.pose.orientation is missing";
+  for(const k of ["x","y","z"])
+    if(typeof P[k] !== "number" || !Number.isFinite(P[k])) return "ship.pose.position."+k+": "+P[k];
+  for(const k of ["w","x","y","z"])
+    if(typeof O[k] !== "number" || !Number.isFinite(O[k])) return "ship.pose.orientation."+k+": "+O[k];
+  if(O.w === 0 && O.x === 0 && O.y === 0 && O.z === 0) return "ship.pose.orientation is all zero";
+  const qq = qnorm([O.w, O.x, O.y, O.z]);
+  if(!poseFinite(qq)) return "ship.pose.orientation does not normalise";
+  return [qq, [P.x, P.y, P.z]];
+}
+
 function saveGame(){
   try{
     const p = state.commander, sh = state.ship;
     const ship = {};
     for(const k of SHIP_SAVED) ship[k] = sh[k];
+    ship.pose = posePack();                 /* LOOP 105, WORLD §9.3 */
     const obj = {
       schema:            SAVE_SCHEMA,
       worldModelVersion: WORLD_MODEL_VERSION,
@@ -1980,20 +2049,52 @@ function saveGame(){
   }
 }
 
+/* LOOP 105, session 065. THE REFUSED-FILE COPY — WORLD §13 [DECISION] 31.
+   061a, read in 065: a refusal left the fresh commander in memory and
+   the NEXT SAVE — any trade, a jump, or just leaving the app — wrote
+   over the refused file. Rolling back a build would therefore destroy
+   the commander it was meant to protect. S190.
+   NOW: every refusal that read a file copies the raw text to
+   SAVE_REFUSED_KEY before loadGame() returns, i.e. before any save can
+   run. FIRST COPY WINS — an existing copy is kept and the new refusal
+   says so. Restoring a copy is Not yet defined; this only keeps it.
+   If the copy itself fails, the TUNE line says FAILED — [ASSUMED]:
+   nothing stops the next save, because §9.7 has no rule for that. */
+let refusedNote = "";                       /* for the TUNE report */
+function keepRefused(raw){
+  try{
+    if(localStorage.getItem(SAVE_REFUSED_KEY) !== null){
+      refusedNote = "copy already held — this refusal NOT copied (first copy wins)";
+      return;
+    }
+    localStorage.setItem(SAVE_REFUSED_KEY, raw);
+    refusedNote = "refused file copied, "+raw.length+" bytes";
+  }catch(e){
+    refusedNote = "COPY FAILED — "+(e&&e.name||"unknown")+" — the next save overwrites the file";
+  }
+}
+
 function loadGame(){
   let raw;
   try{ raw = localStorage.getItem(SAVE_KEY); }
   catch(e){ saveStatus = "storage unreadable — " + (e&&e.name||"unknown"); return false; }
   if(!raw){ saveStatus = "no save on this device — new commander"; return false; }
+  const ok = loadFrom(raw);
+  if(!ok) keepRefused(raw);                 /* LOOP 105, before any save can run */
+  return ok;
+}
 
+function loadFrom(raw){
   let o;
   try{ o = JSON.parse(raw); }
   catch(e){ saveStatus = "REFUSED — file is not JSON"; return false; }
   if(!o || typeof o !== "object"){ saveStatus = "REFUSED — file is not an object"; return false; }
 
   /* --- the three refusals --- */
-  if(o.schema !== SAVE_SCHEMA){
-    saveStatus = "REFUSED — schema "+o.schema+", this build writes "+SAVE_SCHEMA; return false; }
+  /* LOOP 105. 2 and 3 load; 1 and anything else refuse, as §9.5's table. */
+  if(SAVE_SCHEMA_READS.indexOf(o.schema) === -1){
+    saveStatus = "REFUSED — schema "+o.schema+", this build reads "+
+                 SAVE_SCHEMA_READS.join(" and "); return false; }
   if(o.worldSeed !== WORLD_SEED){
     saveStatus = "REFUSED — worldSeed "+o.worldSeed+", this build is "+WORLD_SEED; return false; }
   if(o.worldModelVersion !== WORLD_MODEL_VERSION){
@@ -2096,6 +2197,17 @@ function loadGame(){
     ship[k] = v;
   }
 
+  /* ship.pose. LOOP 105, WORLD §9.5 and §9.7. In a 3 file it is required
+     and a bad one refuses the file. In a 2 file it is NOT READ — no
+     build writes one there, and a hand-edited one is ignored, not
+     refused ([ASSUMED] 29). null means "stay at the start pose". */
+  let pose = null;
+  if(o.schema === 3){
+    const pr = poseRead(o.ship.pose);
+    if(typeof pr === "string"){ saveStatus = "REFUSED — "+pr; return false; }
+    pose = pr;
+  }
+
   /* moduleState.core.trade. LOOP 94, session 045. WORLD MODEL §9.8.
      §9.7 checks moduleState for being an object and no further, because
      §9 does not define module contents. `core.trade` is THIS BUILD'S
@@ -2104,6 +2216,9 @@ function loadGame(){
      build writes.
      ABSENT LOADS AS AN EMPTY COUNTER. Every 043 file lacks it and
      §9.8 says no schema bump is owed, so absence is legal. [ASSUMED].
+     065: a bump HAS now been taken (2 -> 3, loop 105). Absence stays
+     legal in both: it is WORLD [DECISION] 30, which is not tied to a
+     schema number.
      `by` values are net trade and may be negative — §7.2, no floor.
      A stale `key` is not checked: mktAvail discards a counter whose key
      is not today's market, which is how it expires on the next jump. */
@@ -2172,6 +2287,10 @@ function loadGame(){
   state.commander.hyperspaceTarget = ht;
 
   for(const k of SHIP_SAVED) state.ship[k] = ship[k];   /* LOOP 97 */
+  /* LOOP 105, ORDERING RULE 2. This runs at SAVE_LOADED, after `q` and
+     `pos` were given the start pose at their declarations and before
+     frame() first runs; nothing after this line resets them. */
+  if(pose){ q = pose[0]; pos = pose[1]; }
 
   state.cargo       = cargo;
   state.visited     = visited;
@@ -2200,7 +2319,9 @@ function loadGame(){
                ", "+Object.keys(cargo).length+" cargo slot(s), "+
                state.visited.length+" visited, market counter "+
                (trade ? Object.keys(trade.by).length+" entr(ies)" : "none")+
-               htNote+reconciled;
+               htNote+reconciled+
+               (pose ? "  (schema 3, pose loaded)"
+                     : "  (schema 2, no pose — start pose; next save writes 3)");
   return true;
 }
 
@@ -2219,10 +2340,35 @@ function saveFileLine(){
   const c = o && o.commander;
   if(!c) return raw.length+" bytes, no commander";
   const t = c.hyperspaceTarget;
-  return raw.length+" bytes  ·  g"+c.galaxy+" s"+c.system+
+  return raw.length+" bytes  ·  schema "+o.schema+"  ·  g"+c.galaxy+" s"+c.system+
          "  day "+c.gameDay+"  "+c.credits+" tenths CR  fuel "+c.fuel+
          "  target "+(t===null ? "null" : t===undefined ? "KEY ABSENT"
                                         : "g"+t.galaxy+" i"+t.index);
+}
+
+/* LOOP 105. Pose lines for the TUNE report. Display rounding only —
+   the file holds full precision. `live` reads q/pos; `disk` reads the
+   file back off storage, saveFileLine()'s rule. */
+function poseText(P, O){
+  const f=(v,d)=>(typeof v==="number" ? v.toFixed(d) : String(v));
+  return "pos "+f(P.x,1)+" "+f(P.y,1)+" "+f(P.z,1)+
+         "  q "+f(O.w,3)+" "+f(O.x,3)+" "+f(O.y,3)+" "+f(O.z,3);
+}
+function poseLiveLine(){
+  return poseText({x:pos[0],y:pos[1],z:pos[2]}, {w:q[0],x:q[1],y:q[2],z:q[3]});
+}
+function poseDiskLine(){
+  let raw; try{ raw = localStorage.getItem(SAVE_KEY); }catch(e){ return "UNREADABLE"; }
+  if(!raw) return "ABSENT";
+  let o; try{ o = JSON.parse(raw); }catch(e){ return "NOT PARSEABLE"; }
+  const p = o && o.ship && o.ship.pose;
+  if(!p) return "none in file (schema "+(o&&o.schema)+")";
+  if(!p.position || !p.orientation) return "MALFORMED";
+  return poseText(p.position, p.orientation);
+}
+function refusedFileLine(){
+  let raw; try{ raw = localStorage.getItem(SAVE_REFUSED_KEY); }catch(e){ return "UNREADABLE"; }
+  return raw === null ? "none" : raw.length+" bytes held";
 }
 
 /* ==================================================================
@@ -2274,6 +2420,11 @@ function wipe(){
 
   mktTaken    = { key:"", by:{} };
   svcFuelLast = null;
+  /* LOOP 105. The pose is saved ship state now, so a wipe that rebuilds
+     the ship rebuilds it too — otherwise the new commander's first file
+     holds the old commander's pose. [ASSUMED], 065. The refused-file
+     copy is NOT cleared: first copy wins, and restoring is undefined. */
+  q = POSE_START_Q.slice(); pos = POSE_START_POS.slice();
 
   saveLast   = null;
   saveStatus = "WIPED — new commander at "+state.system.name+
@@ -2856,7 +3007,7 @@ document.getElementById("bWipe").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 061a — settings\n"+
+    "ELITE: THE CLONES 065a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -2906,6 +3057,11 @@ function writeReport(){
     "last write    "+(saveLast ? new Date(saveLast).toTimeString().slice(0,8)
                                : "nothing written this session")+"\n"+
     "file on disk  "+saveFileLine()+"\n"+
+    /* LOOP 105, session 065. Printed always, like the lines above. */
+    "pose live     "+poseLiveLine()+"\n"+
+    "pose on disk  "+poseDiskLine()+"\n"+
+    "pose guard    "+(poseGuard || "not fired this session")+"\n"+
+    "refused copy  "+refusedFileLine()+(refusedNote ? "  ·  "+refusedNote : "")+"\n"+
     "visited       "+state.visited.length+" system(s)  — LIVE, loop 93 built 043\n"+
     "\n"+worldReport();
   document.getElementById("report").textContent = lastReport;
@@ -3681,6 +3837,12 @@ function jump(){
   /* LOOP 93: `visited` writers are here, the loader, cold-start boot and wipe(). Bare indices, S91. */
   if(state.visited.indexOf(o.index) === -1) state.visited.push(o.index);
 
+  /* LOOP 105, WORLD §9.3 ORDERING RULE 1 — "a jump sets the arrival pose
+     before it saves". THIS BUILD HAS NO ARRIVAL POSE: the jump never has
+     touched `q` or `pos`, and 065 does not invent one without a flight
+     model spec. So the save below writes the pose the ship holds now,
+     which IS its pose in the arrival system — the frame is continuous,
+     not system-local (S191). The rule holds because nothing moves. */
   saveGame();   /* LOOP 87 */
   stateChanged("jump");
   return { ok:true };
