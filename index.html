@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 065a</title>
+<title>ELITE: THE CLONES — 079a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -1924,12 +1924,14 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 065a (unchanged since 061a). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 079a (actions unchanged since 061a; 079a adds one listener). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
-   No listeners are registered in 065a. A listener may read and repaint;
-   issuing an action from one throws (§3.5, constraint 5 in code). */
+   079a registers ONE listener — the scene rebuild after `jump` and
+   `wipe` (LOOP 106a, below the object field). A listener may read and
+   repaint; issuing an action from one throws (§3.5, constraint 5 in
+   code). */
 const stateListeners = [];
 let signalling = false;
 function onStateChanged(fn){ stateListeners.push(fn); }
@@ -2480,9 +2482,27 @@ function shapeRing(){ const v=[],e=[],n=12;
   return {v,e}; }
 const SHAPES=[shapeCube(),shapeOcta(),shapeRing()];
 
+/* LOOP 106a, session 079. [DECISION], Ripley, 078: the field and the
+   stars are seeded from (WORLD_SEED, galaxy, system), not WORLD_SEED
+   alone — loop 20 CLOSED by that decision. The scene is presentation:
+   module-local arrays derived from `state.commander` at boot and again
+   after `jump` and `wipe`, via the ONE listener this build registers.
+   Nothing here reads or writes the save; the file stays byte-identical
+   to 065a's. Deterministic: return to a system and its field is the
+   one you left. SCENE_TAG keeps this stream apart from the market's,
+   which is hash32(hash32(WORLD_SEED,g,s), gameDay) — a 2-arg hash over
+   the system seed; this is a 4-arg hash over WORLD_SEED. [ASSUMED]:
+   44 objects and 260 stars are the 003 counts, unchanged. What a jump
+   does to the SHIP (arrival pose) is loop 106b — flight model spec —
+   and this build still never touches `q` or `pos` on a jump. */
+const SCENE_TAG = 0x5343454E;              /* "SCEN" */
 const objects=[];
-(function buildField(){
-  const r = rng(hash32(WORLD_SEED,0,0));
+const stars=[];
+let sceneG = -1, sceneS = -1;              /* what the scene was built for — TUNE */
+function buildScene(galaxy, system){
+  sceneG = galaxy; sceneS = system;
+  objects.length = 0; stars.length = 0;
+  const r = rng(hash32(WORLD_SEED, galaxy, system, SCENE_TAG));
   for(let i=0;i<44;i++){
     const s = SHAPES[Math.floor(r()*SHAPES.length)];
     const sc = 40 + r()*100;
@@ -2497,16 +2517,17 @@ const objects=[];
     });
     objects.push({ p:[(r()-.5)*2*CELL,(r()-.5)*2*CELL,(r()-.5)*2*CELL], v:verts, e:s.e, r:sc });
   }
-})();
-
-const stars=[];
-(function buildStars(){
-  const r = rng(hash32(WORLD_SEED,1,0));
+  const rs = rng(hash32(WORLD_SEED, galaxy, system, SCENE_TAG+1));
   for(let i=0;i<260;i++){
-    const u=r()*2-1, th=r()*6.283, s=Math.sqrt(1-u*u);
-    stars.push([s*Math.cos(th), s*Math.sin(th), u, 0.25+r()*0.7]);
+    const u=rs()*2-1, th=rs()*6.283, sq=Math.sqrt(1-u*u);
+    stars.push([sq*Math.cos(th), sq*Math.sin(th), u, 0.25+rs()*0.7]);
   }
-})();
+}
+buildScene(state.commander.galaxy, state.commander.system);
+onStateChanged(function(name){
+  if(name === "jump" || name === "wipe")
+    buildScene(state.commander.galaxy, state.commander.system);
+});
 
 /* ---------- canvas ---------- */
 const cv=document.getElementById("cv"), ctx=cv.getContext("2d",{alpha:false});
@@ -3007,7 +3028,7 @@ document.getElementById("bWipe").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 065a — settings\n"+
+    "ELITE: THE CLONES 079a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -3062,6 +3083,10 @@ function writeReport(){
     "pose on disk  "+poseDiskLine()+"\n"+
     "pose guard    "+(poseGuard || "not fired this session")+"\n"+
     "refused copy  "+refusedFileLine()+(refusedNote ? "  ·  "+refusedNote : "")+"\n"+
+    /* LOOP 106a, 079. Which system the drawn scene was built for. A
+       reader compares it with `here`: they must agree, or the listener
+       did not fire. */
+    "scene         g"+sceneG+" s"+sceneS+" · "+objects.length+" objects · "+stars.length+" stars\n"+
     "visited       "+state.visited.length+" system(s)  — LIVE, loop 93 built 043\n"+
     "\n"+worldReport();
   document.getElementById("report").textContent = lastReport;
