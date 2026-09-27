@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 079a</title>
+<title>ELITE: THE CLONES — 082a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -1502,15 +1502,22 @@ function qrot(q,v){
 /* LOOP 105, session 065. THE SYSTEM-START POSE, ONE COPY. WORLD §9.3.
    Read in 065 before a line was written: the pose is `q`, an array in
    [w,x,y,z] order (qmul's convention), and `pos`, [x,y,z]. Boot sets
-   both here and NOTHING ELSE EVER RESETS THEM — jump() does not touch
-   the pose, so the frame is continuous across jumps and is NOT
-   system-local. WORLD [ASSUMED] 26 is false against this build: S191.
-   The boot, the NaN guard and wipe() all read these two constants. */
+   both here. The boot, the NaN guard and wipe() all read these two
+   constants. The frame is continuous across jumps and is NOT
+   system-local (S191) — 065 to 079a never touched `q` or `pos` on a
+   jump. 082a, LOOP 106b, FLIGHT §5: a jump moves `pos` and ONLY `pos`,
+   through setArrival() below — [DECISION], Ripley, 082, FLIGHT [D] 1 (b):
+   the flight model keeps the one owner of its global; the action calls
+   in. `q`, speed, throttle, T are the pilot's and hyperspace does not
+   touch them (FLIGHT §5.3). */
 const POSE_START_Q   = Object.freeze([1,0,0,0]);
 const POSE_START_POS = Object.freeze([0,0,0]);
 let q=POSE_START_Q.slice();
 let pos=POSE_START_POS.slice();
 let speed=0, throttle=0;
+/* FLIGHT [D] 1 (b). The only writer of `pos` outside this section.
+   Position only — nothing else here is an argument, on purpose. */
+function setArrival(p){ pos = [p[0], p[1], p[2]]; }
 
 /* ------------------------------------------------------------------
    CONSTRAINT 2 — INSTRUMENTS ARE NEVER WRONG.
@@ -1924,7 +1931,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 079a (actions unchanged since 061a; 079a adds one listener). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 082a (actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -2493,15 +2500,20 @@ const SHAPES=[shapeCube(),shapeOcta(),shapeRing()];
    which is hash32(hash32(WORLD_SEED,g,s), gameDay) — a 2-arg hash over
    the system seed; this is a 4-arg hash over WORLD_SEED. [ASSUMED]:
    44 objects and 260 stars are the 003 counts, unchanged. What a jump
-   does to the SHIP (arrival pose) is loop 106b — flight model spec —
-   and this build still never touches `q` or `pos` on a jump. */
+   does to the SHIP (arrival pose) is loop 106b — FLIGHT §5 — built in
+   082a as arrivalPoint() below; the scene itself is unchanged. S217:
+   this is a 4-argument hash; the arrival is a 5-argument one. */
 const SCENE_TAG = 0x5343454E;              /* "SCEN" */
 const objects=[];
 const stars=[];
 let sceneG = -1, sceneS = -1;              /* what the scene was built for — TUNE */
-function buildScene(galaxy, system){
-  sceneG = galaxy; sceneS = system;
-  objects.length = 0; stars.length = 0;
+/* 082a: the field for (galaxy, system), as a fresh array. buildScene()
+   copies it into `objects`; arrivalPoint() reads it without touching
+   the drawn scene, so the arrival check is scene-independent (FLIGHT
+   §5.1) — the listener that rebuilds the scene runs AFTER the save.
+   Same draws in the same order as 079a, so the universe cannot move. */
+function fieldObjects(galaxy, system){
+  const out = [];
   const r = rng(hash32(WORLD_SEED, galaxy, system, SCENE_TAG));
   for(let i=0;i<44;i++){
     const s = SHAPES[Math.floor(r()*SHAPES.length)];
@@ -2515,8 +2527,14 @@ function buildScene(galaxy, system){
       let x3=x2*cc-y1*sc2, y3=x2*sc2+y1*cc;
       return [x3*sc, y3*sc, z2*sc];
     });
-    objects.push({ p:[(r()-.5)*2*CELL,(r()-.5)*2*CELL,(r()-.5)*2*CELL], v:verts, e:s.e, r:sc });
+    out.push({ p:[(r()-.5)*2*CELL,(r()-.5)*2*CELL,(r()-.5)*2*CELL], v:verts, e:s.e, r:sc });
   }
+  return out;
+}
+function buildScene(galaxy, system){
+  sceneG = galaxy; sceneS = system;
+  objects.length = 0; stars.length = 0;
+  for(const o of fieldObjects(galaxy, system)) objects.push(o);
   const rs = rng(hash32(WORLD_SEED, galaxy, system, SCENE_TAG+1));
   for(let i=0;i<260;i++){
     const u=rs()*2-1, th=rs()*6.283, sq=Math.sqrt(1-u*u);
@@ -2528,6 +2546,48 @@ onStateChanged(function(name){
   if(name === "jump" || name === "wipe")
     buildScene(state.commander.galaxy, state.commander.system);
 });
+
+/* LOOP 106b, session 082 — HYPERSPACE ARRIVAL, FLIGHT §5.1 and §5.2.
+   [DECISION], Ripley, 079: position seeded per arrival from
+   (WORLD_SEED, galaxy, system, gameDay); orientation, speed and
+   throttle carried through unchanged. gameDay is the ARRIVAL day —
+   read after jump() increments it ([DECISION] 34, Ripley, 081).
+   ARRIVE_TAG sits in the fifth argument, so this stream is a 5-arg
+   hash: distinct from the scene's 4-arg and the market's 2-arg.
+   Clear on exit: a wrapped distance (the field wraps on a 2·CELL cube,
+   wrap() below) of at least CLEARANCE + o.r from every object. Up to
+   ARRIVE_DRAWS draws, first clear wins; if none is clear, the draw
+   with the greatest nearest-object distance — never a fixed point.
+   CLEARANCE 300, 8 draws, the fallback: ALL [ASSUMED], chosen on the
+   page (FLIGHT [A] 5). Job A flies them first. There is no collision
+   model, so clearance is felt, not fatal (FLIGHT §7). Returns the
+   point and what TUNE prints about it; writes nothing. */
+const ARRIVE_TAG    = 0x41525256;          /* "ARRV" */
+const CLEARANCE     = 300;                 /* [ASSUMED] FLIGHT §5.2 */
+const ARRIVE_DRAWS  = 8;                   /* [ASSUMED] FLIGHT §5.2 */
+let arriveLast = null;                     /* TUNE: last arrival this session */
+function arrivalPoint(galaxy, system, gameDay){
+  const r   = rng(hash32(WORLD_SEED, galaxy, system, gameDay, ARRIVE_TAG));
+  const fld = fieldObjects(galaxy, system);
+  let best = null, bestMargin = -Infinity, bestDraw = 0;
+  for(let d=1; d<=ARRIVE_DRAWS; d++){
+    const p = [(r()-.5)*2*CELL, (r()-.5)*2*CELL, (r()-.5)*2*CELL];
+    let margin = Infinity, nearest = Infinity;
+    for(const o of fld){
+      const dist = Math.hypot(wrap(o.p[0]-p[0]), wrap(o.p[1]-p[1]), wrap(o.p[2]-p[2]));
+      if(dist < nearest) nearest = dist;
+      const m = dist - (CLEARANCE + o.r);
+      if(m < margin) margin = m;
+    }
+    if(margin > bestMargin){ bestMargin = margin; best = p; bestDraw = d; }
+    if(margin >= 0){
+      arriveLast = { day:gameDay, draw:d, clear:true, nearest:nearest };
+      return p;
+    }
+  }
+  arriveLast = { day:gameDay, draw:bestDraw, clear:false, nearest:bestMargin };
+  return best;
+}
 
 /* ---------- canvas ---------- */
 const cv=document.getElementById("cv"), ctx=cv.getContext("2d",{alpha:false});
@@ -3028,7 +3088,7 @@ document.getElementById("bWipe").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 079a — settings\n"+
+    "ELITE: THE CLONES 082a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -3087,6 +3147,13 @@ function writeReport(){
        reader compares it with `here`: they must agree, or the listener
        did not fire. */
     "scene         g"+sceneG+" s"+sceneS+" · "+objects.length+" objects · "+stars.length+" stars\n"+
+    /* LOOP 106b, 082. The last arrival this session, read from the value
+       arrivalPoint() returned — never recomputed for display. */
+    "arrival       "+(arriveLast
+       ? "day "+arriveLast.day+" · draw "+arriveLast.draw+" of "+ARRIVE_DRAWS+" · "+
+         (arriveLast.clear ? "clear, nearest "+arriveLast.nearest.toFixed(0)+" u"
+                           : "NONE CLEAR — best of "+ARRIVE_DRAWS+", margin "+arriveLast.nearest.toFixed(0)+" u")
+       : "no jump this session")+"  — clearance "+CLEARANCE+" [ASSUMED]\n"+
     "visited       "+state.visited.length+" system(s)  — LIVE, loop 93 built 043\n"+
     "\n"+worldReport();
   document.getElementById("report").textContent = lastReport;
@@ -3863,11 +3930,13 @@ function jump(){
   if(state.visited.indexOf(o.index) === -1) state.visited.push(o.index);
 
   /* LOOP 105, WORLD §9.3 ORDERING RULE 1 — "a jump sets the arrival pose
-     before it saves". THIS BUILD HAS NO ARRIVAL POSE: the jump never has
-     touched `q` or `pos`, and 065 does not invent one without a flight
-     model spec. So the save below writes the pose the ship holds now,
-     which IS its pose in the arrival system — the frame is continuous,
-     not system-local (S191). The rule holds because nothing moves. */
+     before it saves" — REINSTATED here, 082a, LOOP 106b, FLIGHT §5.1.
+     065a to 079a had no arrival pose (S191); WORLD v1.23 §9.3 reinstated
+     the rule for the build that creates one. After every field above and
+     BEFORE saveGame(): `pos` from the arrival day, clear of the arrival
+     system's field. `q`, speed and throttle are not touched. The scene
+     listener runs after the save; arrivalPoint() does not depend on it. */
+  setArrival(arrivalPoint(o.galaxy, o.index, state.commander.gameDay));
   saveGame();   /* LOOP 87 */
   stateChanged("jump");
   return { ok:true };
