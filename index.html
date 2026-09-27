@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 082a</title>
+<title>ELITE: THE CLONES — 082b</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -2563,7 +2563,13 @@ onStateChanged(function(name){
    model, so clearance is felt, not fatal (FLIGHT §7). Returns the
    point and what TUNE prints about it; writes nothing. */
 const ARRIVE_TAG    = 0x41525256;          /* "ARRV" */
-const CLEARANCE     = 300;                 /* [ASSUMED] FLIGHT §5.2 */
+const CLEARANCE     = 150;                 /* [ASSUMED] — 082b. FLIGHT §5.2
+   said 300; 082a flew it 27 Sep (nearest 429–1110 u, draw 1–2 every
+   time) and the harness put the floor at 348 u. 150 halves the floor
+   (~0.75 s at max speed 200); still below no fallback in 2,560 draws.
+   Not 100: under the largest object radius (140). The field is sparse
+   (44 objects, WORLD [A] 40), so this moves only the closest tenth of
+   arrivals — the median stays ~630 u. Loop 111. */
 const ARRIVE_DRAWS  = 8;                   /* [ASSUMED] FLIGHT §5.2 */
 let arriveLast = null;                     /* TUNE: last arrival this session */
 function arrivalPoint(galaxy, system, gameDay){
@@ -3088,7 +3094,7 @@ document.getElementById("bWipe").addEventListener("click",function(){
 let lastReport = "";
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 082a — settings\n"+
+    "ELITE: THE CLONES 082b — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
