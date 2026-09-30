@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 082b</title>
+<title>ELITE: THE CLONES — 084a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -845,17 +845,17 @@
   <div class="row">
     <label>Max pitch rate <i><span id="vPr"></span> °/s</i></label>
     <input type="range" id="sPr" min="15" max="180" step="5">
-    <div class="note">SPEC 60. <b>[ASSUMED]</b> — 50 felt better in 034, one pass, never alternated, found while testing roll. Not flown under anything hostile.</div>
+    <div class="note">Ship's row <b id="bsPr"></b>. Wren 60 <b>[ASSUMED]</b> — 50 felt better in 034, one pass, never alternated, found while testing roll. Not flown under anything hostile. Dray 40 <b>[ASSUMED]</b> — a guess made to differ, FLIGHT §4.2.</div>
   </div>
   <div class="row">
     <label>Max roll rate <i><span id="vRr"></span> °/s</i></label>
     <input type="range" id="sRr" min="30" max="360" step="10">
-    <div class="note">SPEC 250. <b>[TESTED]</b> 034 — four alternated passes at max speed 200, against a stated prior preference for 280. <b>The 4:1 ratio was true of the 002 pairing</b>; at pitch 50 it is 5.0&times;.</div>
+    <div class="note">Ship's row <b id="bsRr"></b>. Wren 250 <b>[TESTED]</b> 034 — four alternated passes at max speed 200, against a stated prior preference for 280. <b>The 4:1 ratio was true of the 002 pairing</b>; at pitch 50 it is 5.0&times;. Dray 160 <b>[ASSUMED]</b> — a guess, ratio 4.0.</div>
   </div>
   <div class="row">
     <label>Max speed <i><span id="vSp"></span></i></label>
     <input type="range" id="sSp" min="40" max="600" step="10">
-    <div class="note">SPEC 200. <b>[ASSUMED]</b> — never tested. The pitch fault appears <i>at speed</i>, so this number is implicated by the row above it.</div>
+    <div class="note">Ship's row <b id="bsSp"></b>. Wren 200 <b>[ASSUMED]</b> — never tested. The pitch fault appears <i>at speed</i>, so this number is implicated by the row above it. Dray 140 <b>[ASSUMED]</b> — a guess.</div>
   </div>
 
   <div class="sep"></div>
@@ -891,6 +891,20 @@
 
   <div class="sep"></div>
   <h1>DEV STATE — DRIVES THE GAUGES, NOT A GAME MECHANIC</h1>
+
+  <!-- LOOP 110, 084a. THE DEV SHIP SWITCH — FLIGHT [ASSUMED] 9, loop 89's
+       precedent. A Shipwright is docked mode's and EQUIPMENT's and does
+       not exist; this is how the second ship is reached until it does.
+       It is a dev control under ARCH §2.3's exception, not an action and
+       not a price. devSetShip() in the script carries the reasoning. -->
+  <div class="row">
+    <div class="acts" style="margin-top:0"><button id="bShip">SHIP</button></div>
+    <div class="note">Dev control, not a purchase. Hands you a <b>fresh</b> ship of the
+    other class — hull, shields and energy at that ship's maxima, hold at its default — and
+    <b>resets pitch, roll and max speed to that ship's row</b>; any override you were flying
+    is dropped. Cargo rides. Every Dray figure is <b>[ASSUMED]</b>. Saves at once, so
+    <i>file on disk</i> below reads the class.</div>
+  </div>
 
   <div class="row">
     <label>Shield fore <i><span id="vSf"></span></i></label>
@@ -984,8 +998,54 @@ function makeFlightInput(pitch, roll, throttle){
   return Object.freeze({ pitch: pitch, roll: roll, throttle: throttle });
 }
 
-/* ---------- tuning ---------- */
-const SPEC = { dead:6, defl:55, exp:1.6, pitchRate:60, rollRate:250, maxSpeed:200,
+/* ---------- ships — FLIGHT MODEL SPEC §4.2. LOOP 110, 084a ----------
+   [DECISION], Ripley, 079: THE SHIP OWNS its turn rates, its speed and
+   its shield, energy and hull maxima (loop 86 closed by that decision).
+   Two rows, so the rule is real rather than a table of one. THIS TABLE
+   IS THE ONE AUTHOR of all seven figures: `SPEC` below reads its three
+   rates from the starting ship's row, freshShip() reads the maxima and
+   the hold default, the loader reads the ranges (WORLD §9.7), the
+   gauges read the maxima. SHIELD_MAX and ENERGY_MAX are DELETED, not
+   aliased — loop 75's discipline.
+   KEYS ARE BARE; the save writes them qualified (`core:shipWren`) and
+   the loader strips them — WORLD §9.6, the same boundary as cargo.
+   NAMES ARE PLACEHOLDERS — FLIGHT [DECISION] 3, Ripley's. THIS BUILD IS
+   THE FIRST TO SAVE ONE. A later display name need not change the id.
+   STATUS, per FLIGHT §4.2: Wren roll 250 is [TESTED] (034). Wren pitch
+   60, speed 200 and all three maxima are [ASSUMED]. EVERY DRAY FIGURE
+   IS [ASSUMED] — a guess made to differ from the first, not tuned.
+   `holdTonnes` here is the class DEFAULT; the saved value wins (WORLD
+   §9.3), because EQUIPMENT's Large Cargo Bay writes it. */
+const SHIPS = Object.freeze({
+  shipWren: Object.freeze({ pitchRate:60, rollRate:250, maxSpeed:200,
+                            shieldMax:100, energyMax:100, hullMax:100, holdTonnes:20 }),
+  shipDray: Object.freeze({ pitchRate:40, rollRate:160, maxSpeed:140,
+                            shieldMax:140, energyMax:100, hullMax:160, holdTonnes:35 })
+});
+const START_SHIP  = "shipWren";            /* WORLD §9.3: every new commander, and every schema 2/3 file */
+const SHIP_T_KEYS = ["pitchRate","rollRate","maxSpeed"];   /* what the tuner may override */
+function knownShip(id){ return typeof id === "string" && Object.prototype.hasOwnProperty.call(SHIPS, id); }
+
+/* ---------- tuning ----------
+   084a, FLIGHT §4.1. `SPEC` IS NOW THE STARTING SHIP'S ROW for its
+   three rates — read from SHIPS, not written here — plus the pad, key
+   and radar constants, which are the pad's and not a ship's (FLIGHT
+   [ASSUMED] 8). `T` IS AN OVERRIDE ON THE FLOWN SHIP'S VALUES.
+   S52's SHAPE IS KEPT ON PURPOSE (PRIMER §3): saveT() stores the whole
+   of T and the load lays it over the baseline, so a stored value still
+   outranks a changed constant and the TUNE report is still the only
+   source for what was flown.
+   WHAT IS NEW: `forShip` — which ship's row T's three rates were laid
+   over. A stored tuning with no `forShip` was written when one ship
+   existed and reads as the starting ship's — the schema 3 argument
+   (WORLD §9.5), applied to the other file. shipChanged(), in the flight
+   model block, re-derives the three rates when the flown ship is not
+   the one T was laid over. [ASSUMED], FLIGHT [A] 6. */
+const SPEC = { dead:6, defl:55, exp:1.6,
+               pitchRate:SHIPS[START_SHIP].pitchRate,
+               rollRate: SHIPS[START_SHIP].rollRate,
+               maxSpeed: SHIPS[START_SHIP].maxSpeed,
+               forShip:START_SHIP,
                keyUp:0.35, keyDown:0.18,
                radarRange:1200, blip:3,
                radial:true, invP:false, invR:false, mirror:true };
@@ -993,6 +1053,14 @@ let T = Object.assign({}, SPEC);
 try{ const s = localStorage.getItem("dragpad.tuning");
      if(s) T = Object.assign({}, SPEC, JSON.parse(s)); }catch(e){}
 function saveT(){ try{ localStorage.setItem("dragpad.tuning", JSON.stringify(T)); }catch(e){} }
+/* The baseline for a ship: SPEC's pad constants under that ship's three
+   rates. RESET goes here — to the SHIP's row, not to a constant. */
+function shipBaseline(cls){
+  const b = Object.assign({}, SPEC), r = SHIPS[cls];
+  for(const k of SHIP_T_KEYS) b[k] = r[k];
+  b.forShip = cls;
+  return b;
+}
 
 /* ---------- seeded RNG (World Model Spec §3.1) ---------- */
 function hash32(){ let h=2166136261>>>0;
@@ -1518,6 +1586,27 @@ let speed=0, throttle=0;
 /* FLIGHT [D] 1 (b). The only writer of `pos` outside this section.
    Position only — nothing else here is an argument, on purpose. */
 function setArrival(p){ pos = [p[0], p[1], p[2]]; }
+/* LOOP 110, 084a. FLIGHT §4.1, [ASSUMED] 6: "T must be re-derived when
+   the ship changes ... one function". This is it. If the flown ship is
+   not the ship T's three rates were laid over, they are replaced by the
+   flown ship's row and T is saved. Same ship: nothing moves, so an
+   override survives a reload and a wipe that leaves the class alone.
+   Callers: boot (after the load), wipe(), devSetShip().
+   WHAT THE SPEC DID NOT SAY, DECIDED HERE AND NAMED — S226: whether an
+   override SURVIVES a ship change. BUILT AS: it does not. Wren at pitch
+   50 -> Dray -> Wren comes back at the row's 60. That is the literal
+   reading of "re-derived" and the only one that keeps S52's one-object
+   shape. REJECTED FOR NOW: an override remembered per ship — a second
+   stored shape, and FLIGHT's to rule. Returns true if T moved. */
+function shipChanged(){
+  const cls = state.ship.class;
+  if(T.forShip === cls) return false;
+  const r = SHIPS[cls];
+  for(const k of SHIP_T_KEYS) T[k] = r[k];
+  T.forShip = cls;
+  saveT();
+  return true;
+}
 
 /* ------------------------------------------------------------------
    CONSTRAINT 2 — INSTRUMENTS ARE NEVER WRONG.
@@ -1526,8 +1615,11 @@ function setArrival(p){ pos = [p[0], p[1], p[2]]; }
    drops in without renaming anything. The painter below reads from
    here and from nowhere else; there is no second copy of a value for
    display. Speed is written once per frame from the integrator.
-   Maxima: fuel 70 tenths is WORLD MODEL 2. The other TWO are
-   [ASSUMED] - the ship module spec does not exist yet.
+   Maxima: fuel 70 tenths is WORLD MODEL 2. The shield and energy maxima
+   are THE SHIP'S since 084a — SHIPS above, FLIGHT §4.2 — and the
+   gauges read them by `state.ship.class`. Still [ASSUMED] figures.
+   (Until 084a this said "the other TWO are [ASSUMED] - the ship module
+   spec does not exist yet". FLIGHT §4 has owned them since 079.)
    S113, 052: FUEL IS NO LONGER AUTHORED HERE. It is derived from
    `World.MAX_FUEL_LY`. Still three constants; one of them now reads
    its value from somewhere else, which is the point.
@@ -1538,8 +1630,9 @@ function setArrival(p){ pos = [p[0], p[1], p[2]]; }
    HOLD CAPACITY IS NOT HERE. It is `state.ship.holdTonnes` and it is
    save-file state, not a maximum. See the state object.
 ------------------------------------------------------------------- */
-const SHIELD_MAX = 100;   // [ASSUMED]
-const ENERGY_MAX = 100;   // [ASSUMED] displayed as four banks of 25
+/* 084a: SHIELD_MAX and ENERGY_MAX stood here, 100 each. DELETED — they
+   are SHIPS[class].shieldMax and .energyMax. Energy is still displayed
+   as four banks; CONTROL §3.5.3's bank count is not a ship's. */
 /* S113, 052. Was a literal `70`. DERIVED, so the tank has one author.
    Math.round because the multiply is float: 7.0*10 is exact, but 6.9*10
    is 68.99999999999999 and the next person to tune this will not be
@@ -1561,13 +1654,25 @@ const FUEL_MAX   = Math.round(World.MAX_FUEL_LY * 10);   // tenths of a light ye
    thing it warns about does not read as a warning; it reads as a
    heading. The fix is the derivation, not a louder comment. */
 function freshCommander(){
+  /* 084a, WORLD §9.2, [DECISION] 33, Ripley, 081: `cunningPlans` is
+     commander state — the player's tally, not MUNGO's. Last, as §9
+     draws it. NOTHING WRITES IT: the MUNGO runtime that resolves a plan
+     is unbuilt. It is saved, loaded and printed, and that is all. */
   return { credits:1000, legalStatus:0, fuel:FUEL_MAX, gameDay:0,
            galaxy:0, system:51, kills:0,
-           hyperspaceTarget:null };
+           hyperspaceTarget:null,
+           cunningPlans:0 };
 }
-function freshShip(){
-  return { hull:100, shieldFore:100, shieldAft:100, energy:100,
-           cargoUsed:0, holdTonnes:20, speed:0, docked:false };
+/* 084a, LOOP 110. A fresh ship OF A CLASS. Every starting value is the
+   class's row — no literal here, so there is no second copy of a
+   maximum (the `fuel:70` lesson, S113). `class` first, as WORLD §9
+   draws it; bare, qualified at the save boundary. No argument means the
+   starting ship: the cold start and wipe() call it that way. */
+function freshShip(cls){
+  const id = cls || START_SHIP, r = SHIPS[id];
+  return { class:id,
+           hull:r.hullMax, shieldFore:r.shieldMax, shieldAft:r.shieldMax, energy:r.energyMax,
+           cargoUsed:0, holdTonnes:r.holdTonnes, speed:0, docked:false };
 }
 
 const state = {
@@ -1597,6 +1702,9 @@ const state = {
      stopped being harmless the day that document was filed.
      FIELD ORDER MATCHES CORE API §3.1's `ship` line exactly, so the
      two can be read against each other without translating.
+     084a: NOT EXACTLY, SINCE `class` — it leads the object, as WORLD §9
+     draws it, and CORE API §3.1 does not declare it yet. Owed by CORE
+     API, named in FLIGHT §4.3. The other fields keep §3.1's order.
      THE VALUE IS UNCHANGED AT 20 AND IS STILL [ASSUMED] — WORLD MODEL
      §13 [ASSUMED] 10 and §9. This session moved it; it did not tune
      it. Nothing has been played against 20 tonnes.
@@ -1845,11 +1953,25 @@ const SAVE_KEY = "elite.clones.save";
    045a check unchanged and the ship at the system-start pose. The
    file is NOT rewritten at load; the next save writes 3. 1 still
    refuses. Anything else refuses — provisional, a newer file. */
-const SAVE_SCHEMA = 3;                    /* WORLD MODEL §9.5 — what this build WRITES */
-const SAVE_SCHEMA_READS = [2, 3];         /* WORLD MODEL §9.5 — what it READS */
-/* LOOP 105. The refused-file copy. WORLD §13 [DECISION] 31, answered by
-   Ripley in 064 per the 065 handover and NOT YET RECORDED IN WORLD —
-   S192. A refusal copies the raw file here before anything can save
+/* LOOP 110, session 084. SCHEMA 3 -> 4, AND THE SECOND MIGRATION.
+   WORLD MODEL v1.23 §9.5. Two keys become required in 4 — `ship.class`
+   ([DECISION] 32) and `commander.cunningPlans` ([DECISION] 33), both
+   Ripley, 081 — one bump for both. Ripley's commander is a 3 file, so
+   again the provisional refusal is NOT used: a 3 file loads with every
+   check unchanged, the class read as the starting ship and the tally
+   as 0. A DEFAULT, NOT A TRANSFORM. A 2 file stacks the two defaults
+   (no pose, then these). The file is NOT rewritten at load; the next
+   save writes 4. 1 still refuses. Anything else refuses — provisional.
+   THE COST THE OTHER WAY, S190's shape: once this build has saved, the
+   file refuses on 082b and everything older. 065a onward keeps a copy
+   of a refused file; nothing before 065a does — DO NOT ROLL BACK PAST
+   065a. */
+const SAVE_SCHEMA = 4;                    /* WORLD MODEL §9.5 — what this build WRITES */
+const SAVE_SCHEMA_READS = [2, 3, 4];      /* WORLD MODEL §9.5 — what it READS */
+/* LOOP 105. The refused-file copy. WORLD §13 [DECISION] 31, Ripley, 064;
+   recorded in WORLD §9.7 since v1.20 — S192 PAID there. (Until 084a this
+   said "NOT YET RECORDED IN WORLD"; S225, sweep check 10.) A refusal
+   copies the raw file here before anything can save
    over it. FIRST COPY WINS: an existing copy is never overwritten. */
 const SAVE_REFUSED_KEY = SAVE_KEY + ".refused";
 const WORLD_MODEL_VERSION = "1.2.0";      /* WORLD MODEL §9.5 */
@@ -1904,10 +2026,16 @@ const SAVE_MODULES = [
   { id:"core.trade", version:"1.0.0" }
 ];
 
-/* WHICH SHIP FIELDS PERSIST. §9 gives `holdTonnes` and then says "the
-   rest defined in ship module spec". THAT DOCUMENT DOES NOT EXIST, so
-   this list is [ASSUMED] and it is a list rather than a rule so that
-   the ship module spec can replace it in one edit.
+/* WHICH SHIP FIELDS PERSIST. THE FIVE INTEGERS. WORLD §9.3 rules the
+   list — [DECISION], Ripley, 043 — and it is a list rather than a rule
+   on purpose. Whether the four a damage model will move stay in it is
+   §13 [ASSUMED] 21, still open. (Until 084a this said the list was [ASSUMED] because the
+   ship module spec "DOES NOT EXIST"; §9.3 has ruled it since v1.15 and
+   FLIGHT §4 is the ship document since 079.)
+   `class` IS SAVED TOO AND IS NOT IN THIS LIST — 084a, WORLD §9.3: it is
+   the one `ship` key that is not an integer, it has its own check, and
+   it is read BEFORE these five because their ranges depend on it.
+   `pose` likewise has its own pack and read (loop 105).
    OMITTED DELIBERATELY: `speed` and `docked` are runtime — a save that
    restores you at speed 200 is a save that restores a moment, not a
    commander. `cargoUsed` is NOT STORED — WORLD MODEL §9.4 — and is
@@ -1931,7 +2059,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 082a (actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 084a (actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -2000,6 +2128,7 @@ function saveGame(){
   try{
     const p = state.commander, sh = state.ship;
     const ship = {};
+    ship.class = ID_NS + ":" + sh.class;    /* LOOP 110, WORLD §9.3 — qualified on the way out, §9.6 */
     for(const k of SHIP_SAVED) ship[k] = sh[k];
     ship.pose = posePack();                 /* LOOP 105, WORLD §9.3 */
     const obj = {
@@ -2024,7 +2153,8 @@ function saveGame(){
         kills:            p.kills,
         /* §9: null is WRITTEN, never omitted. The empty state has one
            spelling and it is a value. */
-        hyperspaceTarget: p.hyperspaceTarget
+        hyperspaceTarget: p.hyperspaceTarget,
+        cunningPlans:     p.cunningPlans     /* LOOP 110, WORLD §9.2 */
       },
       ship:        ship,
       /* LOOP 95. Qualified on the way out, stripped on the way in.
@@ -2100,10 +2230,11 @@ function loadFrom(raw){
   if(!o || typeof o !== "object"){ saveStatus = "REFUSED — file is not an object"; return false; }
 
   /* --- the three refusals --- */
-  /* LOOP 105. 2 and 3 load; 1 and anything else refuse, as §9.5's table. */
+  /* LOOP 105, LOOP 110. 2, 3 and 4 load; 1 and anything else refuse, as
+     §9.5's table. */
   if(SAVE_SCHEMA_READS.indexOf(o.schema) === -1){
     saveStatus = "REFUSED — schema "+o.schema+", this build reads "+
-                 SAVE_SCHEMA_READS.join(" and "); return false; }
+                 SAVE_SCHEMA_READS.join(", "); return false; }
   if(o.worldSeed !== WORLD_SEED){
     saveStatus = "REFUSED — worldSeed "+o.worldSeed+", this build is "+WORLD_SEED; return false; }
   if(o.worldModelVersion !== WORLD_MODEL_VERSION){
@@ -2121,6 +2252,16 @@ function loadFrom(raw){
   if(!Number.isInteger(c.gameDay)     || c.gameDay     < 0){ saveStatus="REFUSED — gameDay: "+c.gameDay; return false; }
   if(!Number.isInteger(c.kills)       || c.kills       < 0){ saveStatus="REFUSED — kills: "+c.kills; return false; }
   if(!Number.isInteger(c.legalStatus) || c.legalStatus < 0){ saveStatus="REFUSED — legalStatus: "+c.legalStatus; return false; }
+  /* commander.cunningPlans. LOOP 110, WORLD §9.5 and §9.7. Required in a
+     4 file: a non-negative integer, or the file refuses. In a 2 or 3
+     file it is NOT READ — no build writes one there, and a hand-edited
+     one is ignored, not refused ([ASSUMED] 29's rule); it loads as 0. */
+  let cunningPlans = 0;
+  if(o.schema === 4){
+    if(!Number.isInteger(c.cunningPlans) || c.cunningPlans < 0){
+      saveStatus = "REFUSED — cunningPlans: "+c.cunningPlans; return false; }
+    cunningPlans = c.cunningPlans;
+  }
 
   /* cargo. An open-ended map, and every slot is checked. A bad slot
      discards the FILE, not the slot — dropping it silently takes goods
@@ -2188,15 +2329,38 @@ function loadFrom(raw){
      nothing was range-checked. That is a partial load, which §9.7
      forbids. NOW: `ship` must be an object, and every SHIP_SAVED field
      must be present, an integer and in range, or the file refuses.
-     RANGES are the build's own constants, not new numbers:
-     shields 0-SHIELD_MAX, energy 0-ENERGY_MAX. HULL HAS NO CONSTANT and
-     its ceiling is freshShip()'s 100 — [ASSUMED]; a damage model
-     replaces it. `holdTonnes` is 1 or more with no ceiling, because
-     EQUIPMENT can raise it — [ASSUMED]. */
+     084a, LOOP 110, WORLD v1.23 §9.7: THE RANGES ARE THE CLASS'S.
+     `ship.class` is read FIRST — [DECISION] 32, Ripley, 081:
+       absent (every 2 and 3 file)  -> the starting ship. A default.
+       present and known (a 4 file) -> that ship's row.
+       present and unknown, or not a qualified `core:` id, or absent in
+       a 4 file                     -> THE FILE REFUSES. Not repaired.
+     A `class` key in a 2 or 3 file cannot be written by any build and is
+     ignored ([ASSUMED] 29's rule, a second time).
+     Then hull 0-hullMax, shields 0-shieldMax, energy 0-energyMax FOR
+     THAT CLASS — so a hull of 150 passes in a Dray file and refuses in
+     a Wren file. `holdTonnes` is 1 or more with no ceiling, as before:
+     the class supplies the default and the saved value wins (§9.3).
+     (Until 084a the ranges were SHIELD_MAX, ENERGY_MAX and
+     freshShip().hull — the starting ship's row by another name, which
+     is why a 3 file that loaded on 082b loads here.) */
   if(!o.ship || typeof o.ship !== "object" || Array.isArray(o.ship)){
     saveStatus = "REFUSED — ship is missing or not an object"; return false; }
-  const shipMax = { hull: freshShip().hull, shieldFore: SHIELD_MAX,
-                    shieldAft: SHIELD_MAX, energy: ENERGY_MAX };
+  let shipClass = START_SHIP;
+  if(o.schema === 4){
+    const rawClass = o.ship.class;
+    if(typeof rawClass !== "string"){
+      saveStatus = "REFUSED — ship.class: "+rawClass; return false; }
+    const cid = bareId(rawClass);
+    if(cid === null){
+      saveStatus = "REFUSED — ship.class not qualified: "+rawClass; return false; }
+    if(!knownShip(cid)){
+      saveStatus = "REFUSED — ship.class unknown: "+rawClass; return false; }
+    shipClass = cid;
+  }
+  const shipRow = SHIPS[shipClass];
+  const shipMax = { hull: shipRow.hullMax, shieldFore: shipRow.shieldMax,
+                    shieldAft: shipRow.shieldMax, energy: shipRow.energyMax };
   const ship = {};
   for(const k of SHIP_SAVED){
     const v = o.ship[k];
@@ -2206,12 +2370,12 @@ function loadFrom(raw){
     ship[k] = v;
   }
 
-  /* ship.pose. LOOP 105, WORLD §9.5 and §9.7. In a 3 file it is required
-     and a bad one refuses the file. In a 2 file it is NOT READ — no
-     build writes one there, and a hand-edited one is ignored, not
+  /* ship.pose. LOOP 105, WORLD §9.5 and §9.7. In a 3 or a 4 file it is
+     required and a bad one refuses the file. In a 2 file it is NOT READ
+     — no build writes one there, and a hand-edited one is ignored, not
      refused ([ASSUMED] 29). null means "stay at the start pose". */
   let pose = null;
-  if(o.schema === 3){
+  if(o.schema >= 3){
     const pr = poseRead(o.ship.pose);
     if(typeof pr === "string"){ saveStatus = "REFUSED — "+pr; return false; }
     pose = pr;
@@ -2294,7 +2458,9 @@ function loadFrom(raw){
   state.commander.system           = c.system;
   state.commander.kills            = c.kills;
   state.commander.hyperspaceTarget = ht;
+  state.commander.cunningPlans     = cunningPlans;      /* LOOP 110 */
 
+  state.ship.class = shipClass;                         /* LOOP 110 — before the five, as it was read */
   for(const k of SHIP_SAVED) state.ship[k] = ship[k];   /* LOOP 97 */
   /* LOOP 105, ORDERING RULE 2. This runs at SAVE_LOADED, after `q` and
      `pos` were given the start pose at their declarations and before
@@ -2329,8 +2495,15 @@ function loadFrom(raw){
                state.visited.length+" visited, market counter "+
                (trade ? Object.keys(trade.by).length+" entr(ies)" : "none")+
                htNote+reconciled+
-               (pose ? "  (schema 3, pose loaded)"
-                     : "  (schema 2, no pose — start pose; next save writes 3)");
+               /* LOOP 110. What the load SUPPLIED is said in words, per
+                  schema — the migration is readable off this line. */
+               (o.schema === 4
+                  ? "  (schema 4, pose loaded, class "+ID_NS+":"+shipClass+", cunningPlans "+cunningPlans+")"
+                : o.schema === 3
+                  ? "  (schema 3 -> 4: pose loaded; class absent — "+ID_NS+":"+START_SHIP+
+                    "; cunningPlans absent — 0; next save writes 4)"
+                  : "  (schema 2 -> 4: no pose — start pose; class absent — "+ID_NS+":"+START_SHIP+
+                    "; cunningPlans absent — 0; next save writes 4)");
   return true;
 }
 
@@ -2349,10 +2522,15 @@ function saveFileLine(){
   const c = o && o.commander;
   if(!c) return raw.length+" bytes, no commander";
   const t = c.hyperspaceTarget;
+  /* 084a: the class and the tally AS THE FILE HOLDS THEM — read off
+     disk, so a 3 file says so here until the next save. */
+  const fc = o.ship ? o.ship.class : undefined;
   return raw.length+" bytes  ·  schema "+o.schema+"  ·  g"+c.galaxy+" s"+c.system+
          "  day "+c.gameDay+"  "+c.credits+" tenths CR  fuel "+c.fuel+
          "  target "+(t===null ? "null" : t===undefined ? "KEY ABSENT"
-                                        : "g"+t.galaxy+" i"+t.index);
+                                        : "g"+t.galaxy+" i"+t.index)+
+         "  class "+(fc===undefined ? "KEY ABSENT" : fc)+
+         "  plans "+(c.cunningPlans===undefined ? "KEY ABSENT" : c.cunningPlans);
 }
 
 /* LOOP 105. Pose lines for the TUNE report. Display rounding only —
@@ -2434,6 +2612,11 @@ function wipe(){
      holds the old commander's pose. [ASSUMED], 065. The refused-file
      copy is NOT cleared: first copy wins, and restoring is undefined. */
   q = POSE_START_Q.slice(); pos = POSE_START_POS.slice();
+  /* LOOP 110, 084a. The new commander is in the starting ship. If the
+     wiped one was not, T's three rates are the old ship's and are
+     re-derived. Same class: T is untouched, as a wipe has always left
+     it. T is tuning, not save state; this does not recreate the file. */
+  shipChanged();
 
   saveLast   = null;
   saveStatus = "WIPED — new commander at "+state.system.name+
@@ -2445,6 +2628,41 @@ function wipe(){
 
 /* THE LOAD ITSELF. Above the boot IIFE — see the note at the top. */
 const SAVE_LOADED = loadGame();
+/* LOOP 110, 084a. T was laid over a ship's row before the save was read
+   (the tuning block is at the top of the file). If the ship the load
+   left behind is not that ship — a refused file after a session in the
+   other ship is the reachable case — the three rates are re-derived
+   here, before the first frame. Same ship: nothing moves. */
+shipChanged();
+
+/* LOOP 110, 084a. THE DEV SHIP SWITCH. FLIGHT [ASSUMED] 9, loop 89's
+   precedent; ARCH §2.3's exception — a dev control writes state
+   directly, IS NOT AN ACTION and is not to be copied as a pattern. A
+   Shipwright (docked mode's, EQUIPMENT's) replaces it and will be an
+   action with a price.
+   WHAT IT DOES, all [ASSUMED] — no document says what a dev switch
+   hands you: a FRESH ship of the class, so hull, shields and energy sit
+   at that class's maxima and the hold at its default. It has to write
+   all five: a Dray's hull of 160 left in a Wren would save a file this
+   build's own loader refuses (§9.7).
+   CARGO RIDES. Dray (35 t) to Wren (20 t) with more than 20 t aboard
+   leaves an OVER-FULL HOLD, which is a legal state (PRIMER §3,
+   DECLARATIVE §5.3) and had no way to occur until this control — S45.
+   `speed` and `docked` are the moment's and are carried.
+   IT SAVES, which the four sliders do not: a class change that is not
+   on disk reads as a fault on the `file on disk` line. It does not
+   signal — nothing listens for it, and a signal belongs to an action. */
+function devSetShip(cls){
+  if(!knownShip(cls)) return false;
+  const was = state.ship;
+  state.ship = freshShip(cls);
+  state.ship.cargoUsed = holdUsed();
+  state.ship.speed  = was.speed;
+  state.ship.docked = was.docked;
+  shipChanged();
+  saveGame();
+  return true;
+}
 
 /* ---------- boot the world. Galaxy 0 only; 1-7 wait to be asked. ----------
    LOOP 90, session 039. THIS NO LONGER TIMES ANYTHING, AND THAT IS THE
@@ -2558,8 +2776,13 @@ onStateChanged(function(name){
    wrap() below) of at least CLEARANCE + o.r from every object. Up to
    ARRIVE_DRAWS draws, first clear wins; if none is clear, the draw
    with the greatest nearest-object distance — never a fixed point.
-   CLEARANCE 300, 8 draws, the fallback: ALL [ASSUMED], chosen on the
-   page (FLIGHT [A] 5). Job A flies them first. There is no collision
+   CLEARANCE 150 (ruling 35, Ripley, 082 — the constant below carries
+   why), 8 draws, the fallback: ALL [ASSUMED] (FLIGHT [A] 5); flown on
+   eight arrivals, not felt. (082a to 082b this line said "CLEARANCE
+   300 ... chosen on the page ... Job A flies them first", four lines
+   above a constant that reads 150 — S224, sweep check 15, 084.) The
+   fallback is the draw of greatest MARGIN, dist − (CLEARANCE + o.r)
+   on the worst object, as FLIGHT §5.2 has it. There is no collision
    model, so clearance is felt, not fatal (FLIGHT §7). Returns the
    point and what TUNE prints about it; writes nothing. */
 const ARRIVE_TAG    = 0x41525256;          /* "ARRV" */
@@ -2924,9 +3147,15 @@ function paintConsole(){
   const sh=state.ship, cm=state.commander;
   fillBar(gSpd, sh.speed/Math.max(1,T.maxSpeed));
   nSpd.textContent=sh.speed.toFixed(0);
-  fillBar(gFore, sh.shieldFore/SHIELD_MAX); nFore.textContent=sh.shieldFore.toFixed(0)+"%";
-  fillBar(gAft,  sh.shieldAft/SHIELD_MAX);  nAft.textContent=sh.shieldAft.toFixed(0)+"%";
-  const per=ENERGY_MAX/4;
+  /* 084a, LOOP 110. The ranges are the flown ship's — FLIGHT §4.1,
+     CONTROL §3.5.3 "Bar, percent". The percent is OF THAT SHIP'S
+     MAXIMUM: on the starting ship (max 100) it is the number it always
+     was; on a ship whose maximum is 140, 140 points reads 100%.
+     Constraint 2: value and class are both read from state, here. */
+  const row=SHIPS[sh.class];
+  fillBar(gFore, sh.shieldFore/row.shieldMax); nFore.textContent=(sh.shieldFore/row.shieldMax*100).toFixed(0)+"%";
+  fillBar(gAft,  sh.shieldAft/row.shieldMax);  nAft.textContent=(sh.shieldAft/row.shieldMax*100).toFixed(0)+"%";
+  const per=row.energyMax/4;
   for(let i=0;i<4;i++) fillBar(bk[i], (sh.energy-i*per)/per);
   nEne.textContent=(sh.energy/per).toFixed(1);
   fillBar(gFuel, cm.fuel/FUEL_MAX);
@@ -3018,10 +3247,22 @@ const map=[["sDead","vDead","dead",0],["sDefl","vDefl","defl",0],["sExp","vExp",
 const devMap=[["sSf","vSf","ship","shieldFore"],["sSa","vSa","ship","shieldAft"],
               ["sEn","vEn","ship","energy"],["sFu","vFu","commander","fuel"]];
 function syncDev(){
+  /* 084a. The three ship sliders run to the FLOWN SHIP's maxima — set
+     before the value, or a Dray's 140 is clamped to a stale max of 100
+     by the control and the slider shows a number state does not hold. */
+  const row = SHIPS[state.ship.class];
+  document.getElementById("sSf").max = row.shieldMax;
+  document.getElementById("sSa").max = row.shieldMax;
+  document.getElementById("sEn").max = row.energyMax;
   for(const [sid,vid,grp,key] of devMap){
     document.getElementById(sid).value=state[grp][key];
     document.getElementById(vid).textContent=state[grp][key];
   }
+  document.getElementById("bShip").textContent =
+    "SHIP: "+ID_NS+":"+state.ship.class+" — TAP TO SWITCH";
+  document.getElementById("bsPr").textContent = row.pitchRate;
+  document.getElementById("bsRr").textContent = row.rollRate;
+  document.getElementById("bsSp").textContent = row.maxSpeed;
 }
 for(const [sid,vid,grp,key] of devMap){
   document.getElementById(sid).addEventListener("input",function(){
@@ -3074,8 +3315,20 @@ document.getElementById("tuneBtn").addEventListener("click",function(){
 document.getElementById("bClose").addEventListener("click",function(){
   tuner.classList.remove("open");
 });
+/* 084a, FLIGHT §4.1: RESET goes to the FLOWN SHIP's baseline, not to a
+   constant. On the starting ship that is what it always was. THE LABEL
+   STILL SAYS "002 BASELINE" and on the second ship that is not what it
+   does — left as it is because three documents name the button by that
+   label; S227, CONTROL's. */
 document.getElementById("bReset").addEventListener("click",function(){
-  T=Object.assign({},SPEC); saveT(); syncUI();
+  T=shipBaseline(state.ship.class); saveT(); syncUI();
+});
+/* LOOP 110. One button, cycles the table. With two rows it is a toggle. */
+document.getElementById("bShip").addEventListener("click",function(){
+  const ids = Object.keys(SHIPS);
+  devSetShip(ids[(ids.indexOf(state.ship.class)+1) % ids.length]);
+  syncUI();
+  if(panelEl.classList.contains("open")) PANELS[panelCur].render();
 });
 /* LOOP 87: two taps, the label is the confirmation. 042b: the repaint belongs here. */
 let wipeArmed = false;
@@ -3092,15 +3345,32 @@ document.getElementById("bWipe").addEventListener("click",function(){
    the clipboard directly. It used to be read back out of the textarea's
    .value via el.select(), which is what made the box focusable. */
 let lastReport = "";
+/* LOOP 110, 084a. The flown ship's row, and what T holds against it.
+   Both computed at write time from SHIPS, state and T — nothing stored. */
+function shipRowLine(){
+  const r = SHIPS[state.ship.class];
+  return "P "+r.pitchRate+" R "+r.rollRate+" S "+r.maxSpeed+
+         "  ·  shield "+r.shieldMax+" energy "+r.energyMax+" hull "+r.hullMax+
+         " hold "+r.holdTonnes;
+}
+function overrideLine(){
+  const r = SHIPS[state.ship.class];
+  if(T.forShip !== state.ship.class) return "MISMATCH — shipChanged() did not run";
+  const d = SHIP_T_KEYS.filter(k => T[k] !== r[k]).map(k => k+" "+T[k]+" (row "+r[k]+")");
+  return d.length ? "override: "+d.join(", ") : "no override — the ship's row";
+}
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 082b — settings\n"+
+    "ELITE: THE CLONES 084a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
-    "pitch rate    "+T.pitchRate+" deg/s\n"+
-    "roll rate     "+T.rollRate+" deg/s\n"+
-    "max speed     "+T.maxSpeed+"\n"+
+    /* 084a. The flown value, then the flown ship's row beside it — the
+       report is the only source for what was flown (PRIMER §8.1), and
+       now it also says what the ship would fly untouched. */
+    "pitch rate    "+T.pitchRate+" deg/s  (ship "+SHIPS[state.ship.class].pitchRate+")\n"+
+    "roll rate     "+T.rollRate+" deg/s  (ship "+SHIPS[state.ship.class].rollRate+")\n"+
+    "max speed     "+T.maxSpeed+"  (ship "+SHIPS[state.ship.class].maxSpeed+")\n"+
     "key ramp up   "+T.keyUp.toFixed(2)+" s\n"+
     "key ramp down "+T.keyDown.toFixed(2)+" s\n"+
     "curve         "+(T.radial?"radial":"per-axis")+"\n"+
@@ -3138,7 +3408,15 @@ function writeReport(){
        An instrument that is silent when clean cannot be told apart from
        an instrument that is not running, and a save is precisely the
        kind of thing that silently stops working. */
-    "\n\nsave key      "+SAVE_KEY+"\n"+
+    /* LOOP 110, 084a. The ship, read from state at write time. Printed
+       always. `tuning for` must name the same ship as `ship.class`, or
+       shipChanged() did not run — two lines that must agree, the
+       `scene`/`here` shape. */
+    "\n\nship.class    "+ID_NS+":"+state.ship.class+"\n"+
+    "ship row      "+shipRowLine()+"\n"+
+    "tuning for    "+ID_NS+":"+T.forShip+"  ·  "+overrideLine()+"\n"+
+    "cunningPlans  "+state.commander.cunningPlans+"  — nothing writes it yet\n"+
+    "\nsave key      "+SAVE_KEY+"\n"+
     "save schema   "+SAVE_SCHEMA+"  ·  world model "+WORLD_MODEL_VERSION+"\n"+
     "load at boot  "+saveStatus+"\n"+
     "last write    "+(saveLast ? new Date(saveLast).toTimeString().slice(0,8)
