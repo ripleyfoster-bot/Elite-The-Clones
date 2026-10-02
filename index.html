@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 086a</title>
+<title>ELITE: THE CLONES — 088a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -981,7 +981,14 @@
        S92, 043b. A corrected decision left standing at the point of
        use. The comment a reader reaches first outranks the one eight
        hundred lines below it, and PROJECT PRIMER Part B reads these
-       comments as the only source for sessions 036-042. -->
+       comments as the only source for sessions 036-042.
+
+       LOOP 113, 088a. THE FIRST TAP NO LONGER STAYS ARMED. It stands
+       down when TUNE is left (FLY, or the page going hidden) and
+       after 5 s [ASSUMED], whichever comes first; a tap after that
+       is a first tap again. Through 086a it stayed armed until the
+       second tap or a reload — S239. The bWipe handler in the script
+       carries the rule and the reasoning. -->
   <div class="acts"><button id="bWipe">WIPE SAVE FILE</button></div>
   <pre id="report"></pre>
 </div>
@@ -2060,7 +2067,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 086a (actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 088a (actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -3324,6 +3331,7 @@ document.getElementById("tuneBtn").addEventListener("click",function(){
   tuner.classList.add("open"); refreshTune();
 });
 document.getElementById("bClose").addEventListener("click",function(){
+  disarmWipe();                 /* LOOP 113, 088a: leaving TUNE stands the wipe down */
   tuner.classList.remove("open");
 });
 /* 084a, FLIGHT §4.1: RESET goes to the FLOWN SHIP's baseline, not to a
@@ -3336,7 +3344,13 @@ document.getElementById("bClose").addEventListener("click",function(){
    the old label and gave S227 to CONTROL. TWO do — FLIGHT §4.1.2 (and
    its §6 debt row) and PRIMER §3's tuning row — and CONTROL names
    neither the button nor the radar note. The string was always this
-   file's. Both documents still quote the old label and owe the new one.
+   file's.
+   S241, 088a: 086a's last sentence here read "Both documents still
+   quote the old label and owe the new one." ONE DOES. PRIMER s087
+   (session 087) annotated its §3 tuning row with the new label. As
+   read at 088, FLIGHT v1.2 §4.1.2 and its §6 debt row still say the
+   button reads the old label; the next FLIGHT revision owes the new
+   one.
    RESET replaces the whole of T, so it also resets the pad, key and
    radar constants, as it always has; the label names the part that
    differs by ship. */
@@ -3350,13 +3364,57 @@ document.getElementById("bShip").addEventListener("click",function(){
   syncUI();
   if(panelEl.classList.contains("open")) PANELS[panelCur].render();
 });
-/* LOOP 87: two taps, the label is the confirmation. 042b: the repaint belongs here. */
-let wipeArmed = false;
+/* LOOP 87: two taps, the label is the confirmation. 042b: the repaint belongs here.
+
+   LOOP 113, 088a — S239. AN ARMED WIPE NOW STANDS DOWN.
+   Through 086a `wipeArmed` was cleared in one place, after the wipe.
+   The first tap armed the button and nothing disarmed it but the
+   second tap or a reload — not FLY, not time. Seen armed on device,
+   1 October 22:26; how it got armed is unproved.
+
+   THE RULE — [DECISION], Ripley, 088, option (a): it stands down ON
+   LEAVING TUNE AND AFTER A SHORT DELAY, whichever comes first.
+   · LEAVING TUNE is the FLY button, the only thing that closes the
+     panel — AND THE PAGE GOING HIDDEN: a home-swipe, an app switch,
+     the lock. The second is this build's reading of "leaving",
+     [ASSUMED], and Ripley's to overturn. The reason: a hidden page's
+     timers may be frozen, so without it the button could sit armed
+     behind the lock screen for as long as the phone is in a pocket.
+   · THE DELAY is WIPE_DISARM_MS — 5 s, [ASSUMED]. A guess from the
+     s088 handover, never tuned. Change the one constant.
+
+   THE DEADLINE IS A CLOCK READING, NOT ONLY A TIMER. The timer puts
+   the LABEL back. The tap handler also reads Date.now() against the
+   deadline, so a timer that was frozen, throttled or late cannot
+   leave a second tap live: A TAP AFTER THE DEADLINE IS A FIRST TAP,
+   and it arms again. The timer is for the label; the clock is for
+   the save.
+
+   disarmWipe() is the ONE place the flag, the deadline, the timer and
+   the label are put back, and every path goes through it — the
+   timer, FLY, the hidden page, and the wipe itself.
+   PRESENTATION ONLY. wipe() is untouched, nothing here is saved, and
+   nothing here signals. */
+const WIPE_DISARM_MS = 5000;    /* [ASSUMED] — see above */
+let wipeArmed = false, wipeDeadline = 0, wipeTimer = null;
+function disarmWipe(){
+  wipeArmed = false; wipeDeadline = 0;
+  if(wipeTimer !== null){ clearTimeout(wipeTimer); wipeTimer = null; }
+  document.getElementById("bWipe").textContent = "WIPE SAVE FILE";
+}
+document.addEventListener("visibilitychange",function(){
+  if(document.visibilityState === "hidden") disarmWipe();
+});
 document.getElementById("bWipe").addEventListener("click",function(){
-  if(!wipeArmed){ wipeArmed = true; this.textContent = "TAP AGAIN TO DESTROY SAVE"; return; }
+  if(!wipeArmed || Date.now() > wipeDeadline){
+    disarmWipe();               /* clears a stale timer before arming afresh */
+    wipeArmed = true; wipeDeadline = Date.now() + WIPE_DISARM_MS;
+    wipeTimer = setTimeout(disarmWipe, WIPE_DISARM_MS);
+    this.textContent = "TAP AGAIN TO DESTROY SAVE"; return;
+  }
   const r = wipe();
   if(r.ok){ chartSel = state.system; mktOpen = null; mktBuyQ = 0; mktSellQ = 0; }
-  wipeArmed = false; this.textContent = "WIPE SAVE FILE";
+  disarmWipe();
   syncUI();
   if(panelEl.classList.contains("open")) PANELS[panelCur].render();
   refreshTune();
@@ -3381,7 +3439,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 086a — settings\n"+
+    "ELITE: THE CLONES 088a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
