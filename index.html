@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 090a</title>
+<title>ELITE: THE CLONES — 091a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -881,7 +881,11 @@
     <input type="range" id="sRad" min="300" max="3000" step="50">
     <div class="note">How far the radar sees. Field cell is 2000 units. At this ship's
       max speed, <b id="bsRadSp"></b>/s (its row), the default <b id="bsRadR"></b> is
-      <b id="bsRadT"></b> s from rim to centre. Guess.</div>
+      <b id="bsRadT"></b> s from rim to centre. Guess.
+      <b>Since 091a the radar shows ships as well as objects</b> — amber is a pirate,
+      white is police, bright green is a trader, and a ship's blip is 2 px bigger
+      than an object's. Who is here today is on the <i>contacts</i> lines of the
+      report below. Colours and size are <b>[ASSUMED]</b>. No ship can fire in 091a.</div>
   </div>
 
   <div class="row">
@@ -927,7 +931,8 @@
       copy, refreshed when this panel opens and at no other moment.
       <b>Since 090a energy and shields recharge</b> — energy +6 a second, each
       shield +4 a second drawn from energy, shields off below energy 10. All
-      three figures are <b>[ASSUMED]</b>, COMBAT §6.1's, never flown. Drag one
+      three figures are <b>[ASSUMED]</b>, COMBAT §6.1's — seen working on
+      device 3 Oct in 090a, <b>not timed</b>. Drag one
       down, press FLY and watch the gauge climb. <b>Hull has no slider and never
       recharges</b>; the ship switch above hands a fresh one. Fuel is moved by a jump
       and by the market's Fuel service, since 037. <b>This slider
@@ -1004,6 +1009,8 @@
    Flight input carries three fields. There is no yaw field to set, and
    the integrator below builds its angular velocity as [wx, 0, wz] with
    a literal zero on the y axis. Adding yaw would mean changing both.
+   091a: "the integrator" is flightStep(), and a CONTACT's input is made
+   by this same function — a pirate has no yaw either (COMBAT §3.4).
 ------------------------------------------------------------------- */
 function makeFlightInput(pitch, roll, throttle){
   return Object.freeze({ pitch: pitch, roll: roll, throttle: throttle });
@@ -1363,9 +1370,23 @@ function deriveSystem(worldSeed, galaxy, index, tally) {
     species = [size, col, tex, form].filter(Boolean).join(" ");
   }
 
+  /* 091a. `dangerRating` — WORLD §4: "Derived: dangerRating = 7 -
+     government". THE ONE LINE HERE THAT IS NOT THE RIG'S: the block
+     header says "ported verbatim", and it was until this. It is not a
+     draw — `r` is not touched, so the universe cannot move, and the
+     self-check rows below still decide that. WHY HERE: DECLARATIVE
+     §4.1.1 marked `system.dangerRating` *not held* (S209) and left
+     "derived at read time, or computed by the generator" to the combat
+     build. DECIDED, [ASSUMED]: the generator — `state.system` IS this
+     record, so a rule that reads the path reads a number with no second
+     object in between. First reader: spawnContacts(), COMBAT §3.2.
+     REJECTED: a function called at each use — the whitelisted path
+     would still read `undefined`. DECLARATIVE §4.1.1 and CORE API §3.1
+     (S212) owe the mark's removal; worldgen.html does not carry it. */
   const sys = { galaxy, index, x, y, government, economy, techLevel, population,
     productivity, radiusKm, starClass, scoopable, stationTypeRaw, name, dem, species,
-    govName: GOVERNMENT[government], ecoName: ECONOMY[economy] };
+    govName: GOVERNMENT[government], ecoName: ECONOMY[economy],
+    dangerRating: 7 - government };
 
   /* §8.3 + Word Banks §4–§6 */
   const d = describe(sys, sub(descSeed, TAG_DESC, galaxy, index), tally);
@@ -2093,12 +2114,13 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 090a (actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 091a (actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
    079a registers ONE listener — the scene rebuild after `jump` and
-   `wipe` (LOOP 106a, below the object field). A listener may read and
+   `wipe` (LOOP 106a, below the object field). 091a: STILL ONE — it
+   also calls spawnContacts(), COMBAT §3.2. A listener may read and
    repaint; issuing an action from one throws (§3.5, constraint 5 in
    code). */
 const stateListeners = [];
@@ -2559,11 +2581,17 @@ function saveFileLine(){
   /* 084a: the class and the tally AS THE FILE HOLDS THEM — read off
      disk, so a 3 file says so here until the next save. */
   const fc = o.ship ? o.ship.class : undefined;
+  /* S258, 091a: and the hull AS THE FILE HOLDS IT. The `hull` line above
+     reads state; a collision does not save (COMBAT §11), so until the
+     next save the two differ — and after a full close and reopen this
+     is the figure that says whether damage survived (WORLD [A] 21). */
+  const fh = o.ship ? o.ship.hull : undefined;
   return raw.length+" bytes  ·  schema "+o.schema+"  ·  g"+c.galaxy+" s"+c.system+
          "  day "+c.gameDay+"  "+c.credits+" tenths CR  fuel "+c.fuel+
          "  target "+(t===null ? "null" : t===undefined ? "KEY ABSENT"
                                         : "g"+t.galaxy+" i"+t.index)+
          "  class "+(fc===undefined ? "KEY ABSENT" : fc)+
+         "  hull "+(fh===undefined ? "KEY ABSENT" : fh)+
          "  plans "+(c.cunningPlans===undefined ? "KEY ABSENT" : c.cunningPlans);
 }
 
@@ -2799,8 +2827,16 @@ function buildScene(galaxy, system){
 }
 buildScene(state.commander.galaxy, state.commander.system);
 onStateChanged(function(name){
-  if(name === "jump" || name === "wipe")
+  if(name === "jump" || name === "wipe"){
     buildScene(state.commander.galaxy, state.commander.system);
+    /* 091a, COMBAT §3.2: one population draw per arrival. Runtime, like
+       the scene — nothing is saved, no action is issued. After a jump
+       `pos` is already the arrival point (jump() sets it before it
+       signals); after a wipe it is the start pose. spawnContacts() is
+       below the flight model and carries the rest. */
+    spawnContacts(name === "jump" ? "on arrival"
+                                  : "after the wipe (the start pose stands in)");
+  }
 });
 
 /* LOOP 106b, session 082 — HYPERSPACE ARRIVAL, FLIGHT §5.1 and §5.2.
@@ -3059,25 +3095,46 @@ function keyAxes(dt){
   return [ curve(kRawP), curve(kRawR) ];
 }
 
-/* ---------- flight model ---------- */
-function integrate(input, dt){
-  const pr = T.pitchRate*Math.PI/180, rr = T.rollRate*Math.PI/180;
-  const sp = T.invP?-1:1, sr = T.invR?-1:1;
+/* ---------- flight model ----------
+   091a, COMBAT §3.4: "contacts use the same integrator as the player
+   with their own blueprint's rates". Through 090a integrate() WAS the
+   integrator and read the globals `q`, `pos`, `speed` and `T`, so
+   nothing else could be flown by it. THE STEP IS NOW flightStep(): the
+   same lines in the same order, on a body `b` = { q, pos, speed } and
+   the three figures it is handed. TWO CALLERS: integrate(), for the
+   player — `T`'s rates, with the two invert toggles folded into them;
+   and contactsStep(), for each contact — its hull's row from SHIPS.
+   CONSTRAINT 1 IS HERE: `wy` is the literal zero it always was, and
+   the input is makeFlightInput()'s three fields for both callers.
+   THE PLAYER'S FLIGHT IS UNCHANGED — the claim to test, and the 091
+   harness tests it: the same inputs give the same `q`, `pos` and
+   `speed`, bit for bit, as 090a. (A sign of exactly 1 or -1 multiplied
+   in a different order is the only arithmetic that moved, and that is
+   exact.) FLIGHT §3 says "the integrator ... reads three numbers from
+   `T`" — true of integrate() only, now. FLIGHT owes the sentence; S262. */
+function flightStep(b, input, pr, rr, maxSpeed, dt){
   // body-frame angular velocity: pitch about x, roll about z, YAW ABOUT Y IS ZERO
-  const wx = -input.pitch*pr*sp;
+  const wx = -input.pitch*pr;
   const wy = 0;
-  const wz = -input.roll*rr*sr;
+  const wz = -input.roll*rr;
   const ang = Math.hypot(wx,wy,wz)*dt;
   if(ang>1e-7){
     const ax=wx/Math.hypot(wx,wy,wz), az=wz/Math.hypot(wx,wy,wz);
     const s=Math.sin(ang/2);
-    q = qnorm(qmul(q,[Math.cos(ang/2), ax*s, 0, az*s]));
+    b.q = qnorm(qmul(b.q,[Math.cos(ang/2), ax*s, 0, az*s]));
   }
-  const target = input.throttle*T.maxSpeed;
-  speed += (target-speed)*Math.min(1, dt*1.6);
-  const fwd = qrot(q,[0,0,1]);
-  pos[0]+=fwd[0]*speed*dt; pos[1]+=fwd[1]*speed*dt; pos[2]+=fwd[2]*speed*dt;
+  const target = input.throttle*maxSpeed;
+  b.speed += (target-b.speed)*Math.min(1, dt*1.6);
+  const fwd = qrot(b.q,[0,0,1]);
+  b.pos[0]+=fwd[0]*b.speed*dt; b.pos[1]+=fwd[1]*b.speed*dt; b.pos[2]+=fwd[2]*b.speed*dt;
   return { wx:-wx, wz:-wz };
+}
+function integrate(input, dt){
+  const sp = T.invP?-1:1, sr = T.invR?-1:1;
+  const b = { q:q, pos:pos, speed:speed };
+  const out = flightStep(b, input, T.pitchRate*Math.PI/180*sp, T.rollRate*Math.PI/180*sr, T.maxSpeed, dt);
+  q = b.q; speed = b.speed;      /* `pos` is the same array, moved in place — as it always was */
+  return out;
 }
 
 /* ==================================================================
@@ -3090,14 +3147,23 @@ function integrate(input, dt){
    They write `state.ship` direct, as core, and the next save that runs
    persists it (a trade, a jump, the page going hidden) — §6.2, ARCH
    §2.3's exception class. No new saved field, no `schema` change (§12).
-   WHAT IS NOT: contacts, weapons, hits, equipment loss, the legal
-   model — steps 2 to 4. DEATH — at hull 0 NOTHING HAPPENS. [ASSUMED],
+   WHAT IS NOT IN THIS BLOCK: contacts — STEP 2, BUILT IN 091a, the
+   block below this one; weapons, hits, equipment loss, the legal
+   model — steps 3 and 4, unbuilt. DEATH — at hull 0 NOTHING HAPPENS. [ASSUMED],
    the s090 handover's: hull stops at 0 and the ship flies on. §8 and
    §15's "death -> wipe" wait for PANEL's death screen (S249).
    NOT RAISED: `combat.collision` (§11) — there is no declarative tier
    to hear it. NOT WRITTEN: Integrity (BIBLE §4.1) — no MUNGO runtime.
 
-   EVERY FIGURE IS [ASSUMED] — COMBAT [A] 1. Nothing here has flown.
+   EVERY FIGURE IS [ASSUMED] — COMBAT [A] 1.
+   S257, 091a: this ended "Nothing here has flown", and 090a flew the
+   morning it shipped. [TESTED], Ripley's iPhone, 3 October 09:09 to
+   09:31: energy and shields refill; energy holds at the floor while
+   the shields draw; a hit stops the ship; two hits of -21 at 91 of
+   200, hull 100 to 79 to 58; one charge per collision; shields
+   untouched by a collision. NOT FLOWN as of that date: hull 0; a
+   reload with damage; a collision in the Dray. The recharge is SEEN,
+   NOT TIMED, so the figures stay [ASSUMED] — working is not tuned.
 
    THE INTEGER RULE — S252, decided here and named. The four saved
    values are integers and the loader REFUSES a file where one is not
@@ -3193,9 +3259,12 @@ function recharge(dt){
    build with no collision) is pushed out at boot at speed 0: no loss.
 
    `hits` IS FOR TUNE: the last few that cost hull, newest first, and
-   two counts. Runtime only, never saved, never read by the game. */
+   two counts. Runtime only, never saved, never read by the game.
+   091a: `contactCount` is `touchCount` — it counts touches of OBJECTS,
+   and since 091a a "contact" is a ship (COMBAT §3). A rename; nothing
+   else in collide() moved. SHIPS ARE NOT TESTED HERE — S261. */
 const HIT_LOG = 6;
-let contactCount = 0, hitCount = 0;
+let touchCount = 0, hitCount = 0;
 const hits = [];
 function collide(){
   const sh = state.ship, row = SHIPS[sh.class];
@@ -3212,7 +3281,7 @@ function collide(){
       loss = Math.round(row.hullMax * ratio * ratio);
       const was = sh.hull;
       sh.hull = Math.max(0, sh.hull - loss);
-      contactCount++;
+      touchCount++;
       if(loss > 0){
         hitCount++;
         hits.unshift({ loss:loss, speed:Math.abs(speed), max:T.maxSpeed, r:o.r,
@@ -3229,9 +3298,12 @@ function collide(){
   }
 }
 /* The one call the frame makes. Collision first, so a ship stopped
-   this frame shows speed 0 this frame. */
+   this frame shows speed 0 this frame. 091a: then the contacts fly
+   (step 2, below) — after the player has moved, so a pirate steers at
+   where the ship IS this frame. */
 function combatStep(dt){
   collide();
+  contactsStep(dt);
   recharge(dt);
 }
 /* TUNE. Read from state and the runtime log at write time; nothing
@@ -3248,13 +3320,270 @@ function chargeLine(){
          "  ·  energy "+sh.energy+" of "+row.energyMax;
 }
 function hitsLine(){
-  if(!contactCount) return "none this session";
-  return contactCount+" this session, "+hitCount+" cost hull"+
+  if(!touchCount) return "none this session";
+  return touchCount+" this session, "+hitCount+" cost hull"+
     (hits.length ? "  ·  newest first: "+hits.map(function(h){
         return "-"+h.loss+" at "+h.speed.toFixed(0)+" of "+h.max+" (r "+h.r.toFixed(0)+", hull "+h.was+" to "+h.now+", "+
                new Date(h.t).toTimeString().slice(0,8)+")"; }).join("; ")
                  : "");
 }
+
+/* ==================================================================
+   core.combat — STEP 2. 091a. COMBAT §15 step 2: CONTACTS AND SPAWNING
+   (§3). NO WEAPONS. [BUILT], 3 October 2026 — as exported, not one line
+   here had run on a device. (Dated, so it ages visibly — S257's lesson.)
+
+   WHAT IS HERE: the seeded population draw (§3.2), the contact AI
+   (§3.4) and what the window and the radar draw (§3.3). A contact is
+   a ship: a hull from SHIPS (FLIGHT §4.2 — ruling 7), a role, a laser
+   and a pose in the frame the player flies in (§3.1).
+   CONTACTS ARE RUNTIME, NEVER SAVED (§3.1, COMBAT [A] 9). No new saved
+   field, no `schema` change; the file is byte-identical to 090a's.
+   PER-FRAME, §11's right column: contactsStep() neither saves nor
+   signals, and it writes NOTHING IN `state` — a contact is a
+   module-local record, like `objects`.
+   WHAT IS NOT: lasers firing, hits, kills, bounty (step 3); the legal
+   model, so NO +1/+2 police by band and no police attack (§9.4, step
+   4 — `legalStatus` has no writer yet, so neither could be reached).
+   `laser` is ASSIGNED and READ BY NOTHING but TUNE until step 3. A
+   contact carries NO shields, energy or hull yet: nothing can hit one,
+   and a field that is present reads as implemented. Step 3 adds them
+   from the hull's row.
+   NOT RAISED: `combat.contact` (§11) — no declarative tier to hear it.
+
+   EVERY FIGURE IS [ASSUMED] — COMBAT [A] 1. As exported on 3 October
+   2026 nothing in this block had flown.
+
+   FOUR THINGS §3 DID NOT SAY, DECIDED HERE AND NAMED — all [ASSUMED],
+   all Ripley's to overturn:
+
+   1. HOW A CONTACT TURNS TOWARD YOU WITHOUT YAW (constraint 1). It
+      rolls until you sit in its pitch plane, then pitches — the way
+      the player has to. steerTo() below. It rolls the SHORT way: if you
+      are nearer its belly than its roof it rolls to put you under it
+      and pitches down. The input goes through makeFlightInput() — three
+      fields, no yaw to set — and through flightStep(), THE SAME
+      INTEGRATOR the player flies, with the HULL's row for rates and
+      speed (§3.4: "no contact turns faster than its hull allows").
+      Two gains and a fade are new numbers: STEER_*, below.
+   2. A BOOT IS NOT AN ARRIVAL. §3.2 places contacts ">= 600 units from
+      the player's arrival point". At boot and after a wipe there was
+      no arrival. BUILT AS: 600 from WHERE THE SHIP IS when the draw
+      runs. On a jump that IS the arrival point (jump() calls
+      setArrival() before it signals). At boot it is the loaded pose;
+      after a wipe, the start pose. Same seed either way, so a reload
+      draws the same ships (§3.2) — every candidate point is drawn
+      whether or not it is used, so the stream never shifts — and only
+      a point the pose rules out can differ.
+   3. CONTACTS COLLIDE WITH NOTHING. Not with objects, not with you,
+      not with each other: they fly through. §7 says "contacts collide
+      too" and gives ship-to-ship its radii and relative speed, but §15
+      puts collision in step 1 "no contacts" and contacts in step 2 "no
+      weapons", so NO STEP OWNS IT — S261 — and whether 090a's stop and
+      latch (S251) apply between ships is a ruling nobody has made.
+      Not built rather than guessed: a pirate that rams costs hull, and
+      nothing repairs hull but the dev ship switch.
+   4. WHAT A BREAK-OFF FLIES. §3.4: "breaks off for 3 s after passing
+      within 150 units". BUILT AS: no steering, full throttle, straight
+      on for the 3 s — a pass, then it comes round again.
+
+   AND TWO PLACES THE BUILD DEPARTS FROM §3's LETTER, NAMED:
+   S259 — THE OBJECT CLEARANCE IS `CLEARANCE`, NOT 300. §3.2 says ">=
+      300 from every object (FLIGHT §5.2's clearance rule, reused)".
+      300 was FLIGHT's figure the day COMBAT was written; ruling 35
+      (082) made it 150, measured from the object's SURFACE (+ o.r).
+      The rule is reused, so the constant is: one author. COMBAT owes.
+   S260 — A TRADER'S BLIP IS NOT THE OBJECTS' GREEN. §3.3 says pirate
+      amber, police white, trader green — and every object on the radar
+      is already green (#8fe3b0). So a trader is a BRIGHTER green and
+      EVERY SHIP's blip is 2 px bigger than an object's, so a ship is
+      told from a rock by size before colour. The window draws each
+      ship in its role colour too — §3.3 gives the window no colour.
+      A colour is read from the contact's role, never stored apart.
+
+   ONE SHAPE FOR EVERY SHIP (§3.3) — a five-point dart, drawn at
+   HULL_RADIUS, §7's 60. THE CELL WRAPS, so a trader's "straight line
+   through the cell" never leaves it — loop 108's question, unanswered.
+   ================================================================== */
+const SPAWN_TAG          = 0x5350574E;    /* "SPWN". The fifth argument, as ARRIVE_TAG is. */
+const SPAWN_PLAYER_CLEAR = 600;           /* [ASSUMED] §3.2 */
+const SPAWN_DRAWS        = 8;             /* [ASSUMED] — ARRIVE_DRAWS's figure, its own constant: all 8 are always drawn */
+const SPAWN_WREN_SHARE   = 0.7;           /* [ASSUMED] §3.2: 70% shipWren, 30% shipDray */
+const SPAWN_BEAM_TECH    = 8;             /* [ASSUMED] §3.2: pulse below, beam at and above — the SYSTEM's tech level */
+const PIRATE_NEAR          = 800;         /* [ASSUMED] §3.4 */
+const PIRATE_NEAR_THROTTLE = 0.6;         /* [ASSUMED] §3.4 */
+const PIRATE_BREAK_RANGE   = 150;         /* [ASSUMED] §3.4 */
+const PIRATE_BREAK_S       = 3;           /* [ASSUMED] §3.4 */
+const PATROL_THROTTLE      = 0.7;         /* [ASSUMED] §3.4 — trader, and police until provoked */
+const STEER_ROLL_BAND  = 20*Math.PI/180;  /* [ASSUMED], 091a's: full roll rate outside this roll error */
+const STEER_PITCH_BAND = 15*Math.PI/180;  /* [ASSUMED], 091a's: full pitch rate outside this angle off the nose */
+const STEER_FADE       =  3*Math.PI/180;  /* [ASSUMED], 091a's: roll fades out inside this — no spin when on target */
+const HULL_RADIUS = 60;                   /* [ASSUMED] §7 — one radius per hull class. Drawn size only, until S261 */
+/* §3.2's table, ROW FOR ROW — government 0 (Anarchy) first, as COMBAT
+   draws it. LOOKED UP BY `state.system.dangerRating`: this is the
+   field's first reader (COMBAT §12). [lo, hi], both inclusive. */
+const SPAWN_TABLE = Object.freeze([
+  { danger:7, pirate:[3,5], police:[0,0], trader:[0,1] },   /* 0 Anarchy */
+  { danger:6, pirate:[2,4], police:[0,1], trader:[0,1] },   /* 1 Feudal */
+  { danger:5, pirate:[2,3], police:[1,1], trader:[1,1] },   /* 2 Multi-Government */
+  { danger:4, pirate:[1,2], police:[1,1], trader:[1,1] },   /* 3 Dictatorship */
+  { danger:3, pirate:[1,2], police:[1,2], trader:[1,2] },   /* 4 Communist */
+  { danger:2, pirate:[0,1], police:[2,2], trader:[1,2] },   /* 5 Confederacy */
+  { danger:1, pirate:[0,1], police:[2,2], trader:[2,2] },   /* 6 Democracy */
+  { danger:0, pirate:[0,0], police:[2,3], trader:[2,2] }    /* 7 Corporate State */
+]);
+const ROLES = ["pirate","police","trader"];                 /* the draw order. Do not reorder: it is the stream */
+const ROLE_RGB = { pirate:"232,178,58", police:"255,255,255", trader:"70,255,90" };   /* S260 */
+const SHIP_SHAPE = { v:[[0,0,1],[-0.8,0,-0.6],[0.8,0,-0.6],[0,0.3,-0.6],[0,-0.12,-0.6]],
+                     e:[[0,1],[0,2],[0,3],[0,4],[1,3],[2,3],[1,4],[2,4]] };
+const contacts = [];
+let spawnLast = null;                     /* TUNE: what the last draw was made for */
+
+/* §3.2. ONE DRAW PER ARRIVAL: r = rng(hash32(WORLD_SEED, galaxy, system,
+   gameDay, SPAWN_TAG)). Called at boot, and by the scene listener after
+   `jump` and `wipe`. THE STREAM, IN ORDER, and it is fixed whatever the
+   table or the pose says: three counts (one draw per role, even where
+   lo = hi); then per contact, pirates first — one hull draw, three for
+   a uniform orientation, and SPAWN_DRAWS x 3 for position. First clear
+   point wins; if none is clear, the point of greatest margin, as
+   arrivalPoint() does. The field is read through fieldObjects(), not
+   `objects`, so this does not depend on the scene having been rebuilt
+   first — arrivalPoint()'s rule. Writes `contacts` and `spawnLast`;
+   nothing in `state`. */
+function spawnContacts(why){
+  const cm = state.commander, sys = state.system;
+  contacts.length = 0;
+  const row = SPAWN_TABLE.find(function(x){ return x.danger === sys.dangerRating; });
+  const r   = rng(hash32(WORLD_SEED, cm.galaxy, cm.system, cm.gameDay, SPAWN_TAG));
+  const fld = fieldObjects(cm.galaxy, cm.system);
+  const n = {};
+  for(const role of ROLES){
+    const lo = row[role][0], hi = row[role][1];
+    n[role] = lo + Math.floor(r() * (hi - lo + 1));
+  }
+  const laser = sys.techLevel >= SPAWN_BEAM_TECH ? "beam" : "pulse";
+  let fallbacks = 0;
+  for(const role of ROLES) for(let i=0; i<n[role]; i++){
+    const hull = r() < SPAWN_WREN_SHARE ? "shipWren" : "shipDray";
+    const u1 = r(), u2 = r()*2*Math.PI, u3 = r()*2*Math.PI;
+    const a = Math.sqrt(1-u1), b = Math.sqrt(u1);
+    const cq = qnorm([a*Math.sin(u2), a*Math.cos(u2), b*Math.sin(u3), b*Math.cos(u3)]);
+    let chosen = null, best = null, bestM = -Infinity;
+    for(let d=0; d<SPAWN_DRAWS; d++){
+      const p = [(r()-.5)*2*CELL, (r()-.5)*2*CELL, (r()-.5)*2*CELL];
+      let m = Math.hypot(wrap(p[0]-pos[0]), wrap(p[1]-pos[1]), wrap(p[2]-pos[2])) - SPAWN_PLAYER_CLEAR;
+      for(const o of fld){
+        const mm = Math.hypot(wrap(o.p[0]-p[0]), wrap(o.p[1]-p[1]), wrap(o.p[2]-p[2])) - (CLEARANCE + o.r);
+        if(mm < m) m = mm;
+      }
+      if(m > bestM){ bestM = m; best = p; }
+      if(chosen === null && m >= 0) chosen = p;
+    }
+    if(chosen === null){ chosen = best; fallbacks++; }
+    const thr = role === "pirate" ? 1 : PATROL_THROTTLE;
+    contacts.push({ role:role, hull:hull, laser:laser, q:cq, pos:chosen,
+                    speed:thr * SHIPS[hull].maxSpeed,     /* already under way. [ASSUMED] */
+                    breakFor:0 });
+  }
+  spawnLast = { why:why, g:cm.galaxy, s:cm.system, day:cm.gameDay,
+                danger:row.danger, n:n, row:row, fallbacks:fallbacks };
+}
+
+/* CONSTRAINT 1, FOR A CONTACT. Returns [pitch, roll], each in -1..1,
+   that turn a ship at `c` toward the world-frame vector `to`. No yaw:
+   the target is taken into the ship's own frame (x right, y up, z
+   ahead); `phi` is how far round the nose it sits from "up", `theta`
+   how far off the nose. Roll takes phi to zero — or to "down", if that
+   is the shorter roll, and then the pitch is a dive. Pitch is scaled
+   by cos(phi), so the ship pitches as the target comes into its pitch
+   plane, not before. Each band is widened to one frame's turn at the
+   hull's rate, so a slow frame cannot overshoot and hunt.
+   SIGNS, read off flightStep(): +pitch brings a target ABOVE the nose
+   onto it; +roll carries a target off the RIGHT wing up toward "up".
+   Dead ahead: no input. Dead astern: pitch, either way round. */
+function steerTo(c, row, to, dt){
+  const d = qrot(qconj(c.q), to);
+  const lat = Math.hypot(d[0], d[1]);
+  if(lat < 1e-6) return [ d[2] < 0 ? 1 : 0, 0 ];
+  const theta = Math.atan2(lat, d[2]);
+  let phi = Math.atan2(d[0], d[1]), dive = 1;
+  if(Math.abs(phi) > Math.PI/2){ phi -= Math.sign(phi)*Math.PI; dive = -1; }
+  const rr = row.rollRate*Math.PI/180, pr = row.pitchRate*Math.PI/180;
+  const roll  = Math.max(-1, Math.min(1, phi / Math.max(STEER_ROLL_BAND, rr*dt))) *
+                Math.min(1, theta / STEER_FADE);
+  const pitch = dive * Math.min(1, theta / Math.max(STEER_PITCH_BAND, pr*dt)) * Math.cos(phi);
+  return [pitch, roll];
+}
+
+/* §3.4, per frame. A pirate turns toward the player at its hull's
+   rates: throttle 100% until inside PIRATE_NEAR, then 60%; inside
+   PIRATE_BREAK_RANGE it breaks off for PIRATE_BREAK_S (decision 4
+   above). It does not fire — step 3. A trader flies straight at 70%.
+   Police fly the trader's loop: nothing can provoke them yet. The
+   range is the WRAPPED one — the nearest image of the player. */
+function contactsStep(dt){
+  for(const c of contacts){
+    const row = SHIPS[c.hull];
+    let pitch = 0, roll = 0, thr = PATROL_THROTTLE;
+    if(c.role === "pirate"){
+      const rel = [wrap(pos[0]-c.pos[0]), wrap(pos[1]-c.pos[1]), wrap(pos[2]-c.pos[2])];
+      const d = Math.hypot(rel[0], rel[1], rel[2]);
+      if(c.breakFor <= 0 && d < PIRATE_BREAK_RANGE) c.breakFor = PIRATE_BREAK_S;
+      if(c.breakFor > 0){
+        c.breakFor = Math.max(0, c.breakFor - dt);
+        thr = 1;
+      } else {
+        const s = steerTo(c, row, rel, dt);
+        pitch = s[0]; roll = s[1];
+        thr = d > PIRATE_NEAR ? 1 : PIRATE_NEAR_THROTTLE;
+      }
+    }
+    flightStep(c, makeFlightInput(pitch, roll, thr),
+               row.pitchRate*Math.PI/180, row.rollRate*Math.PI/180, row.maxSpeed, dt);
+  }
+}
+
+/* TUNE. Read from state, `spawnLast` and the live contacts at write
+   time; nothing stored for display. `drawn for` must name the same
+   system and day as `here` — the `scene` shape: if it does not, the
+   listener did not run. The report is a snapshot from when TUNE
+   opened; the ships fly on underneath it (S254). */
+function contactRange(c){
+  return Math.hypot(wrap(c.pos[0]-pos[0]), wrap(c.pos[1]-pos[1]), wrap(c.pos[2]-pos[2]));
+}
+function dangerLine(){
+  const s = state.system;
+  return s.dangerRating+"  = 7 - government "+s.government+" ("+s.govName+")  ·  tech "+s.techLevel+
+         ", so "+(s.techLevel >= SPAWN_BEAM_TECH ? "beam" : "pulse")+" lasers — fitted, cannot fire (step 3)";
+}
+function contactsLine(){
+  if(!spawnLast) return "NOT DRAWN — spawnContacts() did not run";
+  const L = spawnLast, here = state.commander;
+  const same = L.g === here.galaxy && L.s === here.system && L.day === here.gameDay;
+  return ROLES.map(function(role){
+      return role+" "+L.n[role]+" (table "+L.row[role][0]+(L.row[role][1] !== L.row[role][0] ? "-"+L.row[role][1] : "")+")";
+    }).join(" · ")+
+    "  ·  drawn for g"+L.g+" s"+L.s+" day "+L.day+" "+L.why+
+    (same ? "" : "  — MISMATCH: here is g"+here.galaxy+" s"+here.system+" day "+here.gameDay)+
+    (L.fallbacks ? "  ·  "+L.fallbacks+" placed by FALLBACK" : "")+
+    "  — every cell [ASSUMED]";
+}
+function contactRows(){
+  if(!contacts.length) return "  (no ships in this system today)\n";
+  return contacts.map(function(c, i){
+    const d = contactRange(c);
+    const doing = c.role !== "pirate" ? "straight line"
+                : c.breakFor > 0     ? "BREAKING OFF, "+c.breakFor.toFixed(1)+" s left"
+                : d > PIRATE_NEAR    ? "closing, full throttle"
+                                     : "closing, 60%";
+    return "  "+(i+1)+" "+(c.role+"      ").slice(0,7)+" "+ID_NS+":"+c.hull+"  "+c.laser+
+           "  ·  "+d.toFixed(0)+" u away"+(d > T.radarRange ? " (off radar)" : "")+
+           "  ·  "+c.speed.toFixed(0)+"/s  ·  "+doing+"\n";
+  }).join("");
+}
+/* Boot. The load has run, so `pos` is the pose the file held — or the
+   start pose. Decision 2 above. */
+spawnContacts("at boot (the pose stands in for the arrival point)");
 
 /* ---------- render ---------- */
 const NEAR=1.2;
@@ -3302,6 +3631,36 @@ function render(){
     ctx.stroke();
   }
 
+  // 091a, COMBAT §3.3: the ships. One shape, turned by the contact's own
+  // `q`, drawn at HULL_RADIUS in the role's colour (S260). Same range
+  // fade and near-plane clip as the field above; that loop is untouched.
+  for(const c of contacts){
+    const rel=[wrap(c.pos[0]-pos[0]), wrap(c.pos[1]-pos[1]), wrap(c.pos[2]-pos[2])];
+    const cc=qrot(cq,rel);
+    const d=Math.hypot(cc[0],cc[1],cc[2]);
+    if(d>CELL*1.35) continue;
+    if(cc[2] < -HULL_RADIUS*2) continue;
+    const a=Math.max(0.10, Math.min(1, 1-d/(CELL*1.2)));
+    ctx.strokeStyle="rgba("+ROLE_RGB[c.role]+","+a.toFixed(2)+")";
+    ctx.beginPath();
+    const pts=SHIP_SHAPE.v.map(function(vv){
+      const w=qrot(c.q,[vv[0]*HULL_RADIUS, vv[1]*HULL_RADIUS, vv[2]*HULL_RADIUS]);
+      return qrot(cq,[rel[0]+w[0], rel[1]+w[1], rel[2]+w[2]]);
+    });
+    for(const e of SHIP_SHAPE.e){
+      let A=pts[e[0]], B=pts[e[1]];
+      if(A[2]<NEAR && B[2]<NEAR) continue;
+      if(A[2]<NEAR||B[2]<NEAR){
+        const t=(NEAR-A[2])/(B[2]-A[2]);
+        const M=[A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t, NEAR];
+        if(A[2]<NEAR) A=M; else B=M;
+      }
+      ctx.moveTo(hw+F*A[0]/A[2], hh-F*A[1]/A[2]);
+      ctx.lineTo(hw+F*B[0]/B[2], hh-F*B[1]/B[2]);
+    }
+    ctx.stroke();
+  }
+
   // centre reticle
   ctx.strokeStyle="rgba(143,227,176,0.35)";
   ctx.beginPath();
@@ -3321,6 +3680,17 @@ function render(){
    That is deliberate - it makes the instrument checkable by eye. A blip
    to starboard means a shape out of the right of the window, or the
    instrument is lying, which constraint 2 forbids.
+   091a, COMBAT §3.3: AND THE SHIPS — the second kind of blip, read
+   from `contacts`, THE SAME RECORDS the window draws and the AI flies
+   (PRIMER §3: "never a parallel list" — there is none), on the same
+   projection, so the same check holds: a coloured blip to
+   starboard is a ship of that colour out of the right of the window.
+   Colour is the contact's role, read at draw time: pirate amber,
+   police white, trader a brighter green than the objects', and every
+   ship 2 px bigger than an object (S260). Drawn after the objects, so
+   a ship is never hidden behind a rock's blip. ("Contacts" in the
+   first sentence is 003's word for the objects; since 091a a contact
+   is a ship.)
 
    Range and blip size are [ASSUMED] and on sliders.                   */
 function drawRadar(){
@@ -3351,6 +3721,20 @@ function drawRadar(){
     rctx.beginPath(); rctx.moveTo(x,y); rctx.lineTo(x,y+st); rctx.stroke();
     rctx.fillStyle="#8fe3b0";
     rctx.fillRect(x-b/2, y+st-b/2, b, b);
+  }
+  const bs=b+2;                              /* S260: a ship is bigger than a rock */
+  for(const s of contacts){
+    const rel=[wrap(s.pos[0]-pos[0]), wrap(s.pos[1]-pos[1]), wrap(s.pos[2]-pos[2])];
+    const d=Math.hypot(rel[0],rel[1],rel[2]);
+    if(d>R) continue;
+    const c=qrot(cq,rel);
+    const x=ox2 + (c[0]/R)*ea;
+    const y=oy2 - (c[2]/R)*eb;
+    const st=Math.max(-sMax, Math.min(sMax, -(c[1]/R)*sMax*2));
+    rctx.strokeStyle="rgba("+ROLE_RGB[s.role]+",0.6)";
+    rctx.beginPath(); rctx.moveTo(x,y); rctx.lineTo(x,y+st); rctx.stroke();
+    rctx.fillStyle="rgb("+ROLE_RGB[s.role]+")";
+    rctx.fillRect(x-bs/2, y+st-bs/2, bs, bs);
   }
 }
 
@@ -3413,6 +3797,8 @@ function frame(now){
   // They write state.ship.hull, .shieldFore, .shieldAft and .energy
   // direct. No save, no signal. Before the speed write below, so a
   // ship a collision stopped reads 0 on the gauge the same frame.
+  // 091a: it also flies the contacts (COMBAT §3.4) — runtime records,
+  // nothing in `state`, so the count of state writers is unchanged.
   combatStep(dt);
 
   // the one write OF SPEED: the integrator's speed (or a collision's
@@ -3660,7 +4046,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 090a — settings\n"+
+    "ELITE: THE CLONES 091a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -3719,6 +4105,13 @@ function writeReport(){
     "charge        "+chargeLine()+"\n"+
     "recharge      energy +"+RECHARGE_ENERGY+"/s · shields +"+RECHARGE_SHIELD+"/s each from energy, off below "+SHIELD_ENERGY_FLOOR+"  [ASSUMED]\n"+
     "collisions    "+hitsLine()+"\n"+
+    /* 091a, COMBAT step 2. `danger` is read from state.system — the
+       field's first print. `contacts` is what the last draw made and
+       what it was drawn for; the rows under it are the live ships,
+       read at write time. */
+    "danger        "+dangerLine()+"\n"+
+    "contacts      "+contactsLine()+"\n"+
+    contactRows()+
     "tuning for    "+ID_NS+":"+T.forShip+"  ·  "+overrideLine()+"\n"+
     "cunningPlans  "+state.commander.cunningPlans+"  — nothing writes it yet\n"+
     "\nsave key      "+SAVE_KEY+"\n"+
