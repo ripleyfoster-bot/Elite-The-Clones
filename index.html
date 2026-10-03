@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 088a</title>
+<title>ELITE: THE CLONES — 090a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -924,10 +924,13 @@
     <input type="range" id="sFu" min="0" max="70" step="1">
     <div class="note">These four write to state. The instruments only ever read it —
       no instrument holds a second copy. These sliders do: a slider position is a
-      copy, refreshed when this panel opens and at no other moment. Nothing
-      recharges: no recharge rate has been designed yet and inventing one here
-      would be a lie. <b>Fuel is the one value the game itself moves</b> — a jump
-      spends it and the market's Fuel service buys it, since 037. <b>This slider
+      copy, refreshed when this panel opens and at no other moment.
+      <b>Since 090a energy and shields recharge</b> — energy +6 a second, each
+      shield +4 a second drawn from energy, shields off below energy 10. All
+      three figures are <b>[ASSUMED]</b>, COMBAT §6.1's, never flown. Drag one
+      down, press FLY and watch the gauge climb. <b>Hull has no slider and never
+      recharges</b>; the ship switch above hands a fresh one. Fuel is moved by a jump
+      and by the market's Fuel service, since 037. <b>This slider
       buys it for nothing, and that is a dev control, not a price.</b> Loop 89.</div>
   </div>
 
@@ -1048,7 +1051,9 @@ function knownShip(id){ return typeof id === "string" && Object.prototype.hasOwn
    existed and reads as the starting ship's — the schema 3 argument
    (WORLD §9.5), applied to the other file. shipChanged(), in the flight
    model block, re-derives the three rates when the flown ship is not
-   the one T was laid over. [ASSUMED], FLIGHT [A] 6. */
+   the one T was laid over. S247, 090a: this ended "[ASSUMED], FLIGHT
+   [A] 6". FLIGHT closed [A] 6 in v1.2 (085) — the re-derive is as
+   built and [TESTED] on both ships. */
 const SPEC = { dead:6, defl:55, exp:1.6,
                pitchRate:SHIPS[START_SHIP].pitchRate,
                rollRate: SHIPS[START_SHIP].rollRate,
@@ -1591,10 +1596,25 @@ const POSE_START_POS = Object.freeze([0,0,0]);
 let q=POSE_START_Q.slice();
 let pos=POSE_START_POS.slice();
 let speed=0, throttle=0;
-/* FLIGHT [D] 1 (b). The only writer of `pos` outside this section.
-   Position only — nothing else here is an argument, on purpose. */
+/* FLIGHT [D] 1 (b). The one entry a JUMP uses to write `pos`.
+   Position only — nothing else here is an argument, on purpose.
+   S248, 090a: this said "The only writer of `pos` outside this
+   section". It never was. THE WRITERS OF `pos`, found by searching for
+   every assignment, as of 090a: integrate(); setArrival() — jump();
+   bump() below — the collision, new in 090a; the loader (`q` and `pos`
+   together, from the saved pose); wipe() (both to the start pose). The
+   last two write directly and have since 065a — FLIGHT v1.3 §3, [A] 16.
+   A claim of "only" is checked by looking for the others. */
 function setArrival(p){ pos = [p[0], p[1], p[2]]; }
-/* LOOP 110, 084a. FLIGHT §4.1, [ASSUMED] 6: "T must be re-derived when
+/* 090a, COMBAT §7. THE COLLISION'S ENTRY — the second function through
+   which something outside the integrator moves the ship, on FLIGHT
+   [D] 1 (b)'s pattern: the flight model keeps the owner, the caller
+   calls in. It sets `pos` AND ZEROES `speed`. Never `q`, never
+   `throttle` — those are the pilot's. One caller: collide().
+   THE ZERO IS THIS BUILD'S, NOT COMBAT'S — S251, [ASSUMED]; collide()
+   carries the reasoning. FLIGHT §3 owes this writer a sentence. */
+function bump(p){ pos = [p[0], p[1], p[2]]; speed = 0; }
+/* LOOP 110, 084a. FLIGHT §4.1 (its [ASSUMED] 6, closed v1.2): "T must be re-derived when
    the ship changes ... one function". This is it. If the flown ship is
    not the ship T's three rates were laid over, they are replaced by the
    flown ship's row and T is saved. Same ship: nothing moves, so an
@@ -1604,8 +1624,11 @@ function setArrival(p){ pos = [p[0], p[1], p[2]]; }
    override SURVIVES a ship change. BUILT AS: it does not. Wren at pitch
    50 -> Dray -> Wren comes back at the row's 60. That is the literal
    reading of "re-derived" and the only one that keeps S52's one-object
-   shape. REJECTED FOR NOW: an override remembered per ship — a second
-   stored shape, and FLIGHT's to rule. Returns true if T moved. */
+   shape. REJECTED: an override remembered per ship — a second stored
+   shape. S247, 090a: this said "REJECTED FOR NOW ... FLIGHT's to
+   rule". FLIGHT RULED IT — [DECISION] 6, Ripley, 089, option (a): a
+   tuning override does not survive a ship change. FLIGHT v1.3. As
+   built since 084a. Returns true if T moved. */
 function shipChanged(){
   const cls = state.ship.class;
   if(T.forShip === cls) return false;
@@ -2037,7 +2060,10 @@ const SAVE_MODULES = [
 /* WHICH SHIP FIELDS PERSIST. THE FIVE INTEGERS. WORLD §9.3 rules the
    list — [DECISION], Ripley, 043 — and it is a list rather than a rule
    on purpose. Whether the four a damage model will move stay in it is
-   §13 [ASSUMED] 21, still open. (Until 084a this said the list was [ASSUMED] because the
+   §13 [ASSUMED] 21, still open — narrowed in WORLD v1.24 to one
+   question: that a reload restores a drained shield drained. 090a IS
+   THE FIRST BUILD THAT MOVES THEM IN PLAY (combatStep(), below the
+   flight model), so it is the first build that can answer it. (Until 084a this said the list was [ASSUMED] because the
    ship module spec "DOES NOT EXIST"; §9.3 has ruled it since v1.15 and
    FLIGHT §4 is the ship document since 079.)
    `class` IS SAVED TOO AND IS NOT IN THIS LIST — 084a, WORLD §9.3: it is
@@ -2067,7 +2093,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 088a (actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 090a (actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -2653,6 +2679,10 @@ shipChanged();
    at that class's maxima and the hold at its default. It has to write
    all five: a Dray's hull of 160 left in a Wren would save a file this
    build's own loader refuses (§9.7).
+   090a: SINCE COLLISION COSTS HULL AND NOTHING REPAIRS IT (COMBAT
+   §6.1 — repair is a docked service, Not yet defined), THIS SWITCH IS
+   THE ONLY WAY TO GET A HULL BACK. That makes a dev control the repair
+   shop until docking exists. Named, not fixed; loop 89's shape.
    CARGO RIDES. Dray (35 t) to Wren (20 t) with more than 20 t aboard
    leaves an OVER-FULL HOLD, which is a legal state (PRIMER §3,
    DECLARATIVE §5.3) and had no way to occur until this control — S45.
@@ -2786,13 +2816,19 @@ onStateChanged(function(name){
    with the greatest nearest-object distance — never a fixed point.
    CLEARANCE 150 (ruling 35, Ripley, 082 — the constant below carries
    why), 8 draws, the fallback: ALL [ASSUMED] (FLIGHT [A] 5); flown on
-   eight arrivals, not felt. (082a to 082b this line said "CLEARANCE
+   THIRTEEN jumps on device AS OF 1 OCTOBER (FLIGHT §5.4), not felt.
+   (S246, 090a: through 088a this said "eight arrivals", undated —
+   084a's count, read as today's for three builds. Dated now, so it
+   ages visibly.) (082a to 082b this line said "CLEARANCE
    300 ... chosen on the page ... Job A flies them first", four lines
    above a constant that reads 150 — S224, sweep check 15, 084.) The
    fallback is the draw of greatest MARGIN, dist − (CLEARANCE + o.r)
-   on the worst object, as FLIGHT §5.2 has it. There is no collision
-   model, so clearance is felt, not fatal (FLIGHT §7). Returns the
-   point and what TUNE prints about it; writes nothing. */
+   on the worst object, as FLIGHT §5.2 has it. 090a: THERE IS A
+   COLLISION MODEL NOW — collide(), COMBAT §7 — so clearance is no
+   longer only felt: an arrival at speed towards an object costs hull.
+   (Through 088a this said "There is no collision model, so clearance
+   is felt, not fatal (FLIGHT §7)".) Death is NOT built — ruling 38.
+   Returns the point and what TUNE prints about it; writes nothing. */
 const ARRIVE_TAG    = 0x41525256;          /* "ARRV" */
 const CLEARANCE     = 150;                 /* [ASSUMED] — 082b. FLIGHT §5.2
    said 300; 082a flew it 27 Sep (nearest 429–1110 u, draw 1–2 every
@@ -3044,6 +3080,182 @@ function integrate(input, dt){
   return { wx:-wx, wz:-wz };
 }
 
+/* ==================================================================
+   core.combat — STEP 1. 090a. COMBAT §15 step 1, LESS DEATH.
+   [DECISION], Ripley, 089, ruling 38: step 1 ships before the death
+   screen. COMBAT §12 read by Ripley — the 090 opener says so; the gate.
+
+   WHAT IS HERE: recharge (§6.1) and collision (§7). Both are PER-FRAME
+   EFFECTS — §11's right column: THEY DO NOT SAVE AND DO NOT SIGNAL.
+   They write `state.ship` direct, as core, and the next save that runs
+   persists it (a trade, a jump, the page going hidden) — §6.2, ARCH
+   §2.3's exception class. No new saved field, no `schema` change (§12).
+   WHAT IS NOT: contacts, weapons, hits, equipment loss, the legal
+   model — steps 2 to 4. DEATH — at hull 0 NOTHING HAPPENS. [ASSUMED],
+   the s090 handover's: hull stops at 0 and the ship flies on. §8 and
+   §15's "death -> wipe" wait for PANEL's death screen (S249).
+   NOT RAISED: `combat.collision` (§11) — there is no declarative tier
+   to hear it. NOT WRITTEN: Integrity (BIBLE §4.1) — no MUNGO runtime.
+
+   EVERY FIGURE IS [ASSUMED] — COMBAT [A] 1. Nothing here has flown.
+
+   THE INTEGER RULE — S252, decided here and named. The four saved
+   values are integers and the loader REFUSES a file where one is not
+   (WORLD §9.7, isIdx). §6.1 gives rates per second; at 60 fps +6/s is
+   0.1 a frame. A fractional energy written to `state` would be saved
+   by the next autosave and refuse on the next load — the whole
+   commander, for a recharge tick. SO `state` ONLY EVER HOLDS WHOLE
+   POINTS: the fraction lives in three runtime accumulators below and
+   a point moves to `state` when a whole one has built up. The hull
+   loss is rounded to a whole point for the same reason. The
+   accumulators are never saved; a reload, a wipe or a ship switch
+   loses or carries under one point, which no instrument can show.
+   REJECTED: rounding in saveGame() — `state` would then hold a value
+   the file does not, and the gauges read `state` (constraint 2).
+   REJECTED: loosening the loader — WORLD's rule, not this build's.
+   ================================================================== */
+const RECHARGE_ENERGY     = 6;    /* points/s. [ASSUMED] COMBAT §6.1 */
+const RECHARGE_SHIELD     = 4;    /* points/s, each shield. [ASSUMED] §6.1 */
+const SHIELD_ENERGY_FLOOR = 10;   /* shields stop below this. [ASSUMED] §6.1 */
+let rcE = 0, rcF = 0, rcA = 0;    /* fractions of a point. Runtime only. */
+
+/* §6.1. Energy first, then the shields draw from it 1:1. An Energy
+   Unit doubles the energy rate — READ FROM `state.equipment.energyUnit`
+   (EQUIPMENT §5.2's id), which nothing in this build can fit: there is
+   no equipment panel. So the x2 is [BUILT], harness only, and cannot
+   be reached on a device. Hull is never touched here: "never in
+   flight". */
+function shieldStep(key, acc, dt, row){
+  const sh = state.ship;
+  if(sh[key] >= row.shieldMax || sh.energy < SHIELD_ENERGY_FLOOR) return 0;
+  acc += RECHARGE_SHIELD * dt;
+  const n = Math.min(Math.floor(acc), row.shieldMax - sh[key], sh.energy);
+  if(n > 0){ sh[key] += n; sh.energy -= n; acc -= n; }
+  return acc;
+}
+function recharge(dt){
+  const sh = state.ship, row = SHIPS[sh.class];
+  const eu = state.equipment.energyUnit;
+  const rate = RECHARGE_ENERGY * (eu && eu.qty > 0 ? 2 : 1);
+  if(sh.energy < row.energyMax){
+    rcE += rate * dt;
+    const n = Math.min(Math.floor(rcE), row.energyMax - sh.energy);
+    if(n > 0){ sh.energy += n; rcE -= n; }
+    if(sh.energy >= row.energyMax) rcE = 0;
+  } else rcE = 0;
+  rcF = shieldStep("shieldFore", rcF, dt, row);
+  rcA = shieldStep("shieldAft",  rcA, dt, row);
+}
+
+/* §7, ruling 3. The ship meets an object when the WRAPPED distance from
+   `pos` to its centre is under its radius `o.r` — arrivalPoint()'s
+   distance. One test per object per frame.
+     hullLoss = hullMax x (speed / maxSpeed)^2, rounded to a whole point
+   COLLISION BYPASSES SHIELDS. Fatal at full speed "shields or not" —
+   except that nothing is fatal yet (above).
+   `maxSpeed` IS T.maxSpeed — the speed the ship is being FLOWN at, the
+   same divisor the speed gauge uses, so A FULL SPEED BAR IS A FULL
+   HULL. [ASSUMED]: §7 says "maxSpeed" and does not say whose; with no
+   override the two are one number. The ratio is capped at 1.
+   THE PUSH-OUT: along the contact normal to `r + 1`, §7's figure.
+
+   S251 — WHAT §7 DID NOT SAY, DECIDED HERE AND NAMED. §7 says the
+   push-out is there "so a single collision costs one hit, not one per
+   frame". IT DOES NOT DO THAT ON ITS OWN. A ship pushed to r + 1 and
+   still flying inward at 100 units/s covers that one unit in under a
+   frame and is charged again: at half speed a quarter of the hull
+   every other frame — gone in a tenth of a second. So this build adds
+   two things, both [ASSUMED], neither COMBAT's:
+     1. bump() ZEROES `speed`. You hit it; you stop. Throttle is left
+        where the pilot put it, so the ship pushes off again — and the
+        speed gauge falling to 0 is the only cue a collision has: there
+        is no flash, no sound and no hull gauge (S250).
+     2. A LATCH, `o.touching`. The hit is charged on first contact.
+        While the ship stays inside the one-unit skin (d <= r + 1) it
+        is the SAME collision: pushed out and stopped each time, no
+        further charge. Moving out past r + 1 clears the latch; coming
+        back is a new collision at whatever speed it arrives with.
+        No new number — r + 1 is §7's own.
+   REJECTED: §7 to the letter (above — every collision over a crawl is
+   fatal). A bounce (there is no velocity vector, and turning the ship
+   means writing `q`, the pilot's). A timed grace period (a new number).
+   Cutting the throttle (the pilot's control, and the strip would then
+   show a position the ship is not flying). The latch without the stop
+   (the ship slides round the object at full speed and the pilot cannot
+   tell he hit it). COMBAT §7 owes the ruling; Ripley's.
+
+   THE SHAPE IS A SPHERE, as §7 has it, [ASSUMED]: inside a cube's faces
+   (its corners stick out and are free), outside an octahedron's — and A
+   RING IS SOLID. You cannot fly through one. Named, not fixed.
+   AN OBJECT RECORD GAINS `touching` AT RUNTIME. Presentation's array,
+   rebuilt on a jump and a wipe, never saved — a new scene has no
+   latches. A pose already inside an object (a save parked there by a
+   build with no collision) is pushed out at boot at speed 0: no loss.
+
+   `hits` IS FOR TUNE: the last few that cost hull, newest first, and
+   two counts. Runtime only, never saved, never read by the game. */
+const HIT_LOG = 6;
+let contactCount = 0, hitCount = 0;
+const hits = [];
+function collide(){
+  const sh = state.ship, row = SHIPS[sh.class];
+  for(const o of objects){
+    const rel = [wrap(pos[0]-o.p[0]), wrap(pos[1]-o.p[1]), wrap(pos[2]-o.p[2])];
+    const d = Math.hypot(rel[0], rel[1], rel[2]);
+    if(d >= o.r){
+      if(o.touching && d > o.r + 1) o.touching = false;
+      continue;
+    }
+    let loss = 0;
+    if(!o.touching){
+      const ratio = Math.min(1, Math.abs(speed) / Math.max(1, T.maxSpeed));
+      loss = Math.round(row.hullMax * ratio * ratio);
+      const was = sh.hull;
+      sh.hull = Math.max(0, sh.hull - loss);
+      contactCount++;
+      if(loss > 0){
+        hitCount++;
+        hits.unshift({ loss:loss, speed:Math.abs(speed), max:T.maxSpeed, r:o.r,
+                       was:was, now:sh.hull, t:Date.now() });
+        if(hits.length > HIT_LOG) hits.length = HIT_LOG;
+      }
+      o.touching = true;
+    }
+    let n;
+    if(d > 1e-6) n = [rel[0]/d, rel[1]/d, rel[2]/d];
+    else { const f = qrot(q,[0,0,1]); n = [-f[0], -f[1], -f[2]]; }   /* dead centre: back out the way it came */
+    const k = (o.r + 1) - d;
+    bump([pos[0]+n[0]*k, pos[1]+n[1]*k, pos[2]+n[2]*k]);
+  }
+}
+/* The one call the frame makes. Collision first, so a ship stopped
+   this frame shows speed 0 this frame. */
+function combatStep(dt){
+  collide();
+  recharge(dt);
+}
+/* TUNE. Read from state and the runtime log at write time; nothing
+   stored for display. S250: THIS LINE IS THE ONLY PLACE HULL CAN BE
+   READ — no spec gives it an instrument (CONTROL's to write), and the
+   report is a snapshot from when TUNE opened, not a live gauge. */
+function hullLine(){
+  const sh = state.ship, row = SHIPS[sh.class];
+  return sh.hull+" of "+row.hullMax+(sh.hull <= 0 ? "  — AT ZERO. Death is not built (ruling 38); the ship flies on" : "");
+}
+function chargeLine(){
+  const sh = state.ship, row = SHIPS[sh.class];
+  return "fore "+sh.shieldFore+" aft "+sh.shieldAft+" of "+row.shieldMax+
+         "  ·  energy "+sh.energy+" of "+row.energyMax;
+}
+function hitsLine(){
+  if(!contactCount) return "none this session";
+  return contactCount+" this session, "+hitCount+" cost hull"+
+    (hits.length ? "  ·  newest first: "+hits.map(function(h){
+        return "-"+h.loss+" at "+h.speed.toFixed(0)+" of "+h.max+" (r "+h.r.toFixed(0)+", hull "+h.was+" to "+h.now+", "+
+               new Date(h.t).toTimeString().slice(0,8)+")"; }).join("; ")
+                 : "");
+}
+
 /* ---------- render ---------- */
 const NEAR=1.2;
 function wrap(v){ const m=((v+CELL)%(2*CELL)+2*CELL)%(2*CELL)-CELL; return m; }
@@ -3197,8 +3409,17 @@ function frame(now){
   const input = makeFlightInput(p, r, throttle);
   const rates = integrate(input, dt);
 
-  // the one write: the integrator's speed becomes the state's speed,
-  // and the speed instrument reads it back from there.
+  // 090a, COMBAT §11: the per-frame effects — collision, then recharge.
+  // They write state.ship.hull, .shieldFore, .shieldAft and .energy
+  // direct. No save, no signal. Before the speed write below, so a
+  // ship a collision stopped reads 0 on the gauge the same frame.
+  combatStep(dt);
+
+  // the one write OF SPEED: the integrator's speed (or a collision's
+  // zero) becomes the state's speed, and the speed instrument reads it
+  // back from there. (Through 088a: "the one write" — it was the only
+  // per-frame write to state at all. Since 090a combatStep() is the
+  // second writer.)
   state.ship.speed = speed;
 
   render();
@@ -3439,7 +3660,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 088a — settings\n"+
+    "ELITE: THE CLONES 090a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -3492,6 +3713,12 @@ function writeReport(){
        `scene`/`here` shape. */
     "\n\nship.class    "+ID_NS+":"+state.ship.class+"\n"+
     "ship row      "+shipRowLine()+"\n"+
+    /* 090a, COMBAT step 1. Hull's only readout — S250. The row above
+       prints the MAXIMA; these three print what the ship holds. */
+    "hull          "+hullLine()+"\n"+
+    "charge        "+chargeLine()+"\n"+
+    "recharge      energy +"+RECHARGE_ENERGY+"/s · shields +"+RECHARGE_SHIELD+"/s each from energy, off below "+SHIELD_ENERGY_FLOOR+"  [ASSUMED]\n"+
+    "collisions    "+hitsLine()+"\n"+
     "tuning for    "+ID_NS+":"+T.forShip+"  ·  "+overrideLine()+"\n"+
     "cunningPlans  "+state.commander.cunningPlans+"  — nothing writes it yet\n"+
     "\nsave key      "+SAVE_KEY+"\n"+
