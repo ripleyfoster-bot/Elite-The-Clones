@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 091a</title>
+<title>ELITE: THE CLONES — 092a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -114,6 +114,11 @@
     color:var(--ink-faint);font-size:9px;letter-spacing:.16em;text-align:center;
     touch-action:none;
   }
+  /* 092a, COMBAT step 3. The zone is the button (CONTROL §4.2) — no
+     graphic. `hot` is the trigger held with a laser that can fire;
+     `dry` is no laser, or no energy. Colours [ASSUMED]. */
+  .fire.hot{color:var(--ink);}
+  .fire.dry{color:#7a5a2a;}
   .throttle{
     flex:0 0 32px;position:relative;
     border-left:1px solid var(--ink-faint);
@@ -790,7 +795,7 @@
       <div class="stem" id="stem"></div>
       <div class="dot" id="dot"></div>
     </div>
-    <div class="fire" id="fire">FIRE ZONE<br>INACTIVE THIS SESSION</div>
+    <div class="fire" id="fire">FIRE ZONE</div>
     <div class="throttle" id="thr">
       <div class="fill" id="thrFill"></div>
       <div class="knob" id="thrKnob"></div>
@@ -885,13 +890,51 @@
       <b>Since 091a the radar shows ships as well as objects</b> — amber is a pirate,
       white is police, bright green is a trader, and a ship's blip is 2 px bigger
       than an object's. Who is here today is on the <i>contacts</i> lines of the
-      report below. Colours and size are <b>[ASSUMED]</b>. No ship can fire in 091a.</div>
+      report below. Colours and size are <b>[ASSUMED]</b>. <b>Since 092a pirates fire</b>,
+      and they go on firing while this panel or any other is open. Police and traders do not fire.</div>
   </div>
 
   <div class="row">
     <label>Blip size <i><span id="vBlip"></span> px</i></label>
     <input type="range" id="sBlip" min="2" max="7" step="1">
     <div class="note">Readable at arm's length?</div>
+  </div>
+
+  <div class="sep"></div>
+  <!-- No blanket confidence marker in this heading — S62's lesson, the
+       tuning heading above. Each row carries its own. -->
+  <h1>COMBAT — STEP 3, SINCE 092a</h1>
+
+  <!-- 092a, COMBAT §4.1: "a laser hits if the target is inside a 2°
+       cone from the mount". ONE number for every laser in the system —
+       yours and theirs. Built as 2° EITHER SIDE of the nose (S268). On
+       a slider because whether 2° can be held on a touch pad is the
+       first thing step 3 has to find out. It is tuning: stored with T,
+       put back to 2 by RESET. -->
+  <div class="row">
+    <label>Laser cone <i><span id="vCone"></span>° either side</i></label>
+    <input type="range" id="sCone" min="1" max="10" step="1">
+    <div class="note">COMBAT §4.1 default 2. <b>[ASSUMED]</b> — never flown. A shot lands only if the
+      target's centre is inside this cone and inside the laser's range. <b>It is one number for
+      every laser: widen it and the pirates hit you more often too.</b> The faint ring round the
+      reticle is this cone, drawn to scale; it is there only when a fore laser is fitted.</div>
+  </div>
+
+  <!-- 092a. THE DEV LASER — the `Laser` letter, option (a), the s092
+       handover's recommendation, [ASSUMED]: the letter arrived blank.
+       Ruling 1 (COMBAT §0.1) keeps an old save unarmed and there is no
+       equipment panel to buy from (S266), so without this the build
+       cannot be tested on the commander he has. A dev control under
+       ARCH §2.3's exception — NOT AN ACTION, NOT A PRICE (EQUIPMENT
+       §5.3 prices it at 400.0 CR). devFitLaser() in the script carries
+       the reasoning. -->
+  <div class="row">
+    <div class="acts" style="margin-top:0"><button id="bLaser">FIT PULSE LASER</button></div>
+    <div class="note">Dev control, not a purchase. Fits <b>one pulse laser to the fore mount</b>
+    and saves at once. One way — nothing here takes it off again. <b>A commander created by
+    092a or later starts with one</b>; a save from before 092a does not (ruling 1), and this
+    is how it gets one until there is an equipment panel. Then FLY and <b>hold the middle
+    zone</b> — or Space.</div>
   </div>
 
   <div class="sep"></div>
@@ -1048,7 +1091,11 @@ function knownShip(id){ return typeof id === "string" && Object.prototype.hasOwn
    084a, FLIGHT §4.1. `SPEC` IS NOW THE STARTING SHIP'S ROW for its
    three rates — read from SHIPS, not written here — plus the pad, key
    and radar constants, which are the pad's and not a ship's (FLIGHT
-   [ASSUMED] 8). `T` IS AN OVERRIDE ON THE FLOWN SHIP'S VALUES.
+   [ASSUMED] 8). 092a: AND `laserCone` — COMBAT §4.1's hit cone, a
+   combat number kept here because this is the one object TUNE's
+   sliders write and RESET puts back. Not a ship's; no ship's row
+   carries it. A stored tuning from before 092a has no such key and
+   reads the 2 below. `T` IS AN OVERRIDE ON THE FLOWN SHIP'S VALUES.
    S52's SHAPE IS KEPT ON PURPOSE (PRIMER §3): saveT() stores the whole
    of T and the load lays it over the baseline, so a stored value still
    outranks a changed constant and the TUNE report is still the only
@@ -1068,6 +1115,7 @@ const SPEC = { dead:6, defl:55, exp:1.6,
                forShip:START_SHIP,
                keyUp:0.35, keyDown:0.18,
                radarRange:1200, blip:3,
+               laserCone:2,              /* 092a. degrees EITHER SIDE of the nose. [ASSUMED] COMBAT §4.1, S268 */
                radial:true, invP:false, invR:false, mirror:true };
 let T = Object.assign({}, SPEC);
 try{ const s = localStorage.getItem("dragpad.tuning");
@@ -1720,6 +1768,18 @@ function freshCommander(){
    maximum (the `fuel:70` lesson, S113). `class` first, as WORLD §9
    draws it; bare, qualified at the save boundary. No argument means the
    starting ship: the cold start and wipe() call it that way. */
+/* 092a, EQUIPMENT §5.4: "`equipment` at new-game is
+   { "core:pulseLaserFore": { "qty": 1 } } and nothing else." A FUNCTION,
+   as the two above are, for the same reason: the cold start and wipe()
+   both call it, so the starting fit has one author. Bare key; qualified
+   at the save boundary (WORLD §9.6).
+   RULING 1 (COMBAT §0.1, Ripley, 079): THE STARTING LASER IS FOR NEW
+   COMMANDERS. A file that loads keeps whatever `equipment` it holds —
+   the loader assigns it over this — so a save from before 092a stays
+   unarmed. Nothing here edits a loaded file. */
+function freshEquipment(){
+  return { pulseLaserFore:{ qty:1 } };
+}
 function freshShip(cls){
   const id = cls || START_SHIP, r = SHIPS[id];
   return { class:id,
@@ -1803,8 +1863,13 @@ const state = {
      while the lines beneath it were corrected one at a time.
 
      `equipment` — §9's { qty } slots. PANEL §8 sells them; there is no
-       equipment panel, no rule engine and no pack loader, so nothing
-       here can write one. Absent means not fitted; nothing writes
+       equipment panel, no rule engine and no pack loader. 092a: THROUGH
+       091a THIS WENT ON "so nothing here can write one". TWO THINGS
+       WRITE ONE NOW, both a fore pulse laser: freshEquipment() — the
+       starting fit, cold start and wipe(), EQUIPMENT §5.4 — and
+       devFitLaser(), the TUNE dev control. Nothing else. FIRST READER
+       OF A LASER SLOT: foreLaser(), combat step 3.
+       Absent means not fitted; nothing writes
        false and nothing writes qty: 0. Each slot's `qty` is VALIDATED
        ON LOAD and a bad slot refuses the file — WORLD §9.7, loop 96,
        043a. S92, 045a: this said "round-trips verbatim so a hand-edited
@@ -1832,7 +1897,7 @@ const state = {
        045a: this said "nothing adds to this array", written in 042 and
        false from 043a. PANEL LAYOUT §4.4's visited mark is the first
        reader and waits on WORLD [DECISION] 28, not on this. */
-  equipment:   {},
+  equipment:   freshEquipment(),   /* 092a — a new commander's. A loaded file's replaces it; ruling 1 */
   flags:       {},
   moduleState: {},
   /* EMPTY HERE ON PURPOSE. §9 draws it as `[51]` and copying that
@@ -2114,7 +2179,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 091a (actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 092a (092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -2592,7 +2657,14 @@ function saveFileLine(){
                                         : "g"+t.galaxy+" i"+t.index)+
          "  class "+(fc===undefined ? "KEY ABSENT" : fc)+
          "  hull "+(fh===undefined ? "KEY ABSENT" : fh)+
-         "  plans "+(c.cunningPlans===undefined ? "KEY ABSENT" : c.cunningPlans);
+         "  plans "+(c.cunningPlans===undefined ? "KEY ABSENT" : c.cunningPlans)+
+         /* 092a: `kills` and `equipment` AS THE FILE HOLDS THEM. A kill
+            saves once (recordKill) and the dev laser saves at once, so
+            these must agree with the live lines above the moment either
+            has run. */
+         "  kills "+(c.kills===undefined ? "KEY ABSENT" : c.kills)+
+         "  equipment "+(o.equipment && typeof o.equipment === "object"
+                           ? (Object.keys(o.equipment).join(",") || "none") : "KEY ABSENT");
 }
 
 /* LOOP 105. Pose lines for the TUNE report. Display rounding only —
@@ -2661,7 +2733,7 @@ function wipe(){
   state.commander   = freshCommander();
   state.ship        = freshShip();
   state.cargo       = {};
-  state.equipment   = {};
+  state.equipment   = freshEquipment();   /* 092a, EQUIPMENT §5.4: the new commander starts armed */
   state.flags       = {};
   state.moduleState = {};
   state.system  = World.system(state.commander.galaxy, state.commander.system);
@@ -3048,8 +3120,67 @@ thrHit.addEventListener("mousedown",function(e){ thrId="m"; setThrottleFromY(e.c
 window.addEventListener("mousemove",function(e){ if(thrId==="m") setThrottleFromY(e.clientY,false); });
 window.addEventListener("mouseup",function(){ if(thrId==="m") thrId=null; });
 
-/* fire zone swallows touches so the page never scrolls */
-document.getElementById("fire").addEventListener("touchstart",e=>e.preventDefault(),{passive:false});
+/* ---------- fire: the whole zone is the button — CONTROL §4.2 ----------
+   092a, COMBAT step 3. "Tap anywhere in the fire zone. Hold to fire
+   continuously." BUILT AS WRITTEN. Through 091a this was one line that
+   swallowed the touch so the page never scrolled; it still does that.
+   `trigger` is the held state and the ONLY thing combat reads from
+   here. `triggerTap` is a latch: a tap that starts and ends between
+   two frames would otherwise never be seen, and §4.2 says a tap fires.
+   playerFire() clears it.
+   ONE TOUCH OWNS THE ZONE, by identifier, as the pad and the throttle
+   do — a second finger in the zone is ignored, and lifting it does not
+   release the first.
+   Mouse, for desktop checking only, as the pad has. KEYBOARD: Space —
+   CONTROL §5, the Hybrid preset's Fire — read in fireHeld() from the
+   `keys` map the flight keys already fill, and NOT while a text field
+   has the focus (the galaxy chart's FIND) or TUNE or a panel is open.
+   THE PAGE GOING HIDDEN RELEASES THE TRIGGER: iOS can end a touch with
+   no touchend when the app is swiped away, and a trigger that stays
+   held drains energy behind the lock screen. [ASSUMED], the wipe
+   button's reasoning (loop 113), applied here.
+   CONTROL §11 ITEM 34 says §4.1 and §4.2 "are owed a revision by loop
+   65's decision". READ AT 092 BEFORE THIS WAS WRITTEN: loop 65 is one
+   of the five PRIMER §7.1.3 declares permanently unknown — its text is
+   in no document. There is no decision to build, so §4.2 is built as
+   it stands. S267. Loop 69 (a joypad grace period) is about the PAD's
+   release rule and is not touched: the pad's handlers are unchanged. */
+const fireEl = document.getElementById("fire");
+let trigger = false, triggerTap = false, fireTouch = null;
+fireEl.addEventListener("touchstart",function(e){
+  e.preventDefault();
+  if(fireTouch !== null) return;
+  fireTouch = e.changedTouches[0].identifier;
+  trigger = true; triggerTap = true; wake();
+},{passive:false});
+fireEl.addEventListener("touchmove",function(e){ e.preventDefault(); },{passive:false});
+function fireEnd(e){
+  e.preventDefault();
+  for(const t of e.changedTouches){
+    if(t.identifier === fireTouch){ fireTouch = null; trigger = false; }
+  }
+}
+fireEl.addEventListener("touchend",fireEnd,{passive:false});
+fireEl.addEventListener("touchcancel",fireEnd,{passive:false});
+fireEl.addEventListener("mousedown",function(){
+  if(fireTouch !== null) return;
+  fireTouch = "m"; trigger = true; triggerTap = true;
+});
+window.addEventListener("mouseup",function(){
+  if(fireTouch === "m"){ fireTouch = null; trigger = false; }
+});
+document.addEventListener("visibilitychange",function(){
+  if(document.visibilityState === "hidden"){ fireTouch = null; trigger = false; triggerTap = false; }
+});
+function fireHeld(){
+  if(trigger || triggerTap) return true;
+  /* Space fires only in the flying view: not while a text field has
+     the focus, and not under TUNE or a panel — a touch cannot reach
+     the zone there either, so the two inputs agree. */
+  const a = document.activeElement;
+  return !!keys[" "] && !(a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) &&
+         !tuner.classList.contains("open") && !panelEl.classList.contains("open");
+}
 
 /* ---------- keyboard (Hybrid preset, flight keys only) ----------
    Control §2: rate is set by "the original's key-held ramp". A held key
@@ -3148,10 +3279,17 @@ function integrate(input, dt){
    persists it (a trade, a jump, the page going hidden) — §6.2, ARCH
    §2.3's exception class. No new saved field, no `schema` change (§12).
    WHAT IS NOT IN THIS BLOCK: contacts — STEP 2, BUILT IN 091a, the
-   block below this one; weapons, hits, equipment loss, the legal
-   model — steps 3 and 4, unbuilt. DEATH — at hull 0 NOTHING HAPPENS. [ASSUMED],
+   block below this one; weapons and hits — STEP 3, BUILT IN 092a, the
+   block below that (through 091a this line read "weapons, hits,
+   equipment loss, the legal model — steps 3 and 4, unbuilt");
+   equipment loss (§6.3 — in no step of §15, S269) and the legal model
+   (step 4), unbuilt. DEATH — at hull 0 NOTHING HAPPENS. [ASSUMED],
    the s090 handover's: hull stops at 0 and the ship flies on. §8 and
    §15's "death -> wipe" wait for PANEL's death screen (S249).
+   092a: STILL SO, AND NOW A LASER CAN PUT IT THERE. Ruling 38 named
+   step 1 only; the s092 handover asked the `Death` letter and it came
+   back blank. Built on its option (a), the recommendation — [ASSUMED],
+   not a ruling.
    NOT RAISED: `combat.collision` (§11) — there is no declarative tier
    to hear it. NOT WRITTEN: Integrity (BIBLE §4.1) — no MUNGO runtime.
 
@@ -3301,9 +3439,14 @@ function collide(){
    this frame shows speed 0 this frame. 091a: then the contacts fly
    (step 2, below) — after the player has moved, so a pirate steers at
    where the ship IS this frame. */
+/* 092a: then the player's laser (step 3). A contact fires inside
+   contactsStep(), before the player does — so in a frame where both
+   would kill, the player's hull is charged first and the kill still
+   lands. Recharge last, as it was: a point spent this frame is spent. */
 function combatStep(dt){
   collide();
   contactsStep(dt);
+  playerFire(dt);
   recharge(dt);
 }
 /* TUNE. Read from state and the runtime log at write time; nothing
@@ -3312,7 +3455,7 @@ function combatStep(dt){
    report is a snapshot from when TUNE opened, not a live gauge. */
 function hullLine(){
   const sh = state.ship, row = SHIPS[sh.class];
-  return sh.hull+" of "+row.hullMax+(sh.hull <= 0 ? "  — AT ZERO. Death is not built (ruling 38); the ship flies on" : "");
+  return sh.hull+" of "+row.hullMax+(sh.hull <= 0 ? "  — AT ZERO. Death is not built; the ship flies on" : "");
 }
 function chargeLine(){
   const sh = state.ship, row = SHIPS[sh.class];
@@ -3332,6 +3475,15 @@ function hitsLine(){
    core.combat — STEP 2. 091a. COMBAT §15 step 2: CONTACTS AND SPAWNING
    (§3). NO WEAPONS. [BUILT], 3 October 2026 — as exported, not one line
    here had run on a device. (Dated, so it ages visibly — S257's lesson.)
+   092a — THE FLOWN RECORD, from the s092 handover §1. [TESTED],
+   Ripley's iPhone, 3 October 14:33 to 15:02 and 22:01 to 22:04: the
+   save loads unchanged; population by government in two systems, both
+   matching the 091 harness (Yakacaen 0/3/2, Besoar 4/1/1); blips amber,
+   white and bright green, bigger than the rocks'; pirates close, pass,
+   break off and return; a reload redraws the same six ships `at boot`;
+   contacts survive a ship switch. EVERY FIGURE STAYS [ASSUMED] — seen
+   working is not tuned. NOT FLOWN as of that date: a trader inside
+   1200 u read at arm's length (S260).
 
    WHAT IS HERE: the seeded population draw (§3.2), the contact AI
    (§3.4) and what the window and the radar draw (§3.3). A contact is
@@ -3349,6 +3501,11 @@ function hitsLine(){
    contact carries NO shields, energy or hull yet: nothing can hit one,
    and a field that is present reads as implemented. Step 3 adds them
    from the hull's row.
+   092a: STEP 3 IS BUILT, BELOW, AND THE FOUR SENTENCES ABOVE DESCRIBE
+   091a. A pirate's `laser` is read and fires; a contact carries
+   `shieldFore`, `shieldAft`, `energy` and `hullPts` from its hull's row.
+   NO DRAW WAS ADDED TO THE STREAM — the four are read off SHIPS after
+   the draws — so the same seed and day place the same ships.
    NOT RAISED: `combat.contact` (§11) — no declarative tier to hear it.
 
    EVERY FIGURE IS [ASSUMED] — COMBAT [A] 1. As exported on 3 October
@@ -3481,9 +3638,22 @@ function spawnContacts(why){
     }
     if(chosen === null){ chosen = best; fallbacks++; }
     const thr = role === "pirate" ? 1 : PATROL_THROTTLE;
+    /* 092a, §5.3: "same shields, same order, from their blueprint's
+       maxima". Read off the hull's row — NOT DRAWN, so the stream above
+       is 091a's exactly. THE HULL'S POINTS ARE `hullPts` — `hull` on a
+       contact has been the CLASS id since 091a (the player's `ship.hull`
+       is points; the two records are not the same shape and this is the
+       one name that collides). `cool`, `shot`, `flash`, `firing`, `fled` are
+       step 3's runtime bookkeeping. Floats, unlike the player's: a
+       contact is never saved, so the integer rule (S252) has no file
+       to protect here. */
+    const hr = SHIPS[hull];
     contacts.push({ role:role, hull:hull, laser:laser, q:cq, pos:chosen,
-                    speed:thr * SHIPS[hull].maxSpeed,     /* already under way. [ASSUMED] */
-                    breakFor:0 });
+                    speed:thr * hr.maxSpeed,              /* already under way. [ASSUMED] */
+                    breakFor:0,
+                    shieldFore:hr.shieldMax, shieldAft:hr.shieldMax,
+                    energy:hr.energyMax, hullPts:hr.hullMax,
+                    cool:0, shot:0, flash:0, firing:false, fled:false });
   }
   spawnLast = { why:why, g:cm.galaxy, s:cm.system, day:cm.gameDay,
                 danger:row.danger, n:n, row:row, fallbacks:fallbacks };
@@ -3518,13 +3688,28 @@ function steerTo(c, row, to, dt){
 /* §3.4, per frame. A pirate turns toward the player at its hull's
    rates: throttle 100% until inside PIRATE_NEAR, then 60%; inside
    PIRATE_BREAK_RANGE it breaks off for PIRATE_BREAK_S (decision 4
-   above). It does not fire — step 3. A trader flies straight at 70%.
-   Police fly the trader's loop: nothing can provoke them yet. The
-   range is the WRAPPED one — the nearest image of the player. */
+   above). A trader flies straight at 70%. The range is the WRAPPED
+   one — the nearest image of the player.
+   092a, STEP 3 — through 091a this said "It does not fire — step 3"
+   and "Police fly the trader's loop: nothing can provoke them yet".
+   · A PIRATE FIRES (§3.4) "when the player is within 1200 units and
+     inside a 15° cone ahead" — pirateFire(), in the step 3 block. The
+     steering and throttle lines are 091a's, untouched: with no shot
+     landing, every ship flies exactly as it did.
+   · A TRADER THAT HAS BEEN HIT FLEES (§3.4): "turn away from the
+     player at full rates, throttle 100%" — steerTo() at the opposite
+     vector. It does not stop fleeing. [ASSUMED]: §3.4 gives no end.
+   · POLICE STILL FLY THE TRADER'S LOOP AND DO NOT RESPOND TO BEING
+     SHOT. "Until provoked (§9.4)" is the legal model's — step 4.
+   · EVERY CONTACT RECHARGES (contactRecharge(), step 3 block). */
 function contactsStep(dt){
   for(const c of contacts){
     const row = SHIPS[c.hull];
     let pitch = 0, roll = 0, thr = PATROL_THROTTLE;
+    if(c.flash > 0) c.flash = Math.max(0, c.flash - dt);
+    if(c.shot  > 0) c.shot  = Math.max(0, c.shot  - dt);
+    c.cool = Math.max(-dt, c.cool - dt);          /* as the player's: see playerFire() */
+    c.firing = false;
     if(c.role === "pirate"){
       const rel = [wrap(pos[0]-c.pos[0]), wrap(pos[1]-c.pos[1]), wrap(pos[2]-c.pos[2])];
       const d = Math.hypot(rel[0], rel[1], rel[2]);
@@ -3537,9 +3722,15 @@ function contactsStep(dt){
         pitch = s[0]; roll = s[1];
         thr = d > PIRATE_NEAR ? 1 : PIRATE_NEAR_THROTTLE;
       }
+      pirateFire(c, rel, d, dt);
+    } else if(c.role === "trader" && c.fled){
+      const rel = [wrap(pos[0]-c.pos[0]), wrap(pos[1]-c.pos[1]), wrap(pos[2]-c.pos[2])];
+      const s = steerTo(c, row, [-rel[0], -rel[1], -rel[2]], dt);
+      pitch = s[0]; roll = s[1]; thr = 1;
     }
     flightStep(c, makeFlightInput(pitch, roll, thr),
                row.pitchRate*Math.PI/180, row.rollRate*Math.PI/180, row.maxSpeed, dt);
+    contactRecharge(c, row, dt);
   }
 }
 
@@ -3554,7 +3745,7 @@ function contactRange(c){
 function dangerLine(){
   const s = state.system;
   return s.dangerRating+"  = 7 - government "+s.government+" ("+s.govName+")  ·  tech "+s.techLevel+
-         ", so "+(s.techLevel >= SPAWN_BEAM_TECH ? "beam" : "pulse")+" lasers — fitted, cannot fire (step 3)";
+         ", so "+(s.techLevel >= SPAWN_BEAM_TECH ? "beam" : "pulse")+" lasers on every ship here";
 }
 function contactsLine(){
   if(!spawnLast) return "NOT DRAWN — spawnContacts() did not run";
@@ -3572,18 +3763,382 @@ function contactRows(){
   if(!contacts.length) return "  (no ships in this system today)\n";
   return contacts.map(function(c, i){
     const d = contactRange(c);
-    const doing = c.role !== "pirate" ? "straight line"
+    const doing = c.role !== "pirate" ? (c.fled ? "FLEEING — it was hit" : "straight line")
                 : c.breakFor > 0     ? "BREAKING OFF, "+c.breakFor.toFixed(1)+" s left"
                 : d > PIRATE_NEAR    ? "closing, full throttle"
                                      : "closing, 60%";
+    /* 092a: what the contact holds, read at write time. Floats, shown
+       whole. `FIRING` is this frame's — the report is a snapshot. */
     return "  "+(i+1)+" "+(c.role+"      ").slice(0,7)+" "+ID_NS+":"+c.hull+"  "+c.laser+
            "  ·  "+d.toFixed(0)+" u away"+(d > T.radarRange ? " (off radar)" : "")+
-           "  ·  "+c.speed.toFixed(0)+"/s  ·  "+doing+"\n";
+           "  ·  "+c.speed.toFixed(0)+"/s  ·  "+doing+(c.firing ? "  ·  FIRING" : "")+
+           "  ·  sh "+c.shieldFore.toFixed(0)+"/"+c.shieldAft.toFixed(0)+
+           " hull "+Math.max(0,c.hullPts).toFixed(0)+" en "+c.energy.toFixed(0)+"\n";
   }).join("");
 }
 /* Boot. The load has run, so `pos` is the pose the file held — or the
    start pose. Decision 2 above. */
 spawnContacts("at boot (the pose stands in for the arrival point)");
+
+/* ==================================================================
+   core.combat — STEP 3. 092a. COMBAT §15 step 3: LASERS AND HITS
+   (§4.1, §5), recordKill (§11), BOUNTY (§5.4), RATING (§10).
+   [BUILT], 3 October 2026 — as exported, not one line here had run on
+   a device. (Dated, so it ages visibly — S257's lesson.)
+
+   WHAT IS HERE. The weapon table (§4.1). The player's FORE laser, read
+   from `state.equipment` — its first reader. Pirates' lasers (§3.4).
+   The hit test, facing (§5.1) and the order of loss (§5.2 items 1, 2
+   and 4; §5.3 for a contact). recordKill() — AN ACTION, the first
+   added since 061a: `kills` +1 and the bounty in one save (§5.4, §11).
+   The rating bands (§10), derived at display, never stored.
+   PER-FRAME, §11's right column: firing, hits landing and a contact's
+   recharge neither save nor signal. The player's shields, energy and
+   hull are written direct, as core; the next save persists them.
+   NO NEW SAVED FIELD, NO `schema` CHANGE (§12). `equipment` gains its
+   first writers (the starting fit and the dev laser); `kills` and
+   `credits` gain combat's write. A file with no kill and no laser is
+   byte-identical to 091a's.
+
+   WHAT IS NOT, AND WHY — each named, none guessed:
+   · THE LEGAL CHANGE. §5.4 and §11 say recordKill "also writes ... the
+     legal change"; §15 puts the legal model (§9) in STEP 4. Built to
+     §15: recordKill writes `kills` and the bounty and NOT
+     `legalStatus`. So in 092a KILLING A TRADER OR A POLICE SHIP COSTS
+     NOTHING, and police do not respond to being shot. S273.
+   · EQUIPMENT LOSS (§6.3, and §5.2 item 3). It is in no step of §15 —
+     S261's shape, S269 — and on any file this build can produce it
+     could not fire: it excludes lasers and nothing else can be fitted.
+   · INTEGRITY −1 per 10% of hull (§5.2 item 2) — no MUNGO runtime.
+   · THE AFT MOUNT. §4.1: "aft fires astern (CONTROL §4.7's rear view
+     is how you aim it)". There is no rear view in this build, so an
+     aft laser is not read and cannot fire.
+   · DEATH (§5.2 item 4, §8). Hull stops at 0 and the ship flies on —
+     step 1's block carries the reasoning and the blank `Death` letter.
+   · MISSILES, ECM, the bomb, the pod — step 4.
+   · NOT RAISED: `combat.hit`, `combat.kill` (§11) — no declarative
+     tier to hear them.
+
+   EVERY FIGURE IS [ASSUMED] — COMBAT [A] 1.
+
+   SIX THINGS §4 AND §5 DID NOT SAY, DECIDED HERE AND NAMED — all
+   [ASSUMED], all Ripley's to overturn:
+   1. WHICH WAY ROUND "A 2° CONE" IS — S268. §4.1: a laser hits "if the
+      target is inside a 2° cone from the mount"; §3.4: a pirate fires
+      "inside a 15° cone ahead". Neither says whether the figure is the
+      whole cone or half of it. BUILT AS: degrees EITHER SIDE of the
+      nose, for both. The 2 is `T.laserCone`, on a TUNE slider, and it
+      is ONE number for every laser — yours and theirs. The test is on
+      the target's CENTRE, as §4.1 has it: at 800 u, 2° is 28 u, inside
+      the 60 u a hull is drawn at.
+   2. "PER FRAME" FOR A CONTINUOUS LASER. §4.1 tests a pulse "once per
+      shot" and a beam or military "per frame", and gives both a rate
+      and a damage per hit. BUILT AS: a pulse or mining laser fires a
+      shot every 1/rate s and lands `damage` if the test passes at that
+      moment; a beam or military lands damage x rate x dt in every
+      frame the test passes — 60 a second on target for a beam, however
+      fast the frames come.
+   3. A CONTACT RECHARGES AND PAYS FOR ITS LASER — S271. §5.3 gives a
+      contact "the same shields, same order"; nothing says its shields
+      refill or its laser costs it energy. BUILT AS: both, on §6.1's
+      and §4.1's own figures — "a contact is a ship" (ruling 7).
+   4. WHAT "HELD" COSTS. §4.1 gives "energy / s held". BUILT AS: the
+      drain runs while the trigger is held with a laser that can fire,
+      hit or miss. At energy 0 the laser stops and the ship does not
+      (§6.1); the next whole point of recharge fires it again.
+   5. NOTHING BLOCKS A SHOT. Rocks and other ships are not in the way
+      (S261: ships collide with nothing). The player's shot lands on
+      the NEAREST contact inside the cone and the range. A pirate's
+      shot can only ever land on the player.
+   6. TWO LASERS ON ONE MOUNT (EQUIPMENT [A] 8 — the slot shape cannot
+      forbid it): the first of LASER_PICK that is fitted fires.
+
+   THE INTEGER RULE (S252) HOLDS FOR THE PLAYER. A beam lands a fraction
+   of a point a frame; the fraction waits in `inF` / `inA` and whole
+   points move to `state`, exactly as the recharge does. The energy a
+   held trigger costs waits in `pEn`. A contact's values are floats —
+   it is never saved.
+
+   S270 — A KILL DOES NOT SURVIVE A RELOAD, AND THE BOUNTY DOES.
+   Contacts are never saved (§3.1) and a boot draws the day's
+   population afresh, so a pirate killed a minute ago is back after a
+   reload — and pays again. §3.1 and COMBAT [A] 9 accept "a reload
+   mid-fight is an escape"; neither had a bounty to weigh. NOT FIXED:
+   remembering the dead would be a saved field (§12 says none).
+   S272 — THE FRAME RUNS UNDER TUNE AND UNDER EVERY PANEL (S254, since
+   091a), so SINCE 092a A PIRATE SHOOTS YOU WHILE YOU READ THE REPORT
+   OR TRADE. Not changed here: whether the world waits for a panel is
+   a ruling nobody has made.
+   ================================================================== */
+const LASERS = Object.freeze({                 /* COMBAT §4.1, row for row */
+  pulse:    Object.freeze({ damage:8,  rate:4,  energy:5,  range:1500, continuous:false }),
+  mining:   Object.freeze({ damage:3,  rate:4,  energy:4,  range:800,  continuous:false }),
+  beam:     Object.freeze({ damage:6,  rate:10, energy:12, range:1500, continuous:true  }),
+  military: Object.freeze({ damage:12, rate:10, energy:18, range:2000, continuous:true  })
+});
+const LASER_PICK = ["military","beam","pulse","mining"];   /* decision 6. [ASSUMED] */
+const PIRATE_FIRE_RANGE = 1200;                /* [ASSUMED] §3.4 */
+const PIRATE_FIRE_CONE  = 15*Math.PI/180;      /* [ASSUMED] §3.4 — either side, S268 */
+const BOUNTY_STEP       = 100;                 /* tenths CR per (dangerRating + 1). [ASSUMED] §5.4 */
+const SHOT_SHOW = 0.07;                        /* s a shot stays drawn. Presentation, [ASSUMED], this build's */
+const HIT_SHOW  = 0.12;                        /* s a struck ship is drawn white. The same */
+/* §10, ruling 8. Thresholds [ASSUMED]; NAMES ARE PLACEHOLDERS — COMBAT
+   [DECISION] 1, Ripley's. Highest first: the first row `kills` reaches. */
+const RATING = Object.freeze([[2048,"Feared"],[512,"Hardened"],[128,"Seasoned"],
+                              [32,"Capable"],[8,"Steady"],[1,"Green"],[0,"Unrated"]]);
+function ratingBand(kills){
+  for(const row of RATING) if(kills >= row[0]) return row[1];
+  return RATING[RATING.length-1][1];
+}
+
+/* The fore mount, read from state every time it is asked — no copy.
+   EQUIPMENT §6: the mount is part of the id (`pulseLaserFore`). */
+function foreLaser(){
+  for(const k of LASER_PICK){
+    const e = state.equipment[k+"LaserFore"];
+    if(e && e.qty > 0) return k;
+  }
+  return null;
+}
+/* THE DEV LASER — the `Laser` letter, option (a). ARCH §2.3's exception,
+   devSetShip()'s precedent: a dev control writes state direct, IS NOT
+   AN ACTION, signals nothing, and is not to be copied as a pattern. It
+   saves at once, as the ship switch does, so `file on disk` reads it.
+   IT IS NOT A PRICE: EQUIPMENT §5.3 sells this laser for 4000 tenths
+   and this hands it over for nothing — loop 89's shape, a second time.
+   An equipment panel (PANEL §8, unbuilt) replaces it. One way: a fore
+   mount that holds any laser is left alone. Returns true if it fitted. */
+function devFitLaser(){
+  if(foreLaser()) return false;
+  state.equipment.pulseLaserFore = { qty:1 };
+  saveGame();
+  return true;
+}
+
+/* Runtime only, never saved, never read by the game beyond this block. */
+let pCool = 0, pEn = 0, pShow = 0;             /* the player's laser: s to the next shot, energy owed, s the shot stays drawn */
+let fireNow = "idle";                          /* idle | firing | noEnergy | noLaser — what the zone says */
+let inF = 0, inA = 0;                          /* damage landed on the player, under one point. S252 */
+const KILL_LOG = 6;
+const fireStats = { shots:0, hits:0, held:0, dealt:0 };
+const taken = { pts:0, fore:0, aft:0, shield:0, hull:0, last:null };
+const killLog = [];
+
+/* §5.1: "fore if the shooter is within 90° of the target's forward
+   vector, else aft". `to` is the vector from the target to the shooter;
+   taken into the target's own frame, z ahead. Exactly abeam is aft. */
+function facesFore(tq, to){ return qrot(qconj(tq), to)[2] > 0; }
+
+/* §5.2 items 1 and 2, on the PLAYER. Facing shield to 0, the rest to
+   hull, hull stops at 0. Whole points only (S252). */
+function hurtPlayer(dmg, c){
+  const sh = state.ship;
+  const fore = facesFore(q, [wrap(c.pos[0]-pos[0]), wrap(c.pos[1]-pos[1]), wrap(c.pos[2]-pos[2])]);
+  let acc = (fore ? inF : inA) + dmg;
+  const n = Math.floor(acc);
+  acc -= n;
+  if(fore) inF = acc; else inA = acc;
+  if(n <= 0) return;
+  const key = fore ? "shieldFore" : "shieldAft";
+  const s = Math.min(sh[key], n);
+  sh[key] -= s;
+  const h = Math.min(sh.hull, n - s);
+  sh.hull -= h;
+  taken.pts += n; taken[fore ? "fore" : "aft"] += n; taken.shield += s; taken.hull += h;
+  taken.last = { t:Date.now(), who:c.role+" "+ID_NS+":"+c.hull+" "+c.laser };
+}
+
+/* §5.3, on a CONTACT: the same order, from its own maxima. A trader
+   that is hit flees (§3.4). Hull at 0: the player's weapon destroyed
+   it — this is the only caller — so the kill is the player's. */
+function hitContact(c, dmg){
+  const fore = facesFore(c.q, [wrap(pos[0]-c.pos[0]), wrap(pos[1]-c.pos[1]), wrap(pos[2]-c.pos[2])]);
+  const key = fore ? "shieldFore" : "shieldAft";
+  const s = Math.min(c[key], dmg);
+  c[key] -= s;
+  c.hullPts -= dmg - s;
+  c.flash = HIT_SHOW;
+  if(c.role === "trader") c.fled = true;
+  fireStats.dealt += dmg;
+  if(c.hullPts <= 0) recordKill(c);
+}
+
+/* recordKill(contact) — AN ACTION. COMBAT §11, ARCH §3: validate ->
+   write state -> saveGame() once -> stateChanged(name) -> { ok }.
+   "`kills` +1; bounty §5.4" — credits += 100 x (dangerRating + 1)
+   tenths for a PIRATE, nothing for a trader or police — "so a kill is
+   one save". THE LEGAL CHANGE IS NOT WRITTEN: step 4, S273, above.
+   Issued from the frame loop (hitContact), never from a listener —
+   noCascade() would throw. The one listener ignores this name: the
+   scene and the population are not redrawn by a kill.
+   The contact is removed here, so the record that paid cannot pay
+   twice. `dangerRating` is the CURRENT system's — where the kill was
+   made. Reason code `noTarget` is §12's. */
+function recordKill(c){
+  noCascade();
+  const i = contacts.indexOf(c);
+  if(i === -1) return fail(["noTarget"]);
+  const cm = state.commander;
+  const bounty = c.role === "pirate" ? BOUNTY_STEP * (state.system.dangerRating + 1) : 0;
+  const was = cm.credits;
+  cm.kills   += 1;
+  cm.credits += bounty;
+  contacts.splice(i, 1);
+  killLog.unshift({ role:c.role, hull:c.hull, bounty:bounty, danger:state.system.dangerRating,
+                    name:state.system.name, was:was, now:cm.credits, t:Date.now() });
+  if(killLog.length > KILL_LOG) killLog.length = KILL_LOG;
+  saveGame();
+  stateChanged("recordKill");
+  return { ok:true };
+}
+
+/* §4.1's hit test, for the player's shot: inside the cone off the
+   nose, inside the laser's range, nearest first (decision 5). */
+function playerTarget(L){
+  const fw = qrot(q,[0,0,1]);
+  const cosC = Math.cos(T.laserCone*Math.PI/180);
+  let best = null, bd = Infinity;
+  for(const c of contacts){
+    const rel = [wrap(c.pos[0]-pos[0]), wrap(c.pos[1]-pos[1]), wrap(c.pos[2]-pos[2])];
+    const d = Math.hypot(rel[0], rel[1], rel[2]);
+    if(d > L.range || d < 1e-6 || d >= bd) continue;
+    if((fw[0]*rel[0]+fw[1]*rel[1]+fw[2]*rel[2])/d < cosC) continue;
+    best = c; bd = d;
+  }
+  return best;
+}
+
+/* The player's laser, per frame. Decisions 2 and 4. */
+function playerFire(dt){
+  const sh = state.ship;
+  /* The cooldown runs to at most one frame below zero and the next
+     interval is ADDED to it, so the shots keep §4.1's rate whatever
+     the frame time — a clamp at 0 lost a frame a shot. */
+  pCool = Math.max(-dt, pCool - dt);
+  if(pShow > 0) pShow = Math.max(0, pShow - dt);
+  const held = fireHeld();
+  triggerTap = false;
+  const key = foreLaser();
+  if(!key){ fireNow = "noLaser"; pEn = 0; return; }
+  if(!held){ fireNow = "idle"; pEn = 0; return; }
+  if(sh.energy <= 0){ fireNow = "noEnergy"; return; }
+  fireNow = "firing";
+  const L = LASERS[key];
+  fireStats.held += dt;
+  pEn += L.energy * dt;
+  const n = Math.min(Math.floor(pEn), sh.energy);
+  if(n > 0){ sh.energy -= n; pEn -= n; }
+  if(L.continuous){
+    pShow = SHOT_SHOW;
+    const t = playerTarget(L);
+    if(t) hitContact(t, L.damage * L.rate * dt);
+  } else if(pCool <= 1e-9){
+    pCool += 1 / L.rate;
+    pShow = SHOT_SHOW;
+    fireStats.shots++;
+    const t = playerTarget(L);
+    if(t){ fireStats.hits++; hitContact(t, L.damage); }
+  }
+}
+
+/* §3.4, a pirate's laser, per frame — called from contactsStep() with
+   the range and vector it has already worked out. It FIRES when the
+   player is inside PIRATE_FIRE_RANGE and PIRATE_FIRE_CONE of its nose
+   and it has energy; the shot LANDS only if the player is also inside
+   the laser's own cone and range (§4.1) — so a pirate can be seen
+   firing and missing. Decisions 1 to 4. */
+function pirateFire(c, rel, d, dt){
+  if(d < 1e-6 || d > PIRATE_FIRE_RANGE || c.energy <= 0) return;
+  const fw = qrot(c.q,[0,0,1]);
+  const cs = (fw[0]*rel[0]+fw[1]*rel[1]+fw[2]*rel[2])/d;
+  if(cs < Math.cos(PIRATE_FIRE_CONE)) return;
+  const L = LASERS[c.laser];
+  c.firing = true;
+  c.energy = Math.max(0, c.energy - L.energy*dt);
+  const on = d <= L.range && cs >= Math.cos(T.laserCone*Math.PI/180);
+  if(L.continuous){
+    c.shot = SHOT_SHOW;
+    if(on) hurtPlayer(L.damage * L.rate * dt, c);
+  } else if(c.cool <= 1e-9){
+    c.cool += 1 / L.rate;
+    c.shot = SHOT_SHOW;
+    if(on) hurtPlayer(L.damage, c);
+  }
+}
+
+/* §6.1, for a contact (decision 3). Floats. Hull never. */
+function contactRecharge(c, row, dt){
+  c.energy = Math.min(row.energyMax, c.energy + RECHARGE_ENERGY*dt);
+  for(const key of ["shieldFore","shieldAft"]){
+    if(c[key] >= row.shieldMax || c.energy < SHIELD_ENERGY_FLOOR) continue;
+    const n = Math.min(RECHARGE_SHIELD*dt, row.shieldMax - c[key], c.energy);
+    c[key] += n; c.energy -= n;
+  }
+}
+
+/* THE FIRE ZONE'S WORDS — COMBAT §4.1: "A ship with no laser cannot
+   fire, and the FIRE zone says so ... reads NO LASER" ([ASSUMED]
+   wording, PANEL/CONTROL's to fix). Read from state and this frame's
+   `fireNow`; the DOM is touched only when the words change. */
+let fireText = "", fireCls = "";
+function paintFire(){
+  const k = foreLaser();
+  let t, cls = "";
+  if(!k){ t = "NO LASER"; cls = "dry"; }
+  else if(fireNow === "noEnergy"){ t = k.toUpperCase()+" LASER<br>NO ENERGY"; cls = "dry"; }
+  else if(fireNow === "firing"){ t = k.toUpperCase()+" LASER<br>FIRING"; cls = "hot"; }
+  else t = "FIRE ZONE<br>"+k.toUpperCase()+" LASER — HOLD";
+  if(t !== fireText){ fireEl.innerHTML = t; fireText = t; }
+  if(cls !== fireCls){
+    fireEl.classList.toggle("hot", cls === "hot");
+    fireEl.classList.toggle("dry", cls === "dry");
+    fireCls = cls;
+  }
+}
+
+/* TUNE. Read from state and the runtime logs at write time. */
+function equipLine(){
+  const ks = Object.keys(state.equipment);
+  return ks.length ? ks.map(function(k){ return ID_NS+":"+k+" x"+state.equipment[k].qty; }).join(", ")
+                   : "nothing fitted";
+}
+function laserLine(){
+  const k = foreLaser();
+  if(!k) return "fore mount EMPTY — NO LASER. A save from before 092a stays unarmed (ruling 1): FIT PULSE LASER, above";
+  const L = LASERS[k];
+  return "fore: "+k+" — "+L.damage+" a hit, "+L.rate+"/s, "+L.energy+" energy/s held, range "+L.range+
+         (L.continuous ? ", continuous" : "")+"  ·  cone "+T.laserCone+" deg either side (spec 2)  [ASSUMED]"+
+         "  ·  aft mount not built";
+}
+function fireLine(){
+  if(!(fireStats.held > 0)) return "not fired this session";
+  return (fireStats.shots ? fireStats.shots+" shots, "+fireStats.hits+" landed  ·  " : "")+
+         "trigger held "+fireStats.held.toFixed(1)+" s  ·  "+fireStats.dealt.toFixed(0)+" points landed on ships";
+}
+function takenLine(){
+  if(!taken.pts) return "none this session";
+  return taken.pts+" points this session: fore "+taken.fore+", aft "+taken.aft+
+         "  ·  "+taken.shield+" to shields, "+taken.hull+" to hull"+
+         (taken.pts > taken.shield + taken.hull ? ", "+(taken.pts - taken.shield - taken.hull)+" landed on a hull already at 0" : "")+
+         "  ·  last "+new Date(taken.last.t).toTimeString().slice(0,8)+", "+taken.last.who;
+}
+function killsLine(){
+  const cm = state.commander;
+  return cm.kills+"  ·  rating "+ratingBand(cm.kills)+" — derived, never saved (COMBAT §10); names are placeholders"+
+         "  ·  credits "+cm.credits+" tenths CR";
+}
+function bountyLine(){
+  const s = state.system;
+  return BOUNTY_STEP+" x (danger "+s.dangerRating+" + 1) = "+(BOUNTY_STEP*(s.dangerRating+1))+
+         " tenths CR a pirate, here  [ASSUMED]  ·  trader, police: 0";
+}
+function killRows(){
+  if(!killLog.length) return "  (no kill this session)\n";
+  return killLog.map(function(k){
+    return "  "+new Date(k.t).toTimeString().slice(0,8)+" "+k.role+" "+ID_NS+":"+k.hull+" at "+k.name+
+           " (danger "+k.danger+")  ·  bounty "+k.bounty+"  ·  credits "+k.was+" to "+k.now+"\n";
+  }).join("");
+}
 
 /* ---------- render ---------- */
 const NEAR=1.2;
@@ -3641,7 +4196,11 @@ function render(){
     if(d>CELL*1.35) continue;
     if(cc[2] < -HULL_RADIUS*2) continue;
     const a=Math.max(0.10, Math.min(1, 1-d/(CELL*1.2)));
-    ctx.strokeStyle="rgba("+ROLE_RGB[c.role]+","+a.toFixed(2)+")";
+    /* 092a: a ship the player's laser struck is drawn WHITE for HIT_SHOW
+       seconds — the only cue that a shot landed. [ASSUMED], this
+       build's; no spec gives a hit a look. */
+    ctx.strokeStyle = c.flash > 0 ? "rgba(255,255,255,1)"
+                                  : "rgba("+ROLE_RGB[c.role]+","+a.toFixed(2)+")";
     ctx.beginPath();
     const pts=SHIP_SHAPE.v.map(function(vv){
       const w=qrot(c.q,[vv[0]*HULL_RADIUS, vv[1]*HULL_RADIUS, vv[2]*HULL_RADIUS]);
@@ -3658,6 +4217,50 @@ function render(){
       ctx.moveTo(hw+F*A[0]/A[2], hh-F*A[1]/A[2]);
       ctx.lineTo(hw+F*B[0]/B[2], hh-F*B[1]/B[2]);
     }
+    ctx.stroke();
+  }
+
+  // 092a, COMBAT step 3: SHOTS. No spec draws a laser (the renderer spec
+  // is Not yet defined), so this is the least that makes one visible —
+  // [ASSUMED], this build's. A contact's shot: a line from its nose along
+  // its own heading, as far as the player is or the laser reaches. It is
+  // drawn whether it lands or not; SH FORE / SH AFT say whether it landed.
+  for(const c of contacts){
+    if(!(c.shot > 0)) continue;
+    const rel=[wrap(c.pos[0]-pos[0]), wrap(c.pos[1]-pos[1]), wrap(c.pos[2]-pos[2])];
+    const fw=qrot(c.q,[0,0,1]);
+    const len=Math.min(LASERS[c.laser].range, Math.hypot(rel[0],rel[1],rel[2]));
+    let A=qrot(cq,[rel[0]+fw[0]*HULL_RADIUS, rel[1]+fw[1]*HULL_RADIUS, rel[2]+fw[2]*HULL_RADIUS]);
+    let B=qrot(cq,[rel[0]+fw[0]*len, rel[1]+fw[1]*len, rel[2]+fw[2]*len]);
+    if(A[2]<NEAR && B[2]<NEAR) continue;
+    if(A[2]<NEAR||B[2]<NEAR){
+      const t=(NEAR-A[2])/(B[2]-A[2]);
+      const M=[A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t, NEAR];
+      if(A[2]<NEAR) A=M; else B=M;
+    }
+    ctx.strokeStyle="rgba(255,110,90,0.9)";
+    ctx.beginPath();
+    ctx.moveTo(hw+F*A[0]/A[2], hh-F*A[1]/A[2]);
+    ctx.lineTo(hw+F*B[0]/B[2], hh-F*B[1]/B[2]);
+    ctx.stroke();
+  }
+  // The player's shot: two lines from the lower corners to the reticle,
+  // for SHOT_SHOW seconds a shot. Drawn hit or miss.
+  if(pShow > 0){
+    ctx.strokeStyle="rgba(255,110,90,0.9)";
+    ctx.beginPath();
+    ctx.moveTo(hw-W*0.32,H); ctx.lineTo(hw,hh);
+    ctx.moveTo(hw+W*0.32,H); ctx.lineTo(hw,hh);
+    ctx.stroke();
+  }
+  // The cone, to scale: a shot lands on a ship whose CENTRE is inside
+  // this ring and inside the laser's range (§4.1, S268). Read from
+  // T.laserCone and the view's own focal length every frame — nothing
+  // stored. Only with a fore laser fitted.
+  if(foreLaser()){
+    ctx.strokeStyle="rgba(143,227,176,0.22)";
+    ctx.beginPath();
+    ctx.arc(hw, hh, F*Math.tan(T.laserCone*Math.PI/180), 0, Math.PI*2);
     ctx.stroke();
   }
 
@@ -3799,6 +4402,9 @@ function frame(now){
   // ship a collision stopped reads 0 on the gauge the same frame.
   // 091a: it also flies the contacts (COMBAT §3.4) — runtime records,
   // nothing in `state`, so the count of state writers is unchanged.
+  // 092a: and the lasers (step 3). Hits write the same four fields.
+  // ONE THING IN HERE NOW SAVES: a kill issues recordKill(), an action —
+  // `kills` and `credits`, one save, one signal (COMBAT §11).
   combatStep(dt);
 
   // the one write OF SPEED: the integrator's speed (or a collision's
@@ -3811,6 +4417,7 @@ function frame(now){
   render();
   drawRadar();
   paintConsole();
+  paintFire();
 
   rPitch.textContent=sgn(input.pitch);
   rRoll.textContent=sgn(input.roll);
@@ -3830,7 +4437,8 @@ const tuner=document.getElementById("tuner");
 const map=[["sDead","vDead","dead",0],["sDefl","vDefl","defl",0],["sExp","vExp","exp",1],
            ["sPr","vPr","pitchRate",0],["sRr","vRr","rollRate",0],["sSp","vSp","maxSpeed",0],
            ["sKu","vKu","keyUp",2],["sKd","vKd","keyDown",2],
-           ["sRad","vRad","radarRange",0],["sBlip","vBlip","blip",0]];
+           ["sRad","vRad","radarRange",0],["sBlip","vBlip","blip",0],
+           ["sCone","vCone","laserCone",0]];                      /* 092a */
 
 /* Dev state sliders. These write to `state`, which the instruments read.
    Not saved with the tuning, because they are not tuning.
@@ -3877,6 +4485,11 @@ function syncDev(){
   }
   document.getElementById("bShip").textContent =
     "SHIP: "+ID_NS+":"+state.ship.class+" — TAP TO SWITCH";
+  /* 092a. The label is the fore mount, read from state — not a flag
+     set by the tap. */
+  document.getElementById("bLaser").textContent = foreLaser()
+    ? "FORE LASER: "+ID_NS+":"+foreLaser()+"LaserFore — FITTED"
+    : "FIT PULSE LASER — FORE MOUNT";
   document.getElementById("bsPr").textContent = row.pitchRate;
   document.getElementById("bsRr").textContent = row.rollRate;
   document.getElementById("bsSp").textContent = row.maxSpeed;
@@ -3971,6 +4584,11 @@ document.getElementById("bShip").addEventListener("click",function(){
   syncUI();
   if(panelEl.classList.contains("open")) PANELS[panelCur].render();
 });
+/* 092a. The dev laser. devFitLaser() saves; the repaint is here. */
+document.getElementById("bLaser").addEventListener("click",function(){
+  devFitLaser();
+  syncUI();
+});
 /* LOOP 87: two taps, the label is the confirmation. 042b: the repaint belongs here.
 
    LOOP 113, 088a — S239. AN ARMED WIPE NOW STANDS DOWN.
@@ -4046,7 +4664,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 091a — settings\n"+
+    "ELITE: THE CLONES 092a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -4064,6 +4682,7 @@ function writeReport(){
     "pad side      "+(T.mirror?"right":"left")+"\n"+
     "radar range   "+T.radarRange+" units\n"+
     "blip size     "+T.blip+" px\n"+
+    "laser cone    "+T.laserCone+" deg either side  (spec 2)\n"+
     "console h     "+document.querySelector(".console").getBoundingClientRect().height.toFixed(0)+" px\n"+
     /* LOOP 51. Measured, not arithmetic. Open each chart once, then
        TUNE. "not drawn" means the panel has not been opened this
@@ -4112,6 +4731,21 @@ function writeReport(){
     "danger        "+dangerLine()+"\n"+
     "contacts      "+contactsLine()+"\n"+
     contactRows()+
+    /* 092a, COMBAT step 3. Every line read at write time from state,
+       the table and the runtime logs; nothing stored for display.
+       `kills` and `credits` are the commander's own record — printed
+       always (constraint 6). `legalStatus` is printed BECAUSE nothing
+       writes it yet: a trader kill that leaves it at 0 is step 4's
+       absence, not a fault in this build. */
+    "equipment     "+equipLine()+"\n"+
+    "laser         "+laserLine()+"\n"+
+    "fired         "+fireLine()+"\n"+
+    "hits taken    "+takenLine()+"\n"+
+    "kills         "+killsLine()+"\n"+
+    "bounty        "+bountyLine()+"\n"+
+    "legalStatus   "+state.commander.legalStatus+"  — no writer until step 4: a trader or police kill costs nothing yet\n"+
+    "kill log      newest first\n"+
+    killRows()+
     "tuning for    "+ID_NS+":"+T.forShip+"  ·  "+overrideLine()+"\n"+
     "cunningPlans  "+state.commander.cunningPlans+"  — nothing writes it yet\n"+
     "\nsave key      "+SAVE_KEY+"\n"+
