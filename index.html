@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 092b</title>
+<title>ELITE: THE CLONES — 092c</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -937,24 +937,35 @@
     092a's behaviour, under which a pack of five could not be beaten on 4 October (1,160 points
     landed, no kill). Unlit = they do not. <b>Unlit is the default since 092b, [ASSUMED]</b>: the
     spec says neither (S271). Their energy refills either way.<br><br>
-    PAD FIRE — tap to cycle OFF / SINGLE / DOUBLE. <b>Loop 65: the flight pad fires on a tap</b>
-    (single) or two quick taps (double) — one shot each. The middle zone still fires while held.
-    Lit = on. <b>Only in fight mode</b>: a fore laser fitted and a ship on the radar. In fight
-    mode a lifted thumb does not centre the stick — it holds for the time below, so the ship is
-    steady while you tap. Out of fight mode the pad is exactly as it was.
-  </div>
-  <div class="row">
-    <label>Pad tap time <i><span id="vTap"></span> ms</i></label>
-    <input type="range" id="sTap" min="80" max="500" step="10">
-    <div class="note"><b>[ASSUMED]</b>, never flown. A touch that does not move and lifts inside this
-      is a tap. For DOUBLE, the second tap must start inside this after the first.</div>
+    PAD FIRE — tap to cycle OFF / SINGLE / DOUBLE. Loop 65. <b>Changed in 092c to fit how your
+    thumb was measured on 4 October: it rests on the pad, and a tap is a quick lift.</b><br>
+    SINGLE = <b>lift and come straight back</b>: one shot as the thumb lands.<br>
+    DOUBLE = <b>lift, one quick touch, lift, land</b>: one shot as the thumb lands the second time.
+    A plain lift-and-return does not fire on DOUBLE, so re-gripping is safe.<br>
+    The middle zone still fires while held. Lit = on. <b>Only in fight mode</b>: a fore laser
+    fitted and a ship on the radar. In fight mode a lifted thumb does not centre the stick — it
+    holds, so the ship is steady while you tap. Out of fight mode the pad is exactly as it was.
+    The last few pad touches are listed in the report below.
   </div>
   <div class="row">
     <label>Pad hold <i><span id="vGrace"></span> ms</i></label>
     <input type="range" id="sGrace" min="100" max="800" step="10">
-    <div class="note"><b>[ASSUMED]</b>, never flown — loop 69. How long the stick holds its last
-      position after a lift. Never shorter than the tap time. After it, the stick eases back to
-      centre over the key ramp-down time above.</div>
+    <div class="note">Loop 69. How long the stick holds after a lift — <b>and how quickly the thumb
+      must come back to count</b>. Your lifts measured 21 to 207 ms on the rig, so 250.
+      <b>[ASSUMED]</b> margin; not flown. After it, the stick eases back to centre.</div>
+  </div>
+  <div class="row">
+    <label>Quick touch time <i><span id="vTap"></span> ms</i></label>
+    <input type="range" id="sTap" min="80" max="600" step="10">
+    <div class="note">DOUBLE only. The quick touch in the middle is down no longer than this.
+      Yours measured 44 to 344 ms, so 400. <b>[ASSUMED]</b> margin; not flown.</div>
+  </div>
+  <div class="row">
+    <label>Quick touch move <i><span id="vMove"></span> px</i></label>
+    <input type="range" id="sMove" min="2" max="40" step="1">
+    <div class="note">How far a touch may slide and still be a quick touch — and how far a returned
+      thumb slides before it is steering again. Yours measured up to 17.5 px, so 20. 092b used
+      the 6 px deadzone and missed a quarter of them. <b>[ASSUMED]</b> margin; not flown.</div>
   </div>
 
   <!-- 092a. THE DEV LASER — the `Laser` letter, option (a), the s092
@@ -1156,8 +1167,15 @@ const SPEC = { dead:6, defl:55, exp:1.6,
                pirateCone:2,             /* 092b. the same figure for every CONTACT's laser. [ASSUMED] */
                contactRefill:false,      /* 092b. do contacts' SHIELDS refill? S271. Off: 092a could not be won with it on */
                padFire:"double",         /* 092b, loop 65 (B) and the gesture decision (C): off | single | double */
-               tapGap:200,               /* 092b. ms. A tap is shorter than this; a double's second tap starts inside it. [ASSUMED] */
-               grace:250,                /* 092b, loop 69. ms the stick holds after a lift, in fight mode. [ASSUMED] */
+               /* 092c. `tapGap` (092b, 200) IS RETIRED AND RENAMED, ON PURPOSE. A stored
+                  tuning outranks a changed constant (S52's shape), and 092b stored 200 on
+                  the device — so a new default under the old key would never be read.
+                  `tapMs` is a new key and reads the figure below. A stale `tapGap` may sit
+                  in the stored object; nothing reads it. */
+               tapMs:400,                /* 092c. ms. A SHORT touch is down no longer than this. Measured: most 344 */
+               tapMove:20,               /* 092c. px. ...and moves no further than this. Measured: most 17.5 */
+               grace:250,                /* 092b, loop 69. ms the stick holds after a lift, in fight mode — AND, since
+                                            092c, the window a returning thumb must land inside to fire. Measured: most 207 */
                radial:true, invP:false, invR:false, mirror:true };
 let T = Object.assign({}, SPEC);
 try{ const s = localStorage.getItem("dragpad.tuning");
@@ -2221,7 +2239,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 092b (092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 092c (092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -3104,7 +3122,10 @@ function drawPad(){
    chats for it. "Cannot be recovered" was a claim about where the
    reader looked (S162's lesson, again).
 
-   WHAT IS BUILT.
+   WHAT IS BUILT. (THE FIRST BULLET IS 092b's RULE AND IS GONE — 092c
+   replaced it; see "WHAT A TAP ACTUALLY IS" at the foot of this
+   comment. `T.tapGap` is retired. The hold, expiry and fight-mode
+   bullets stand, with the window now T.grace alone.)
    · A TAP: a touch that never moves more than the deadzone (T.dead)
      from where it landed and lifts inside T.tapGap ms. SINGLE: every
      tap fires. DOUBLE: a tap whose touch-down is inside T.tapGap of the
@@ -3137,10 +3158,56 @@ function drawPad(){
    3. A STILL TOUCH HELD LONGER THAN A TAP is neither a tap nor a steer;
       lifting it holds or centres as any lift does.
    THE MOUSE (desktop checking) is unchanged and does not tap-fire.
-   CONTROL §4.1 and §4.2 owe the revision 025 named. */
-let padDownX=0, padDownY=0, padDownT=0, padMoved=false, padReturn=false;
-let padHold=false, padHoldUntil=0, padHoldVec=[0,0], padLastTap=-1e9;
-const padStats = { taps:0, shots:0, holds:0, regrips:0 };
+   CONTROL §4.1 and §4.2 owe the revision 025 named.
+
+   092c — WHAT A TAP ACTUALLY IS. MEASURED, 4 October, on the pad rig
+   (padrig092.html — a replica of this pad that times every touch):
+   · On 092b, on device: 95 lifts in fight mode, 5 read as taps, 27 as
+     re-grips; DOUBLE never fired.
+   · The rig showed why, and it was not the 6 px or the 200 ms. THE
+     THUMB RESTS ON THE PAD. Asked to tap ten times, it stayed down
+     1.3 to 1.8 s at a time and LIFTED for 57 to 90 ms: the tap is the
+     lift. Asked to double-tap, it lifted, touched once (44 to 344 ms),
+     lifted again (21 to 74 ms) and landed to stay. Two touch-DOWNS, one
+     of them the landing.
+   · 092b fired on the LIFT of a short touch and wanted two short
+     touches for a double. The second "tap" was a landing that never
+     lifted, so the rule was waiting for something the thumb never did.
+   THE RULE NOW — the shot is on the way DOWN:
+   · SINGLE: a touch-down inside the hold window fires. Lift and come
+     back = one shot.
+   · DOUBLE: a touch-down inside the hold window fires IF THE TOUCH
+     BEFORE IT WAS SHORT — down no longer than T.tapMs and moved no
+     further than T.tapMove. A plain lift-and-return (a re-grip) does
+     not fire. This is 025's argument for double, kept.
+   · THE WINDOW IS THE HOLD WINDOW, T.grace — one number: the stick is
+     held for exactly as long as a returning thumb can still fire.
+   · T.tapMove also replaces T.dead as how far a returned thumb slides
+     before it is steering again (the re-grip). T.dead is the stick's
+     deadzone and nothing else again.
+   · A thumb starting in the air: its first touch-down has no window to
+     land in and does not fire; every quick one after it does.
+   `padLog` keeps the last few touches for TUNE — what each measured and
+   what the rule made of it — so the three figures are set from the
+   thumb and not from the page. Runtime only.
+   ALL THREE FIGURES ARE THE RIG'S READINGS PLUS A MARGIN: [ASSUMED]
+   until flown. The rig was at rest; loop 70 says cadence tightens
+   under fire. LOOP 70 PROPER — the same measurement as a calibration
+   mode inside the game, writing the sliders — is NOT BUILT. */
+let padDownX=0, padDownY=0, padDownT=0, padMoved=false, padReturn=false, padFar=0, padFiredNow=false;
+let padHold=false, padHoldUntil=0, padHoldVec=[0,0], padShort=false, padLastLift=null, padGapNow=null;
+const padStats = { taps:0, returns:0, shots:0, holds:0, regrips:0 };
+const PAD_LOG = 8;
+const padLog = [];
+let padCameBack = false;                  /* this touch landed inside the window — for the log */
+function padLogRows(){
+  if(!padLog.length) return "  (no pad touch this session)\n";
+  return padLog.map(function(r){
+    return "  down "+("    "+r.dur.toFixed(0)).slice(-5)+" ms  ·  slid "+("   "+r.move.toFixed(1)).slice(-5)+" px  ·  gap "+
+           (r.gap === null ? "    –" : ("    "+r.gap.toFixed(0)).slice(-5))+" ms  ·  "+
+           (!r.fm ? "no fight mode" : (r.ret ? "came back in time" : "fresh touch")+(r.short ? ", quick" : "")+(r.shot ? "  — SHOT" : ""))+"\n";
+  }).join("");
+}
 function fightMode(){
   if(T.padFire === "off" || foreLaser() === null) return false;
   for(const c of contacts) if(contactRange(c) <= T.radarRange) return true;
@@ -3158,13 +3225,23 @@ pad.addEventListener("touchstart",function(e){
   if(padId!==null) return;
   const t=e.changedTouches[0];
   padId=t.identifier;
-  padDownX=t.clientX; padDownY=t.clientY; padDownT=performance.now(); padMoved=false;
+  padDownX=t.clientX; padDownY=t.clientY; padDownT=performance.now(); padMoved=false; padFar=0;
+  padGapNow = padLastLift === null ? null : padDownT - padLastLift;
+  padFiredNow = false;
+  padCameBack = false;
   if(padHold && padDownT <= padHoldUntil){
     padReturn = true;                    /* inside the window: the stick is not touched */
+    padCameBack = true;
+    padStats.returns++;
+    /* 092c: THE SHOT IS ON THE WAY DOWN. */
+    if(fightMode() && (T.padFire === "single" || (T.padFire === "double" && padShort))){
+      triggerTap = true; padStats.shots++; padFiredNow = true;
+    }
   } else {
     padReturn = false; padHold = false;
     ox=cx=t.clientX; oy=cy=t.clientY; computeAxes();
   }
+  padShort = false;                      /* used, or stale: the next lift sets it again */
   pad.classList.add("live"); drawPad(); wake();
 },{passive:false});
 
@@ -3172,7 +3249,9 @@ pad.addEventListener("touchmove",function(e){
   e.preventDefault();
   for(const t of e.changedTouches){
     if(t.identifier!==padId) continue;
-    if(!padMoved && Math.hypot(t.clientX-padDownX, t.clientY-padDownY) > T.dead){
+    const slid = Math.hypot(t.clientX-padDownX, t.clientY-padDownY);
+    if(slid > padFar) padFar = slid;
+    if(!padMoved && slid > T.tapMove){   /* 092c: its own figure, not the stick's deadzone */
       padMoved = true;
       if(padReturn){                     /* a re-grip: the origin goes where the held stick puts it */
         ox = t.clientX - padHoldVec[0]; oy = t.clientY - padHoldVec[1];
@@ -3191,16 +3270,17 @@ function padEnd(e){
     padId=null;
     pad.classList.remove("live");
     const fm = fightMode(), now = performance.now();
-    if(fm && !padMoved && now - padDownT <= T.tapGap){
-      padStats.taps++;
-      if(T.padFire === "single"){ triggerTap = true; padStats.shots++; }
-      else if(padDownT - padLastTap <= T.tapGap){ triggerTap = true; padStats.shots++; padLastTap = -1e9; }
-      else padLastTap = now;
-    }
+    /* 092c: a SHORT touch arms a DOUBLE; nothing fires on a lift any more. */
+    padShort = fm && !padMoved && now - padDownT <= T.tapMs;
+    if(padShort) padStats.taps++;
+    padLog.unshift({ dur:now - padDownT, move:padFar, gap:padGapNow, fm:fm,
+                     ret:padCameBack, short:padShort, shot:padFiredNow });
+    if(padLog.length > PAD_LOG) padLog.length = PAD_LOG;
+    padLastLift = now;
     if(fm){
       if(!padReturn){ padHoldVec = [cx-ox, cy-oy]; if(!padHold) padStats.holds++; }
       padHold = true; padReturn = false;
-      padHoldUntil = now + Math.max(T.grace, T.tapGap);
+      padHoldUntil = now + T.grace;
     } else {
       padHold = false; padReturn = false;
       pitchIn=0; rollIn=0; defPx=0;      // re-centre on release only — CONTROL §4.1, [TESTED]
@@ -4699,8 +4779,9 @@ const map=[["sDead","vDead","dead",0],["sDefl","vDefl","defl",0],["sExp","vExp",
            ["sKu","vKu","keyUp",2],["sKd","vKd","keyDown",2],
            ["sRad","vRad","radarRange",0],["sBlip","vBlip","blip",0],
            ["sCone","vCone","laserCone",0],                       /* 092a */
-           ["sCone2","vCone2","pirateCone",0],["sTap","vTap","tapGap",0],
-           ["sGrace","vGrace","grace",0]];                        /* 092b */
+           ["sCone2","vCone2","pirateCone",0],["sTap","vTap","tapMs",0],
+           ["sGrace","vGrace","grace",0],                         /* 092b */
+           ["sMove","vMove","tapMove",0]];                        /* 092c */
 
 /* Dev state sliders. These write to `state`, which the instruments read.
    Not saved with the tuning, because they are not tuning.
@@ -4936,7 +5017,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 092b — settings\n"+
+    "ELITE: THE CLONES 092c — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -4957,9 +5038,12 @@ function writeReport(){
     "laser cone    "+T.laserCone+" deg either side  (spec 2)\n"+
     "their cone    "+T.pirateCone+" deg either side  (spec 2)\n"+
     "ships refill  "+(T.contactRefill ? "ON — shields +"+RECHARGE_SHIELD+"/s, as 092a" : "off")+"  [ASSUMED] S271\n"+
-    "pad fire      "+T.padFire+"  ·  tap "+T.tapGap+" ms  ·  hold "+Math.max(T.grace,T.tapGap)+" ms  [ASSUMED]"+
+    "pad fire      "+T.padFire+"  ·  hold "+T.grace+" ms  ·  quick touch "+T.tapMs+" ms, "+T.tapMove+" px  [ASSUMED]"+
        "  ·  fight mode now: "+(fightMode() ? "ON" : "off")+
-       "  ·  "+padStats.taps+" taps, "+padStats.shots+" pad shots, "+padStats.holds+" holds, "+padStats.regrips+" re-grips\n"+
+       "  ·  "+padStats.holds+" holds, "+padStats.returns+" came back in time, "+padStats.taps+" quick touches, "+
+       padStats.shots+" pad shots, "+padStats.regrips+" re-grips\n"+
+    "pad touches   newest first — what each measured and what the rule made of it\n"+
+    padLogRows()+
     "TUNE          the world holds while this panel is open (092b, S272)  [ASSUMED]\n"+
     "console h     "+document.querySelector(".console").getBoundingClientRect().height.toFixed(0)+" px\n"+
     /* LOOP 51. Measured, not arithmetic. Open each chart once, then
