@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 092a</title>
+<title>ELITE: THE CLONES — 092b</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -891,7 +891,8 @@
       white is police, bright green is a trader, and a ship's blip is 2 px bigger
       than an object's. Who is here today is on the <i>contacts</i> lines of the
       report below. Colours and size are <b>[ASSUMED]</b>. <b>Since 092a pirates fire</b>,
-      and they go on firing while this panel or any other is open. Police and traders do not fire.</div>
+      Police and traders do not fire. <b>Since 092b everything stops while this panel is open</b> —
+      your ship, theirs, the lasers — and carries on at FLY. Under PANEL (market, charts) it all keeps going.</div>
   </div>
 
   <div class="row">
@@ -917,7 +918,43 @@
     <div class="note">COMBAT §4.1 default 2. <b>[ASSUMED]</b> — never flown. A shot lands only if the
       target's centre is inside this cone and inside the laser's range. <b>It is one number for
       every laser: widen it and the pirates hit you more often too.</b> The faint ring round the
-      reticle is this cone, drawn to scale; it is there only when a fore laser is fitted.</div>
+      reticle is this cone, drawn to scale; it is there only when a fore laser is fitted.
+      <b>Since 092b this is YOUR laser only</b> — the row below is theirs — and a shot lands on
+      the ship <b>nearest the middle of the ring</b>, not the nearest in range.</div>
+  </div>
+  <div class="row">
+    <label>Their laser cone <i><span id="vCone2"></span>° either side</i></label>
+    <input type="range" id="sCone2" min="1" max="10" step="1">
+    <div class="note">COMBAT §4.1 default 2. <b>[ASSUMED]</b>. Every other ship's laser. Through 092a
+      the slider above set both. A stored tuning from 092a carries no value for this and reads 2.</div>
+  </div>
+  <div class="toggles">
+    <button id="tRefill">SHIPS' SHIELDS REFILL</button>
+    <button id="bPadFire">PAD FIRE</button>
+  </div>
+  <div class="note" style="font-size:9px;color:#1d3b2b;margin-top:-8px">
+    SHIPS' SHIELDS REFILL lit = every other ship's shields refill at +4 a second, as yours do —
+    092a's behaviour, under which a pack of five could not be beaten on 4 October (1,160 points
+    landed, no kill). Unlit = they do not. <b>Unlit is the default since 092b, [ASSUMED]</b>: the
+    spec says neither (S271). Their energy refills either way.<br><br>
+    PAD FIRE — tap to cycle OFF / SINGLE / DOUBLE. <b>Loop 65: the flight pad fires on a tap</b>
+    (single) or two quick taps (double) — one shot each. The middle zone still fires while held.
+    Lit = on. <b>Only in fight mode</b>: a fore laser fitted and a ship on the radar. In fight
+    mode a lifted thumb does not centre the stick — it holds for the time below, so the ship is
+    steady while you tap. Out of fight mode the pad is exactly as it was.
+  </div>
+  <div class="row">
+    <label>Pad tap time <i><span id="vTap"></span> ms</i></label>
+    <input type="range" id="sTap" min="80" max="500" step="10">
+    <div class="note"><b>[ASSUMED]</b>, never flown. A touch that does not move and lifts inside this
+      is a tap. For DOUBLE, the second tap must start inside this after the first.</div>
+  </div>
+  <div class="row">
+    <label>Pad hold <i><span id="vGrace"></span> ms</i></label>
+    <input type="range" id="sGrace" min="100" max="800" step="10">
+    <div class="note"><b>[ASSUMED]</b>, never flown — loop 69. How long the stick holds its last
+      position after a lift. Never shorter than the tap time. After it, the stick eases back to
+      centre over the key ramp-down time above.</div>
   </div>
 
   <!-- 092a. THE DEV LASER — the `Laser` letter, option (a), the s092
@@ -1115,7 +1152,12 @@ const SPEC = { dead:6, defl:55, exp:1.6,
                forShip:START_SHIP,
                keyUp:0.35, keyDown:0.18,
                radarRange:1200, blip:3,
-               laserCone:2,              /* 092a. degrees EITHER SIDE of the nose. [ASSUMED] COMBAT §4.1, S268 */
+               laserCone:2,              /* 092a. degrees EITHER SIDE of the nose. [ASSUMED] COMBAT §4.1, S268. 092b: YOURS only */
+               pirateCone:2,             /* 092b. the same figure for every CONTACT's laser. [ASSUMED] */
+               contactRefill:false,      /* 092b. do contacts' SHIELDS refill? S271. Off: 092a could not be won with it on */
+               padFire:"double",         /* 092b, loop 65 (B) and the gesture decision (C): off | single | double */
+               tapGap:200,               /* 092b. ms. A tap is shorter than this; a double's second tap starts inside it. [ASSUMED] */
+               grace:250,                /* 092b, loop 69. ms the stick holds after a lift, in fight mode. [ASSUMED] */
                radial:true, invP:false, invR:false, mirror:true };
 let T = Object.assign({}, SPEC);
 try{ const s = localStorage.getItem("dragpad.tuning");
@@ -2179,7 +2221,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 092a (092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 092b (092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -3038,27 +3080,130 @@ function drawPad(){
   stem.style.transform="rotate("+Math.atan2(dy,dx)+"rad)";
 }
 
+/* ---------- 092b: PAD FIRE AND THE GRACE HOLD — loops 65 and 69 ----------
+   WHERE THIS COMES FROM. Session 025 (8 September), read at 092 through
+   past-chat search:
+   · LOOP 65, [DECISION], Ripley — option B, a reversal of A in the same
+     session: FIRE FROM THE FLIGHT PAD BY A TAP. "Centre zone stays and
+     stays hold-to-fire. Pad tap is the snap shot; centre zone is the
+     burst. Two inputs, one weapon."
+   · GESTURE FORM, [DECISION], Ripley — option C: "build both [single
+     and double tap] behind a TUNE toggle and decide by flying. Test is
+     shots landed across the same encounter twice, not preference."
+   · LOOP 69: "Brief thumb lift holds the last deflection instead of
+     centring. Delay adjustable in TUNE from the outset. Fight-mode
+     only. A returning thumb inside the window must not re-origin the
+     pad. Expiry decays via CONTROL §5.3's 0.18 s ramp-down, not a snap."
+   · Ripley's reason, same session: you fire with the quarry ahead and
+     let it travel into the shot, so THE FROZEN STICK IS THE MECHANIC —
+     a steady platform while you tap.
+   S267, CORRECTED. 092a's comment on the fire zone said loop 65 "is in
+   no document" and built CONTROL §4.2 alone. PRIMER §7.1.3 does declare
+   65 permanently unknown — and the 025 chat holds it whole. The primer
+   looked in the filed documents and the build; nobody had searched the
+   chats for it. "Cannot be recovered" was a claim about where the
+   reader looked (S162's lesson, again).
+
+   WHAT IS BUILT.
+   · A TAP: a touch that never moves more than the deadzone (T.dead)
+     from where it landed and lifts inside T.tapGap ms. SINGLE: every
+     tap fires. DOUBLE: a tap whose touch-down is inside T.tapGap of the
+     previous tap's lift fires; the first of a pair does not.
+     "Fires" is the 092a latch, `triggerTap` — ONE SHOT, and the laser's
+     own rate still limits it (playerFire). A beam gets one frame.
+   · THE HOLD: in fight mode a lift keeps `pitchIn` / `rollIn` where
+     they were for max(T.grace, T.tapGap) ms. A thumb that comes back
+     inside the window lands WITHOUT moving the stick: while it sits
+     still (a tap in the making) the stick stays frozen; if it moves
+     past the deadzone it is a re-grip, and the origin is placed so that
+     the stick is exactly where it was held — no jump, and no centring.
+     Every lift restarts the window, so a double tap is held throughout.
+   · EXPIRY: the stick eases to centre over T.keyDown (§5.3's ramp),
+     in padStep(), once a frame.
+   · OUT OF FIGHT MODE NOTHING HERE RUNS: a release centres at once,
+     CONTROL §4.1's [TESTED] rule, the line it has always been.
+
+   THREE THINGS 025 DID NOT SAY, DECIDED HERE AND NAMED — [ASSUMED]:
+   1. WHAT "FIGHT MODE" IS. No document defines it (searched at 092).
+      BUILT AS: pad fire is not OFF, a fore laser is fitted, and a ship
+      — any role — is inside the radar's range. fightMode(), read at the
+      moment of a lift, so the pad is crisp whenever nothing is near.
+   2. THE TWO TIMES. 025: "~150 ms was a guess on a call and I am not
+      writing it into a spec as a figure"; "two numbers come out of one
+      measurement — the tap-gap ... and the hold window, which must be
+      at least as long". 200 and 250 are this build's guesses, both on
+      sliders; the hold is never shorter than the tap gap. LOOP 70, the
+      calibration routine that would seed them, is NOT BUILT.
+   3. A STILL TOUCH HELD LONGER THAN A TAP is neither a tap nor a steer;
+      lifting it holds or centres as any lift does.
+   THE MOUSE (desktop checking) is unchanged and does not tap-fire.
+   CONTROL §4.1 and §4.2 owe the revision 025 named. */
+let padDownX=0, padDownY=0, padDownT=0, padMoved=false, padReturn=false;
+let padHold=false, padHoldUntil=0, padHoldVec=[0,0], padLastTap=-1e9;
+const padStats = { taps:0, shots:0, holds:0, regrips:0 };
+function fightMode(){
+  if(T.padFire === "off" || foreLaser() === null) return false;
+  for(const c of contacts) if(contactRange(c) <= T.radarRange) return true;
+  return false;
+}
+function padStep(dt){
+  if(padId !== null || !padHold || performance.now() <= padHoldUntil) return;
+  const m = Math.hypot(pitchIn, rollIn), step = dt / Math.max(0.02, T.keyDown);
+  if(m <= step){ pitchIn = 0; rollIn = 0; defPx = 0; padHold = false; }
+  else { const k = (m - step) / m; pitchIn *= k; rollIn *= k; }
+}
+
 pad.addEventListener("touchstart",function(e){
   e.preventDefault();
   if(padId!==null) return;
   const t=e.changedTouches[0];
-  padId=t.identifier; ox=cx=t.clientX; oy=cy=t.clientY;
-  pad.classList.add("live"); computeAxes(); drawPad(); wake();
+  padId=t.identifier;
+  padDownX=t.clientX; padDownY=t.clientY; padDownT=performance.now(); padMoved=false;
+  if(padHold && padDownT <= padHoldUntil){
+    padReturn = true;                    /* inside the window: the stick is not touched */
+  } else {
+    padReturn = false; padHold = false;
+    ox=cx=t.clientX; oy=cy=t.clientY; computeAxes();
+  }
+  pad.classList.add("live"); drawPad(); wake();
 },{passive:false});
 
 pad.addEventListener("touchmove",function(e){
   e.preventDefault();
   for(const t of e.changedTouches){
-    if(t.identifier===padId){ cx=t.clientX; cy=t.clientY; computeAxes(); drawPad(); }
+    if(t.identifier!==padId) continue;
+    if(!padMoved && Math.hypot(t.clientX-padDownX, t.clientY-padDownY) > T.dead){
+      padMoved = true;
+      if(padReturn){                     /* a re-grip: the origin goes where the held stick puts it */
+        ox = t.clientX - padHoldVec[0]; oy = t.clientY - padHoldVec[1];
+        padReturn = false; padHold = false; padStats.regrips++;
+      }
+    }
+    if(padReturn) continue;              /* still a tap in the making: frozen */
+    cx=t.clientX; cy=t.clientY; computeAxes(); drawPad();
   }
 },{passive:false});
 
 function padEnd(e){
   e.preventDefault();
   for(const t of e.changedTouches){
-    if(t.identifier===padId){
-      padId=null; pitchIn=0; rollIn=0; defPx=0;      // re-centre on release only
-      pad.classList.remove("live");
+    if(t.identifier!==padId) continue;
+    padId=null;
+    pad.classList.remove("live");
+    const fm = fightMode(), now = performance.now();
+    if(fm && !padMoved && now - padDownT <= T.tapGap){
+      padStats.taps++;
+      if(T.padFire === "single"){ triggerTap = true; padStats.shots++; }
+      else if(padDownT - padLastTap <= T.tapGap){ triggerTap = true; padStats.shots++; padLastTap = -1e9; }
+      else padLastTap = now;
+    }
+    if(fm){
+      if(!padReturn){ padHoldVec = [cx-ox, cy-oy]; if(!padHold) padStats.holds++; }
+      padHold = true; padReturn = false;
+      padHoldUntil = now + Math.max(T.grace, T.tapGap);
+    } else {
+      padHold = false; padReturn = false;
+      pitchIn=0; rollIn=0; defPx=0;      // re-centre on release only — CONTROL §4.1, [TESTED]
     }
   }
 }
@@ -3140,11 +3285,11 @@ window.addEventListener("mouseup",function(){ if(thrId==="m") thrId=null; });
    held drains energy behind the lock screen. [ASSUMED], the wipe
    button's reasoning (loop 113), applied here.
    CONTROL §11 ITEM 34 says §4.1 and §4.2 "are owed a revision by loop
-   65's decision". READ AT 092 BEFORE THIS WAS WRITTEN: loop 65 is one
-   of the five PRIMER §7.1.3 declares permanently unknown — its text is
-   in no document. There is no decision to build, so §4.2 is built as
-   it stands. S267. Loop 69 (a joypad grace period) is about the PAD's
-   release rule and is not touched: the pad's handlers are unchanged. */
+   65's decision". 092a said here that loop 65 "is in no document" and
+   that "there is no decision to build". THAT WAS WRONG — S267,
+   corrected in 092b: the decision is in the session 025 chat, and the
+   pad block above builds it. THIS ZONE IS UNCHANGED BY IT: loop 65 (B)
+   keeps the centre zone and keeps it hold-to-fire. */
 const fireEl = document.getElementById("fire");
 let trigger = false, triggerTap = false, fireTouch = null;
 fireEl.addEventListener("touchstart",function(e){
@@ -3170,7 +3315,11 @@ window.addEventListener("mouseup",function(){
   if(fireTouch === "m"){ fireTouch = null; trigger = false; }
 });
 document.addEventListener("visibilitychange",function(){
-  if(document.visibilityState === "hidden"){ fireTouch = null; trigger = false; triggerTap = false; }
+  if(document.visibilityState === "hidden"){
+    fireTouch = null; trigger = false; triggerTap = false;
+    /* 092b: and the pad's hold — a stick held behind the lock screen is the same fault. */
+    if(padId === null && padHold){ padHold = false; pitchIn = 0; rollIn = 0; defPx = 0; }
+  }
 });
 function fireHeld(){
   if(trigger || triggerTap) return true;
@@ -3447,6 +3596,7 @@ function combatStep(dt){
   collide();
   contactsStep(dt);
   playerFire(dt);
+  debrisStep(dt);                        /* 092b: the wreckage drifts */
   recharge(dt);
 }
 /* TUNE. Read from state and the runtime log at write time; nothing
@@ -3594,6 +3744,10 @@ const ROLE_RGB = { pirate:"232,178,58", police:"255,255,255", trader:"70,255,90"
 const SHIP_SHAPE = { v:[[0,0,1],[-0.8,0,-0.6],[0.8,0,-0.6],[0,0.3,-0.6],[0,-0.12,-0.6]],
                      e:[[0,1],[0,2],[0,3],[0,4],[1,3],[2,3],[1,4],[2,4]] };
 const contacts = [];
+/* 092b. What is left of a ship the player destroyed — see spawnDebris(),
+   in the step 3 block. Declared here because spawnContacts() clears it
+   and runs at boot, before that block. Runtime, presentation, never saved. */
+const debris = [];
 let spawnLast = null;                     /* TUNE: what the last draw was made for */
 
 /* §3.2. ONE DRAW PER ARRIVAL: r = rng(hash32(WORLD_SEED, galaxy, system,
@@ -3610,6 +3764,7 @@ let spawnLast = null;                     /* TUNE: what the last draw was made f
 function spawnContacts(why){
   const cm = state.commander, sys = state.system;
   contacts.length = 0;
+  debris.length = 0;                     /* 092b: a new system has no wreckage */
   const row = SPAWN_TABLE.find(function(x){ return x.danger === sys.dangerRating; });
   const r   = rng(hash32(WORLD_SEED, cm.galaxy, cm.system, cm.gameDay, SPAWN_TAG));
   const fld = fieldObjects(cm.galaxy, cm.system);
@@ -3738,7 +3893,9 @@ function contactsStep(dt){
    time; nothing stored for display. `drawn for` must name the same
    system and day as `here` — the `scene` shape: if it does not, the
    listener did not run. The report is a snapshot from when TUNE
-   opened; the ships fly on underneath it (S254). */
+   opened; the ships fly on underneath it (S254). 092b: NOT UNDER TUNE
+   ANY MORE — frame() holds the world while TUNE is open (S272), so the
+   snapshot and the ships agree until FLY. */
 function contactRange(c){
   return Math.hypot(wrap(c.pos[0]-pos[0]), wrap(c.pos[1]-pos[1]), wrap(c.pos[2]-pos[2]));
 }
@@ -3768,7 +3925,7 @@ function contactRows(){
                 : d > PIRATE_NEAR    ? "closing, full throttle"
                                      : "closing, 60%";
     /* 092a: what the contact holds, read at write time. Floats, shown
-       whole. `FIRING` is this frame's — the report is a snapshot. */
+       whole. `FIRING` is the last flown frame's — the report is a snapshot. */
     return "  "+(i+1)+" "+(c.role+"      ").slice(0,7)+" "+ID_NS+":"+c.hull+"  "+c.laser+
            "  ·  "+d.toFixed(0)+" u away"+(d > T.radarRange ? " (off radar)" : "")+
            "  ·  "+c.speed.toFixed(0)+"/s  ·  "+doing+(c.firing ? "  ·  FIRING" : "")+
@@ -3828,7 +3985,8 @@ spawnContacts("at boot (the pose stands in for the arrival point)");
       "inside a 15° cone ahead". Neither says whether the figure is the
       whole cone or half of it. BUILT AS: degrees EITHER SIDE of the
       nose, for both. The 2 is `T.laserCone`, on a TUNE slider, and it
-      is ONE number for every laser — yours and theirs. The test is on
+      is ONE number for every laser — yours and theirs (092a; since
+      092b theirs is `T.pirateCone`, its own slider). The test is on
       the target's CENTRE, as §4.1 has it: at 800 u, 2° is 28 u, inside
       the 60 u a hull is drawn at.
    2. "PER FRAME" FOR A CONTINUOUS LASER. §4.1 tests a pulse "once per
@@ -3838,7 +3996,8 @@ spawnContacts("at boot (the pose stands in for the arrival point)");
       moment; a beam or military lands damage x rate x dt in every
       frame the test passes — 60 a second on target for a beam, however
       fast the frames come.
-   3. A CONTACT RECHARGES AND PAYS FOR ITS LASER — S271. §5.3 gives a
+   3. A CONTACT RECHARGES AND PAYS FOR ITS LASER — S271 (092b: the
+      SHIELD refill is a TUNE switch, off by default — contactRecharge()). §5.3 gives a
       contact "the same shields, same order"; nothing says its shields
       refill or its laser costs it energy. BUILT AS: both, on §6.1's
       and §4.1's own figures — "a contact is a ship" (ruling 7).
@@ -3848,7 +4007,8 @@ spawnContacts("at boot (the pose stands in for the arrival point)");
       (§6.1); the next whole point of recharge fires it again.
    5. NOTHING BLOCKS A SHOT. Rocks and other ships are not in the way
       (S261: ships collide with nothing). The player's shot lands on
-      the NEAREST contact inside the cone and the range. A pirate's
+      the NEAREST contact inside the cone and the range (092a; since
+      092b the one NEAREST THE NOSE — playerTarget()). A pirate's
       shot can only ever land on the player.
    6. TWO LASERS ON ONE MOUNT (EQUIPMENT [A] 8 — the slot shape cannot
       forbid it): the first of LASER_PICK that is fitted fires.
@@ -3868,7 +4028,10 @@ spawnContacts("at boot (the pose stands in for the arrival point)");
    S272 — THE FRAME RUNS UNDER TUNE AND UNDER EVERY PANEL (S254, since
    091a), so SINCE 092a A PIRATE SHOOTS YOU WHILE YOU READ THE REPORT
    OR TRADE. Not changed here: whether the world waits for a panel is
-   a ruling nobody has made.
+   a ruling nobody has made. 092b: SEEN ON DEVICE, 4 October — 9,552
+   points landed between two reports with the orientation unchanged —
+   and CHANGED FOR TUNE ONLY: frame() holds the whole world while TUNE
+   is open. [ASSUMED], Ripley's to overturn. PANEL is as it was.
    ================================================================== */
 const LASERS = Object.freeze({                 /* COMBAT §4.1, row for row */
   pulse:    Object.freeze({ damage:8,  rate:4,  energy:5,  range:1500, continuous:false }),
@@ -3960,7 +4123,49 @@ function hitContact(c, dmg){
   c.flash = HIT_SHOW;
   if(c.role === "trader") c.fled = true;
   fireStats.dealt += dmg;
-  if(c.hullPts <= 0) recordKill(c);
+  if(c.hullPts <= 0 && recordKill(c).ok) spawnDebris(c);
+}
+
+/* 092b — THE EXPLOSION. Ripley, 092: "show the ship explode when killed
+   using smaller shapes moving away from a central point where the ship
+   had been". DEBRIS_N small triangles, born at the ship's centre, each
+   thrown out in its own direction and tumbling, carrying half the
+   ship's own velocity, drawn white at first and then in the ship's role
+   colour as they fade. PRESENTATION, RUNTIME, NEVER SAVED: nothing here
+   is in `state`, nothing can be hit, scooped or collided with, and the
+   radar does not show it. The directions come from a seeded stream
+   (kills, so two explosions differ) — no reason to be unrepeatable.
+   Every figure [ASSUMED], this build's; no spec draws an explosion.
+   LOOP 114, OPENED 092, NOT BUILT: recoverable cargo and ship parts,
+   picked up with a scoop. This is where it would be born. */
+const DEBRIS_N = 16, DEBRIS_LIFE = 2.6, DEBRIS_TAG = 0x44454252;   /* "DEBR" */
+function spawnDebris(c){
+  const r = rng(hash32(WORLD_SEED, state.commander.kills, DEBRIS_TAG));
+  const fw = qrot(c.q,[0,0,1]);
+  for(let i=0; i<DEBRIS_N; i++){
+    const u = r()*2-1, th = r()*2*Math.PI, sq = Math.sqrt(1-u*u);
+    const out = 35 + r()*110;
+    const u1 = r(), u2 = r()*2*Math.PI, u3 = r()*2*Math.PI, a = Math.sqrt(1-u1), b = Math.sqrt(u1);
+    const ax = r()*2-1, ay = r()*2-1, az = r()*2-1, al = Math.hypot(ax,ay,az) || 1;
+    debris.push({ p:[c.pos[0], c.pos[1], c.pos[2]],
+                  v:[fw[0]*c.speed*0.5 + sq*Math.cos(th)*out,
+                     fw[1]*c.speed*0.5 + sq*Math.sin(th)*out,
+                     fw[2]*c.speed*0.5 + u*out],
+                  q:qnorm([a*Math.sin(u2), a*Math.cos(u2), b*Math.sin(u3), b*Math.cos(u3)]),
+                  ax:[ax/al, ay/al, az/al], spin:1 + r()*5,
+                  size:7 + r()*13, age:0, life:DEBRIS_LIFE*(0.55 + 0.45*r()),
+                  rgb:ROLE_RGB[c.role] });
+  }
+}
+function debrisStep(dt){
+  for(let i=debris.length-1; i>=0; i--){
+    const d = debris[i];
+    d.age += dt;
+    if(d.age >= d.life){ debris.splice(i,1); continue; }
+    d.p[0] += d.v[0]*dt; d.p[1] += d.v[1]*dt; d.p[2] += d.v[2]*dt;
+    const h = d.spin*dt/2, sn = Math.sin(h);
+    d.q = qnorm(qmul(d.q, [Math.cos(h), d.ax[0]*sn, d.ax[1]*sn, d.ax[2]*sn]));
+  }
 }
 
 /* recordKill(contact) — AN ACTION. COMBAT §11, ARCH §3: validate ->
@@ -3993,17 +4198,22 @@ function recordKill(c){
 }
 
 /* §4.1's hit test, for the player's shot: inside the cone off the
-   nose, inside the laser's range, nearest first (decision 5). */
+   nose and inside the laser's range.
+   092b — DECISION 5 CHANGED. 092a took the NEAREST ship in the cone.
+   At the spec's 2° that rarely chose between two; at the 10° flown on
+   4 October it shared every burst round a pack of five. NOW: THE SHIP
+   NEAREST THE NOSE — the smallest angle off the reticle, the one being
+   pointed at. [ASSUMED]; nothing still blocks a shot. */
 function playerTarget(L){
   const fw = qrot(q,[0,0,1]);
-  const cosC = Math.cos(T.laserCone*Math.PI/180);
-  let best = null, bd = Infinity;
+  let best = null, bc = Math.cos(T.laserCone*Math.PI/180);
   for(const c of contacts){
     const rel = [wrap(c.pos[0]-pos[0]), wrap(c.pos[1]-pos[1]), wrap(c.pos[2]-pos[2])];
     const d = Math.hypot(rel[0], rel[1], rel[2]);
-    if(d > L.range || d < 1e-6 || d >= bd) continue;
-    if((fw[0]*rel[0]+fw[1]*rel[1]+fw[2]*rel[2])/d < cosC) continue;
-    best = c; bd = d;
+    if(d > L.range || d < 1e-6) continue;
+    const cs = (fw[0]*rel[0]+fw[1]*rel[1]+fw[2]*rel[2])/d;
+    if(cs < bc) continue;
+    best = c; bc = cs;
   }
   return best;
 }
@@ -4055,7 +4265,7 @@ function pirateFire(c, rel, d, dt){
   const L = LASERS[c.laser];
   c.firing = true;
   c.energy = Math.max(0, c.energy - L.energy*dt);
-  const on = d <= L.range && cs >= Math.cos(T.laserCone*Math.PI/180);
+  const on = d <= L.range && cs >= Math.cos(T.pirateCone*Math.PI/180);   /* 092b: their own cone */
   if(L.continuous){
     c.shot = SHOT_SHOW;
     if(on) hurtPlayer(L.damage * L.rate * dt, c);
@@ -4066,9 +4276,17 @@ function pirateFire(c, rel, d, dt){
   }
 }
 
-/* §6.1, for a contact (decision 3). Floats. Hull never. */
+/* §6.1, for a contact (decision 3). Floats. Hull never.
+   092b — S271, FLOWN: with shields refilling, 392 shots / 145 landed /
+   1,160 points at Xavialbe on 4 October killed nothing; both kills that
+   day were a lone beam pirate whose own laser had starved its refill.
+   SO THE SHIELD HALF IS NOW A TUNE SWITCH, `T.contactRefill`, OFF BY
+   DEFAULT — [ASSUMED], Ripley's to overturn; the spec says neither.
+   ENERGY STILL REFILLS either way: without it a pulse pirate fires for
+   twenty seconds and never again. */
 function contactRecharge(c, row, dt){
   c.energy = Math.min(row.energyMax, c.energy + RECHARGE_ENERGY*dt);
+  if(!T.contactRefill) return;
   for(const key of ["shieldFore","shieldAft"]){
     if(c[key] >= row.shieldMax || c.energy < SHIELD_ENERGY_FLOOR) continue;
     const n = Math.min(RECHARGE_SHIELD*dt, row.shieldMax - c[key], c.energy);
@@ -4107,7 +4325,7 @@ function laserLine(){
   if(!k) return "fore mount EMPTY — NO LASER. A save from before 092a stays unarmed (ruling 1): FIT PULSE LASER, above";
   const L = LASERS[k];
   return "fore: "+k+" — "+L.damage+" a hit, "+L.rate+"/s, "+L.energy+" energy/s held, range "+L.range+
-         (L.continuous ? ", continuous" : "")+"  ·  cone "+T.laserCone+" deg either side (spec 2)  [ASSUMED]"+
+         (L.continuous ? ", continuous" : "")+"  ·  cone "+T.laserCone+" deg either side (spec 2), nearest the nose  [ASSUMED]"+
          "  ·  aft mount not built";
 }
 function fireLine(){
@@ -4207,6 +4425,34 @@ function render(){
       return qrot(cq,[rel[0]+w[0], rel[1]+w[1], rel[2]+w[2]]);
     });
     for(const e of SHIP_SHAPE.e){
+      let A=pts[e[0]], B=pts[e[1]];
+      if(A[2]<NEAR && B[2]<NEAR) continue;
+      if(A[2]<NEAR||B[2]<NEAR){
+        const t=(NEAR-A[2])/(B[2]-A[2]);
+        const M=[A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t, NEAR];
+        if(A[2]<NEAR) A=M; else B=M;
+      }
+      ctx.moveTo(hw+F*A[0]/A[2], hh-F*A[1]/A[2]);
+      ctx.lineTo(hw+F*B[0]/B[2], hh-F*B[1]/B[2]);
+    }
+    ctx.stroke();
+  }
+
+  // 092b: wreckage. Each piece is one small triangle, turned by its own
+  // `q`, drawn white for its first 0.2 s and then in the dead ship's
+  // role colour, fading out over its life. Same near-plane clip.
+  for(const d of debris){
+    const rel=[wrap(d.p[0]-pos[0]), wrap(d.p[1]-pos[1]), wrap(d.p[2]-pos[2])];
+    const cc=qrot(cq,rel);
+    if(cc[2] < -d.size*2 || Math.hypot(cc[0],cc[1],cc[2]) > CELL*1.35) continue;
+    const f=1-d.age/d.life;
+    ctx.strokeStyle = d.age < 0.2 ? "rgba(255,255,255,1)" : "rgba("+d.rgb+","+Math.max(0.08,f).toFixed(2)+")";
+    const pts=[[0,1,0],[-0.87,-0.5,0],[0.87,-0.5,0]].map(function(vv){
+      const w=qrot(d.q,[vv[0]*d.size, vv[1]*d.size, 0]);
+      return qrot(cq,[rel[0]+w[0], rel[1]+w[1], rel[2]+w[2]]);
+    });
+    ctx.beginPath();
+    for(const e of [[0,1],[1,2],[2,0]]){
       let A=pts[e[0]], B=pts[e[1]];
       if(A[2]<NEAR && B[2]<NEAR) continue;
       if(A[2]<NEAR||B[2]<NEAR){
@@ -4389,12 +4635,25 @@ function frame(now){
   let dt=(now-last)/1000; last=now;
   if(dt>0.1) dt=0.1;
 
+  /* 092b — S272. WHILE TUNE IS OPEN THE WORLD HOLDS: no flight, no
+     collision, no contacts, no lasers, no recharge, no wreckage. The
+     report is a snapshot from when the panel opened (S254) and through
+     092a the ships flew on beneath it — on 4 October that cost 9,552
+     points while a report was being read. Now the snapshot stays true
+     until FLY. The frame still draws, so the view is a still picture.
+     [ASSUMED], Ripley's to overturn. NOT held: under PANEL (market,
+     charts) everything runs as before — that ruling is unmade. */
+  const held = tuner.classList.contains("open");
+  let input = makeFlightInput(0, 0, throttle), rates = { wx:0, wz:0 };
+  if(!held){
   const kb=keyAxes(dt);
-  const p = padId!==null ? pitchIn : kb[0];
-  const r = padId!==null ? rollIn  : kb[1];
+  padStep(dt);                           /* 092b, loop 69: a held stick eases out once its window ends */
+  const padLive = padId!==null || padHold;
+  const p = padLive ? pitchIn : kb[0];
+  const r = padLive ? rollIn  : kb[1];
 
-  const input = makeFlightInput(p, r, throttle);
-  const rates = integrate(input, dt);
+  input = makeFlightInput(p, r, throttle);
+  rates = integrate(input, dt);
 
   // 090a, COMBAT §11: the per-frame effects — collision, then recharge.
   // They write state.ship.hull, .shieldFore, .shieldAft and .energy
@@ -4413,6 +4672,7 @@ function frame(now){
   // per-frame write to state at all. Since 090a combatStep() is the
   // second writer.)
   state.ship.speed = speed;
+  }                                      /* end of `if(!held)` — 092b */
 
   render();
   drawRadar();
@@ -4438,7 +4698,9 @@ const map=[["sDead","vDead","dead",0],["sDefl","vDefl","defl",0],["sExp","vExp",
            ["sPr","vPr","pitchRate",0],["sRr","vRr","rollRate",0],["sSp","vSp","maxSpeed",0],
            ["sKu","vKu","keyUp",2],["sKd","vKd","keyDown",2],
            ["sRad","vRad","radarRange",0],["sBlip","vBlip","blip",0],
-           ["sCone","vCone","laserCone",0]];                      /* 092a */
+           ["sCone","vCone","laserCone",0],                       /* 092a */
+           ["sCone2","vCone2","pirateCone",0],["sTap","vTap","tapGap",0],
+           ["sGrace","vGrace","grace",0]];                        /* 092b */
 
 /* Dev state sliders. These write to `state`, which the instruments read.
    Not saved with the tuning, because they are not tuning.
@@ -4518,6 +4780,9 @@ function syncUI(){
   document.getElementById("tInvR").classList.toggle("on",T.invR);
   document.getElementById("tMirror").classList.toggle("on",T.mirror);
   document.getElementById("controls").classList.toggle("mirrored",T.mirror);
+  document.getElementById("tRefill").classList.toggle("on",T.contactRefill);          /* 092b */
+  document.getElementById("bPadFire").classList.toggle("on",T.padFire !== "off");
+  document.getElementById("bPadFire").textContent = "PAD FIRE: "+T.padFire.toUpperCase();
   syncDev(); paintTuneVals(); writeReport();
 }
 for(const [sid,vid,key,dp] of map){
@@ -4537,6 +4802,13 @@ function toggle(id,key){
 }
 toggle("tRadial","radial"); toggle("tInvP","invP");
 toggle("tInvR","invR");     toggle("tMirror","mirror");
+toggle("tRefill","contactRefill");                                 /* 092b, S271 */
+/* 092b, loop 65. Three states, so it cycles rather than toggles. */
+document.getElementById("bPadFire").addEventListener("click",function(){
+  const o = ["off","single","double"];
+  T.padFire = o[(o.indexOf(T.padFire)+1) % o.length];
+  saveT(); syncUI();
+});
 
 /* LOOP 63, session 024. Everything TUNE displays is refreshed here, in one
    place, at the only moment a human can read it.
@@ -4664,7 +4936,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 092a — settings\n"+
+    "ELITE: THE CLONES 092b — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -4683,6 +4955,12 @@ function writeReport(){
     "radar range   "+T.radarRange+" units\n"+
     "blip size     "+T.blip+" px\n"+
     "laser cone    "+T.laserCone+" deg either side  (spec 2)\n"+
+    "their cone    "+T.pirateCone+" deg either side  (spec 2)\n"+
+    "ships refill  "+(T.contactRefill ? "ON — shields +"+RECHARGE_SHIELD+"/s, as 092a" : "off")+"  [ASSUMED] S271\n"+
+    "pad fire      "+T.padFire+"  ·  tap "+T.tapGap+" ms  ·  hold "+Math.max(T.grace,T.tapGap)+" ms  [ASSUMED]"+
+       "  ·  fight mode now: "+(fightMode() ? "ON" : "off")+
+       "  ·  "+padStats.taps+" taps, "+padStats.shots+" pad shots, "+padStats.holds+" holds, "+padStats.regrips+" re-grips\n"+
+    "TUNE          the world holds while this panel is open (092b, S272)  [ASSUMED]\n"+
     "console h     "+document.querySelector(".console").getBoundingClientRect().height.toFixed(0)+" px\n"+
     /* LOOP 51. Measured, not arithmetic. Open each chart once, then
        TUNE. "not drawn" means the panel has not been opened this
