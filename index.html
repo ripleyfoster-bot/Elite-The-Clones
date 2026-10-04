@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 092c</title>
+<title>ELITE: THE CLONES — 093b</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -907,20 +907,22 @@
   <h1>COMBAT — STEP 3, SINCE 092a</h1>
 
   <!-- 092a, COMBAT §4.1: "a laser hits if the target is inside a 2°
-       cone from the mount". ONE number for every laser in the system —
-       yours and theirs. Built as 2° EITHER SIDE of the nose (S268). On
+       cone from the mount". Through 092a ONE number for every laser;
+       since 092b YOURS ONLY — theirs is the row below (093a, S278: this
+       comment still said "yours and theirs"). Built as 2° EITHER SIDE of the nose (S268). On
        a slider because whether 2° can be held on a touch pad is the
        first thing step 3 has to find out. It is tuning: stored with T,
        put back to 2 by RESET. -->
   <div class="row">
     <label>Laser cone <i><span id="vCone"></span>° either side</i></label>
     <input type="range" id="sCone" min="1" max="10" step="1">
-    <div class="note">COMBAT §4.1 default 2. <b>[ASSUMED]</b> — never flown. A shot lands only if the
-      target's centre is inside this cone and inside the laser's range. <b>It is one number for
-      every laser: widen it and the pirates hit you more often too.</b> The faint ring round the
+    <div class="note">COMBAT §4.1 default 2. <b>[ASSUMED]</b>. Flown 4 October at 2 (1 shot in 4
+      landed) and at 8 and 10 (over 1 in 3). A shot lands only if the
+      target's centre is inside this cone and inside the laser's range. <b>YOUR laser only</b> —
+      the row below is theirs. The faint ring round the
       reticle is this cone, drawn to scale; it is there only when a fore laser is fitted.
-      <b>Since 092b this is YOUR laser only</b> — the row below is theirs — and a shot lands on
-      the ship <b>nearest the middle of the ring</b>, not the nearest in range.</div>
+      A shot lands on the ship <b>nearest the middle of the ring</b>, not the nearest in range.
+      <b>Since 093a a pad tap fires only with a ship inside this ring</b> (ruling 41).</div>
   </div>
   <div class="row">
     <label>Their laser cone <i><span id="vCone2"></span>° either side</i></label>
@@ -942,30 +944,32 @@
     SINGLE = <b>lift and come straight back</b>: one shot as the thumb lands.<br>
     DOUBLE = <b>lift, one quick touch, lift, land</b>: one shot as the thumb lands the second time.
     A plain lift-and-return does not fire on DOUBLE, so re-gripping is safe.<br>
-    The middle zone still fires while held. Lit = on. <b>Only in fight mode</b>: a fore laser
+    <b>Since 093a (ruling 41) a pad tap fires only with a ship inside the ring and in range.</b>
+    With none, the tap is counted as <i>held back</i> in the report and costs nothing.<br>
+    The middle zone still fires while held, ship or no ship. Lit = on. <b>Only in fight mode</b>: a fore laser
     fitted and a ship on the radar. In fight mode a lifted thumb does not centre the stick — it
     holds, so the ship is steady while you tap. Out of fight mode the pad is exactly as it was.
-    The last few pad touches are listed in the report below.
+    The last few pad touches <b>made in fight mode</b> are listed in the report below.
   </div>
   <div class="row">
     <label>Pad hold <i><span id="vGrace"></span> ms</i></label>
     <input type="range" id="sGrace" min="100" max="800" step="10">
     <div class="note">Loop 69. How long the stick holds after a lift — <b>and how quickly the thumb
-      must come back to count</b>. Your lifts measured 21 to 207 ms on the rig, so 250.
-      <b>[ASSUMED]</b> margin; not flown. After it, the stick eases back to centre.</div>
+      must come back to count</b>. Your lifts measured 21 to 207 ms on the rig, so the default is 250,
+      <b>[ASSUMED]</b> and not flown. <b>You fly 400</b>: 204 pad shots on 4 October. After it, the stick eases back to centre.</div>
   </div>
   <div class="row">
     <label>Quick touch time <i><span id="vTap"></span> ms</i></label>
     <input type="range" id="sTap" min="80" max="600" step="10">
     <div class="note">DOUBLE only. The quick touch in the middle is down no longer than this.
-      Yours measured 44 to 344 ms, so 400. <b>[ASSUMED]</b> margin; not flown.</div>
+      Yours measured 44 to 344 ms, so 400. <b>[ASSUMED]</b> margin. Flown at 400 on 4 October, 204 pad shots.</div>
   </div>
   <div class="row">
     <label>Quick touch move <i><span id="vMove"></span> px</i></label>
     <input type="range" id="sMove" min="2" max="40" step="1">
     <div class="note">How far a touch may slide and still be a quick touch — and how far a returned
       thumb slides before it is steering again. Yours measured up to 17.5 px, so 20. 092b used
-      the 6 px deadzone and missed a quarter of them. <b>[ASSUMED]</b> margin; not flown.</div>
+      the 6 px deadzone and missed a quarter of them. <b>[ASSUMED]</b> margin. Flown at 20 on 4 October, 204 pad shots.</div>
   </div>
 
   <!-- 092a. THE DEV LASER — the `Laser` letter, option (a), the s092
@@ -2046,6 +2050,34 @@ const COMMODITIES = [
    defeat a declaration order is gone with the order. */
 let mktTaken = { key:"", by:{} };
 
+/* 093b — THE KILL LIST. RULING 47, [DECISION], Ripley, session 092:
+   "killed ships stay dead until he jumps". WORLD v1.25 §9.8, COMBAT
+   v1.1 §3.5 and §12. Answers S270: a reload redrew the day's ships, so
+   a pirate killed a minute ago was back — and paid again.
+   WHAT IT IS: the draw numbers (`idx`, spawnContacts()) of the ships
+   killed in this system on this day, under the market counter's own
+   key — galaxy:system:gameDay. `gameDay` moves only on a jump, so the
+   key changes on every jump and on nothing else: THE LIST EXPIRES BY
+   ITSELF, exactly as `mktTaken` does. No expiry rule, no second copy
+   of the day, and jump() is not touched.
+   SAVED in moduleState under `core.combat` — WORLD §9.7 has said since
+   v1.19 that "`core.combat` joins [core.trade] when it saves anything".
+   A BAG, NOT THE ENVELOPE: NO `schema` CHANGE, the file stays 4, and a
+   093b file loads on 093a and 092c (harness only), which carry the bag
+   through untouched.
+   THIS VARIABLE IS THE ONE RUNTIME COPY, declared above the loader so
+   the loader can assign it (loop 104). WRITERS, and only these:
+   recordKill() (adds one), the loader, wipe(), and spawnContacts()
+   (discards a list whose key is not here-and-today).
+   LIVE CONTACTS ARE STILL NEVER SAVED: a ship that was hit and lived
+   comes back whole after a reload. [ASSUMED] — ruling 47 names the
+   dead and nothing else. */
+let killedHere = { key:"", idx:[] };
+function hereKey(){
+  const c = state.commander;
+  return c.galaxy + ":" + c.system + ":" + c.gameDay;
+}
+
 /* ==================================================================
    PERSISTENCE — LOOP 87, session 042. The save file.
    WORLD MODEL §9 is the single copy of the save-file shape. CORE API
@@ -2233,13 +2265,14 @@ const SHIP_SAVED = ["hull","shieldFore","shieldAft","energy","holdTonnes"];
    BOTH DECLARATIONS ARE ABOVE THE LOADER NOW and the loader assigns
    `mktTaken` directly, so the handover variable is deleted. */
 const TRADE_NS = "core.trade";
+const COMBAT_NS = "core.combat";          /* 093b, WORLD §9.8 — the kill list's bag */
 
 let saveStatus = "no save read this session";   /* for the TUNE report */
 let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 092c (092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 093b (093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -2350,7 +2383,12 @@ function saveGame(){
          WORLD §13 [DECISION] 22 is about the file, not the field. */
       moduleState: Object.assign({}, state.moduleState, {
         [TRADE_NS]: { mktTaken: { key: mktTaken.key,
-                                  by:  qualifyMap(mktTaken.by) } }
+                                  by:  qualifyMap(mktTaken.by) } },
+        /* 093b, ruling 47. Written from `killedHere`, its one runtime
+           copy, as `core.trade` is. Always written; an empty list is
+           spelled, not omitted. */
+        [COMBAT_NS]: { killed: { key: killedHere.key,
+                                 idx: killedHere.idx.slice() } }
       })
     };
     /* `cargoUsed` rides in `ship`? NO — it is not in SHIP_SAVED. It is
@@ -2577,6 +2615,7 @@ function loadFrom(raw){
      A stale `key` is not checked: mktAvail discards a counter whose key
      is not today's market, which is how it expires on the next jump. */
   let trade = null;
+  let combat = null;                   /* 093b */
   let moduleState = {};
   if(o.moduleState !== undefined){
     moduleState = Object.assign({}, o.moduleState);
@@ -2597,6 +2636,33 @@ function loadFrom(raw){
         by[id] = mt.by[k];
       }
       trade = { key: mt.key, by: by };
+    }
+    /* moduleState.core.combat. 093b, ruling 47. WORLD §9.8 and §9.7:
+       core's own bag, so it is checked like `cargo` and a malformed one
+       REFUSES THE FILE ([DECISION] 29's rule, which §9.7 extends to
+       `core.combat` by name). ABSENT LOADS AS AN EMPTY LIST — every file
+       written before 093b lacks it, no bump was taken, so absence is
+       legal ([DECISION] 30's argument). A DUPLICATE REFUSES: no build
+       can write one. An index with no ship behind it is NOT checked
+       here — the population is not drawn yet — and spawnContacts()
+       ignores it. A stale `key` is not checked either: spawnContacts()
+       discards a list that is not for here-and-today. */
+    const cb = moduleState[COMBAT_NS];
+    delete moduleState[COMBAT_NS];     /* killedHere is its only copy */
+    if(cb !== undefined){
+      const kd = cb && typeof cb === "object" && !Array.isArray(cb) ? cb.killed : undefined;
+      if(!kd || typeof kd !== "object" || Array.isArray(kd) ||
+         typeof kd.key !== "string" || !Array.isArray(kd.idx)){
+        saveStatus = "REFUSED — moduleState."+COMBAT_NS+" is malformed"; return false; }
+      const idx = [];
+      for(const v of kd.idx){
+        if(!Number.isInteger(v) || v < 0){
+          saveStatus = "REFUSED — killed entry: "+v; return false; }
+        if(idx.indexOf(v) !== -1){
+          saveStatus = "REFUSED — killed entry twice: "+v; return false; }
+        idx.push(v);
+      }
+      combat = { key: kd.key, idx: idx };
     }
   }
 
@@ -2654,6 +2720,7 @@ function loadFrom(raw){
   state.flags       = o.flags       !== undefined ? o.flags       : {};
   state.moduleState = moduleState;                     /* LOOP 94 */
   mktTaken          = trade || { key:"", by:{} };      /* LOOP 104 */
+  killedHere        = combat || { key:"", idx:[] };    /* 093b, ruling 47 */
 
   /* THE RECONCILE, LOOP 104. `cargoUsed` is a stored total and is the
      field that lies — loop 81. It is deliberately NOT in SHIP_SAVED,
@@ -2724,7 +2791,15 @@ function saveFileLine(){
             has run. */
          "  kills "+(c.kills===undefined ? "KEY ABSENT" : c.kills)+
          "  equipment "+(o.equipment && typeof o.equipment === "object"
-                           ? (Object.keys(o.equipment).join(",") || "none") : "KEY ABSENT");
+                           ? (Object.keys(o.equipment).join(",") || "none") : "KEY ABSENT")+
+         /* 093b: the kill list AS THE FILE HOLDS IT — draw numbers as
+            the `killed here` line prints them (from 1). */
+         "  killed "+(function(){
+           const b = o.moduleState && o.moduleState[COMBAT_NS];
+           const k = b && b.killed;
+           if(!k || !Array.isArray(k.idx)) return "BAG ABSENT";
+           return "["+k.idx.map(function(v){ return v+1; }).join(",")+"] for "+(k.key || "(none)");
+         })();
 }
 
 /* LOOP 105. Pose lines for the TUNE report. Display rounding only —
@@ -2800,6 +2875,7 @@ function wipe(){
   state.visited = [state.commander.system];
 
   mktTaken    = { key:"", by:{} };
+  killedHere  = { key:"", idx:[] };       /* 093b: the new commander has killed nobody */
   svcFuelLast = null;
   /* LOOP 105. The pose is saved ship state now, so a wipe that rebuilds
      the ship rebuilds it too — otherwise the new commander's first file
@@ -3122,21 +3198,16 @@ function drawPad(){
    chats for it. "Cannot be recovered" was a claim about where the
    reader looked (S162's lesson, again).
 
-   WHAT IS BUILT. (THE FIRST BULLET IS 092b's RULE AND IS GONE — 092c
-   replaced it; see "WHAT A TAP ACTUALLY IS" at the foot of this
-   comment. `T.tapGap` is retired. The hold, expiry and fight-mode
-   bullets stand, with the window now T.grace alone.)
-   · A TAP: a touch that never moves more than the deadzone (T.dead)
-     from where it landed and lifts inside T.tapGap ms. SINGLE: every
-     tap fires. DOUBLE: a tap whose touch-down is inside T.tapGap of the
-     previous tap's lift fires; the first of a pair does not.
-     "Fires" is the 092a latch, `triggerTap` — ONE SHOT, and the laser's
+   WHAT IS BUILT. (093a: 092b's TAP bullet stood here, marked as gone
+   since 092c, and is removed — the rule is "WHAT A TAP ACTUALLY IS",
+   below. `T.tapGap` is retired.)
+   · "Fires" is the 092a latch, `triggerTap` — ONE SHOT, and the laser's
      own rate still limits it (playerFire). A beam gets one frame.
    · THE HOLD: in fight mode a lift keeps `pitchIn` / `rollIn` where
-     they were for max(T.grace, T.tapGap) ms. A thumb that comes back
+     they were for T.grace ms. A thumb that comes back
      inside the window lands WITHOUT moving the stick: while it sits
      still (a tap in the making) the stick stays frozen; if it moves
-     past the deadzone it is a re-grip, and the origin is placed so that
+     past T.tapMove it is a re-grip, and the origin is placed so that
      the stick is exactly where it was held — no jump, and no centring.
      Every lift restarts the window, so a double tap is held throughout.
    · EXPIRY: the stick eases to centre over T.keyDown (§5.3's ramp),
@@ -3152,8 +3223,8 @@ function drawPad(){
    2. THE TWO TIMES. 025: "~150 ms was a guess on a call and I am not
       writing it into a spec as a figure"; "two numbers come out of one
       measurement — the tap-gap ... and the hold window, which must be
-      at least as long". 200 and 250 are this build's guesses, both on
-      sliders; the hold is never shorter than the tap gap. LOOP 70, the
+      at least as long". 200 and 250 were 092b's guesses; 092c's
+      figures, measured, are at the foot of this comment. LOOP 70, the
       calibration routine that would seed them, is NOT BUILT.
    3. A STILL TOUCH HELD LONGER THAN A TAP is neither a tap nor a steer;
       lifting it holds or centres as any lift does.
@@ -3193,19 +3264,50 @@ function drawPad(){
    ALL THREE FIGURES ARE THE RIG'S READINGS PLUS A MARGIN: [ASSUMED]
    until flown. The rig was at rest; loop 70 says cadence tightens
    under fire. LOOP 70 PROPER — the same measurement as a calibration
-   mode inside the game, writing the sliders — is NOT BUILT. */
+   mode inside the game, writing the sliders — is NOT BUILT.
+   FLOWN, 092c, [TESTED] Ripley's iPhone, 4 October 12:43 to 12:52: 204
+   pad shots on DOUBLE at hold 400 ms, quick touch 400 ms / 20 px, and
+   a pack of four killed. The hold's DEFAULT, 250, is not what flew.
+
+   093a — RULING 41, [DECISION], Ripley, session 092: A PAD TAP FIRES
+   ONLY WITH A SHIP IN THE CIRCLE AND IN RANGE. The fire zone is
+   unchanged: it fires whenever held, ship or no ship. shipInRing().
+   · THE HOLD IS NOT NARROWED — [DECISION], Ripley, 093, option (a):
+     the stick still freezes after a lift whenever fight mode is on (a
+     ship anywhere on the radar), so the pad feels the same all through
+     a fight. Rejected, (b): freeze only with a ship in the ring — the
+     pad's feel would change as a ship crossed the ring's edge.
+   · A DOUBLE's arming is untouched: the quick touch still arms, the
+     landing still counts as "came back in time"; only the shot waits
+     on the ring.
+   · [ASSUMED], mine: the test is made at the touch-down and the shot
+     is taken on the next frame, so a ship crossing the ring's edge in
+     that one frame can still give a shot that misses.
+   · S277: the touch log keeps fight-mode touches only.
+   [BUILT] 4 October 2026 — as exported, 093a has run on no device. */
 let padDownX=0, padDownY=0, padDownT=0, padMoved=false, padReturn=false, padFar=0, padFiredNow=false;
 let padHold=false, padHoldUntil=0, padHoldVec=[0,0], padShort=false, padLastLift=null, padGapNow=null;
-const padStats = { taps:0, returns:0, shots:0, holds:0, regrips:0 };
+const padStats = { taps:0, returns:0, shots:0, holds:0, regrips:0, heldBack:0 };
 const PAD_LOG = 8;
 const padLog = [];
 let padCameBack = false;                  /* this touch landed inside the window — for the log */
+let padHeldBackNow = false;               /* 093a: the rule said fire and ruling 41 said no — for the log */
+/* 093a, RULING 41. "The circle" is the ring round the reticle — the
+   player's laser cone, T.laserCone, drawn to scale — and "in range" is
+   the fitted laser's own range. Both are playerTarget()'s test, the one
+   the shot itself uses a frame later, so the pad and the laser cannot
+   disagree about what "in the ring" means. Read at the touch-down. */
+function shipInRing(){
+  const k = foreLaser();
+  return k !== null && playerTarget(LASERS[k]) !== null;
+}
 function padLogRows(){
-  if(!padLog.length) return "  (no pad touch this session)\n";
+  if(!padLog.length) return "  (no pad touch in fight mode this session)\n";
   return padLog.map(function(r){
     return "  down "+("    "+r.dur.toFixed(0)).slice(-5)+" ms  ·  slid "+("   "+r.move.toFixed(1)).slice(-5)+" px  ·  gap "+
            (r.gap === null ? "    –" : ("    "+r.gap.toFixed(0)).slice(-5))+" ms  ·  "+
-           (!r.fm ? "no fight mode" : (r.ret ? "came back in time" : "fresh touch")+(r.short ? ", quick" : "")+(r.shot ? "  — SHOT" : ""))+"\n";
+           ((r.ret ? "came back in time" : "fresh touch")+(r.short ? ", quick" : "")+
+            (r.shot ? "  — SHOT" : (r.blk ? "  — HELD BACK, no ship in the ring" : ""))+(r.fm ? "" : "  (radar empty at the lift)"))+"\n";
   }).join("");
 }
 function fightMode(){
@@ -3228,14 +3330,19 @@ pad.addEventListener("touchstart",function(e){
   padDownX=t.clientX; padDownY=t.clientY; padDownT=performance.now(); padMoved=false; padFar=0;
   padGapNow = padLastLift === null ? null : padDownT - padLastLift;
   padFiredNow = false;
+  padHeldBackNow = false;
   padCameBack = false;
   if(padHold && padDownT <= padHoldUntil){
     padReturn = true;                    /* inside the window: the stick is not touched */
     padCameBack = true;
     padStats.returns++;
-    /* 092c: THE SHOT IS ON THE WAY DOWN. */
+    /* 092c: THE SHOT IS ON THE WAY DOWN.
+       093a, RULING 41: ...AND ONLY WITH A SHIP IN THE RING AND IN RANGE.
+       A tap the rule would have fired, with nothing in the ring, is
+       counted and logged as HELD BACK and costs nothing. */
     if(fightMode() && (T.padFire === "single" || (T.padFire === "double" && padShort))){
-      triggerTap = true; padStats.shots++; padFiredNow = true;
+      if(shipInRing()){ triggerTap = true; padStats.shots++; padFiredNow = true; }
+      else { padStats.heldBack++; padHeldBackNow = true; }
     }
   } else {
     padReturn = false; padHold = false;
@@ -3273,9 +3380,15 @@ function padEnd(e){
     /* 092c: a SHORT touch arms a DOUBLE; nothing fires on a lift any more. */
     padShort = fm && !padMoved && now - padDownT <= T.tapMs;
     if(padShort) padStats.taps++;
-    padLog.unshift({ dur:now - padDownT, move:padFar, gap:padGapNow, fm:fm,
-                     ret:padCameBack, short:padShort, shot:padFiredNow });
-    if(padLog.length > PAD_LOG) padLog.length = PAD_LOG;
+    /* 093a, S277: a touch made outside fight mode is NOT LOGGED. 092c
+       logged every touch, and ordinary steering pushed the shots off an
+       eight-row list. A touch that came back in time, fired or was held
+       back is kept even if the last ship left the radar while it was down. */
+    if(fm || padCameBack || padFiredNow || padHeldBackNow){
+      padLog.unshift({ dur:now - padDownT, move:padFar, gap:padGapNow, fm:fm,
+                       ret:padCameBack, short:padShort, shot:padFiredNow, blk:padHeldBackNow });
+      if(padLog.length > PAD_LOG) padLog.length = PAD_LOG;
+    }
     padLastLift = now;
     if(fm){
       if(!padReturn){ padHoldVec = [cx-ox, cy-oy]; if(!padHold) padStats.holds++; }
@@ -3721,6 +3834,9 @@ function hitsLine(){
    and a pose in the frame the player flies in (§3.1).
    CONTACTS ARE RUNTIME, NEVER SAVED (§3.1, COMBAT [A] 9). No new saved
    field, no `schema` change; the file is byte-identical to 090a's.
+   (093b: live contacts are still never saved. THE DEAD ARE — ruling 47,
+   `killedHere` — and the file is no longer byte-identical: it carries
+   the `core.combat` bag.)
    PER-FRAME, §11's right column: contactsStep() neither saves nor
    signals, and it writes NOTHING IN `state` — a contact is a
    module-local record, like `objects`.
@@ -3855,6 +3971,7 @@ function spawnContacts(why){
   }
   const laser = sys.techLevel >= SPAWN_BEAM_TECH ? "beam" : "pulse";
   let fallbacks = 0;
+  let drawNo = 0;                        /* 093b: each ship's number in the day's draw */
   for(const role of ROLES) for(let i=0; i<n[role]; i++){
     const hull = r() < SPAWN_WREN_SHARE ? "shipWren" : "shipDray";
     const u1 = r(), u2 = r()*2*Math.PI, u3 = r()*2*Math.PI;
@@ -3883,15 +4000,29 @@ function spawnContacts(why){
        contact is never saved, so the integer rule (S252) has no file
        to protect here. */
     const hr = SHIPS[hull];
-    contacts.push({ role:role, hull:hull, laser:laser, q:cq, pos:chosen,
+    contacts.push({ idx:drawNo++, role:role, hull:hull, laser:laser, q:cq, pos:chosen,
                     speed:thr * hr.maxSpeed,              /* already under way. [ASSUMED] */
                     breakFor:0,
                     shieldFore:hr.shieldMax, shieldAft:hr.shieldMax,
                     energy:hr.energyMax, hullPts:hr.hullMax,
                     cool:0, shot:0, flash:0, firing:false, fled:false });
   }
+  /* 093b, RULING 47. THE WHOLE DAY IS DRAWN FIRST, THEN THE DEAD ARE
+     TAKEN OUT — so the stream, and every survivor's hull, heading and
+     number, is what it was before anyone died. `idx` is the ship's
+     place in that draw and is the only identity a contact has; it
+     holds for as long as the table, the draw order and the day do.
+     A list for another system or day is discarded here — this is
+     where it expires. An index with no ship behind it is ignored. */
+  const key = hereKey();
+  if(killedHere.key !== key) killedHere = { key:key, idx:[] };
+  const drawn = contacts.length;
+  if(killedHere.idx.length)
+    for(let i=contacts.length-1; i>=0; i--)
+      if(killedHere.idx.indexOf(contacts[i].idx) !== -1) contacts.splice(i, 1);
   spawnLast = { why:why, g:cm.galaxy, s:cm.system, day:cm.gameDay,
-                danger:row.danger, n:n, row:row, fallbacks:fallbacks };
+                danger:row.danger, n:n, row:row, fallbacks:fallbacks,
+                drawn:drawn, removed:drawn - contacts.length };
 }
 
 /* CONSTRAINT 1, FOR A CONTACT. Returns [pitch, roll], each in -1..1,
@@ -3994,7 +4125,14 @@ function contactsLine(){
     "  ·  drawn for g"+L.g+" s"+L.s+" day "+L.day+" "+L.why+
     (same ? "" : "  — MISMATCH: here is g"+here.galaxy+" s"+here.system+" day "+here.gameDay)+
     (L.fallbacks ? "  ·  "+L.fallbacks+" placed by FALLBACK" : "")+
-    "  — every cell [ASSUMED]";
+    "  — every cell [ASSUMED]"+
+    /* 093b, ruling 47. `drawn` and `removed` are the last draw's; the
+       list is live. */
+    "\nkilled here   "+(killedHere.idx.length
+        ? killedHere.idx.length+" — draw no. "+killedHere.idx.map(function(v){ return v+1; }).join(", ")
+        : "none")+
+    "  ·  list for "+(killedHere.key || "(none)")+"  ·  last draw: "+L.drawn+" drawn, "+L.removed+
+    " left out as already dead  ·  they stay dead until a jump (ruling 47)";
 }
 function contactRows(){
   if(!contacts.length) return "  (no ships in this system today)\n";
@@ -4006,7 +4144,7 @@ function contactRows(){
                                      : "closing, 60%";
     /* 092a: what the contact holds, read at write time. Floats, shown
        whole. `FIRING` is the last flown frame's — the report is a snapshot. */
-    return "  "+(i+1)+" "+(c.role+"      ").slice(0,7)+" "+ID_NS+":"+c.hull+"  "+c.laser+
+    return "  "+(c.idx+1)+" "+(c.role+"      ").slice(0,7)+" "+ID_NS+":"+c.hull+"  "+c.laser+
            "  ·  "+d.toFixed(0)+" u away"+(d > T.radarRange ? " (off radar)" : "")+
            "  ·  "+c.speed.toFixed(0)+"/s  ·  "+doing+(c.firing ? "  ·  FIRING" : "")+
            "  ·  sh "+c.shieldFore.toFixed(0)+"/"+c.shieldAft.toFixed(0)+
@@ -4022,6 +4160,18 @@ spawnContacts("at boot (the pose stands in for the arrival point)");
    (§4.1, §5), recordKill (§11), BOUNTY (§5.4), RATING (§10).
    [BUILT], 3 October 2026 — as exported, not one line here had run on
    a device. (Dated, so it ages visibly — S257's lesson.)
+   093a — THE FLOWN RECORD, from the s093 handover §1. [TESTED],
+   Ripley's iPhone, 4 October, 11:01 and 12:43 to 12:52, builds 092a to
+   092c: the fire zone and the pad both fire; hits, facing, shields
+   then hull; recordKill saves once and the file agrees; bounty 800 /
+   400 / 200 under Anarchy / Communist / Democracy; a police kill pays
+   0; rating Green to Steady at 8 kills; the explosion; a hit trader
+   flees; refill off holds; a reload brings the dead back (S270); 204
+   pad shots on DOUBLE and a pack of four killed at Xavialbe, his hull
+   at 0. EVERY FIGURE STAYS [ASSUMED] — seen working is not tuned.
+   NOT RUN ON A DEVICE as of that date: the new commander's starting
+   laser; SINGLE beyond 4 shots; any laser but pulse; Space to fire;
+   every refusal path.
 
    WHAT IS HERE. The weapon table (§4.1). The player's FORE laser, read
    from `state.equipment` — its first reader. Pirates' lasers (§3.4).
@@ -4032,10 +4182,12 @@ spawnContacts("at boot (the pose stands in for the arrival point)");
    PER-FRAME, §11's right column: firing, hits landing and a contact's
    recharge neither save nor signal. The player's shields, energy and
    hull are written direct, as core; the next save persists them.
-   NO NEW SAVED FIELD, NO `schema` CHANGE (§12). `equipment` gains its
+   NO NEW SAVED FIELD, NO `schema` CHANGE (§12) — 093b: STILL SO, AND
+   ONE BAG, `core.combat`, the kill list. `equipment` gains its
    first writers (the starting fit and the dev laser); `kills` and
    `credits` gain combat's write. A file with no kill and no laser is
-   byte-identical to 091a's.
+   byte-identical to 091a's. (093b: NO LONGER — the `core.combat` bag is
+   always written, empty or not.)
 
    WHAT IS NOT, AND WHY — each named, none guessed:
    · THE LEGAL CHANGE. §5.4 and §11 say recordKill "also writes ... the
@@ -4105,6 +4257,12 @@ spawnContacts("at boot (the pose stands in for the arrival point)");
    reload — and pays again. §3.1 and COMBAT [A] 9 accept "a reload
    mid-fight is an escape"; neither had a bounty to weigh. NOT FIXED:
    remembering the dead would be a saved field (§12 says none).
+   093b: FIXED. RULING 47 (Ripley, 092) — killed ships stay dead until
+   a jump. WORLD v1.25 §9.8 and COMBAT v1.1 §3.5, §12 carry it: the dead
+   are a bag under `core.combat`, not an envelope field, so §12's "no
+   new field, no `schema` change" still holds and its "no bag" does
+   not. See `killedHere`, above the loader. [BUILT] 4 October 2026 — as
+   exported, 093b has run on no device.
    S272 — THE FRAME RUNS UNDER TUNE AND UNDER EVERY PANEL (S254, since
    091a), so SINCE 092a A PIRATE SHOOTS YOU WHILE YOU READ THE REPORT
    OR TRADE. Not changed here: whether the world waits for a panel is
@@ -4268,6 +4426,15 @@ function recordKill(c){
   const was = cm.credits;
   cm.kills   += 1;
   cm.credits += bounty;
+  /* 093b, ruling 47: and the ship's draw number goes on the kill list,
+     IN THE SAME SAVE as the kill and the bounty — so the file can never
+     hold a paid bounty for a ship that would come back. */
+  const hk = hereKey();
+  if(killedHere.key !== hk) killedHere = { key:hk, idx:[] };
+  if(Number.isInteger(c.idx) && killedHere.idx.indexOf(c.idx) === -1){
+    killedHere.idx.push(c.idx);
+    killedHere.idx.sort(function(a, b){ return a - b; });
+  }
   contacts.splice(i, 1);
   killLog.unshift({ role:c.role, hull:c.hull, bounty:bounty, danger:state.system.dangerRating,
                     name:state.system.name, was:was, now:cm.credits, t:Date.now() });
@@ -5017,7 +5184,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 092c — settings\n"+
+    "ELITE: THE CLONES 093b — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -5041,8 +5208,8 @@ function writeReport(){
     "pad fire      "+T.padFire+"  ·  hold "+T.grace+" ms  ·  quick touch "+T.tapMs+" ms, "+T.tapMove+" px  [ASSUMED]"+
        "  ·  fight mode now: "+(fightMode() ? "ON" : "off")+
        "  ·  "+padStats.holds+" holds, "+padStats.returns+" came back in time, "+padStats.taps+" quick touches, "+
-       padStats.shots+" pad shots, "+padStats.regrips+" re-grips\n"+
-    "pad touches   newest first — what each measured and what the rule made of it\n"+
+       padStats.shots+" pad shots, "+padStats.heldBack+" held back (no ship in the ring), "+padStats.regrips+" re-grips\n"+
+    "pad touches   fight mode only, newest first — what each measured and what the rule made of it\n"+
     padLogRows()+
     "TUNE          the world holds while this panel is open (092b, S272)  [ASSUMED]\n"+
     "console h     "+document.querySelector(".console").getBoundingClientRect().height.toFixed(0)+" px\n"+
