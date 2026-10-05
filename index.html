@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 094a</title>
+<title>ELITE: THE CLONES — 094b</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -1032,6 +1032,22 @@
       recharges</b>; the ship switch above hands a fresh one. Fuel is moved by a jump
       and by the market's Fuel service, since 037. <b>This slider
       buys it for nothing, and that is a dev control, not a price.</b> Loop 89.</div>
+  </div>
+  <!-- 094b. THE DEV LEGAL SLIDER. His commander reached legalStatus 60
+       in one sitting (S287) and decay is -1 every tenth day. A dev
+       control under ARCH §2.3's exception — NOT AN ACTION, NOT A GAME
+       MECHANIC; nothing in the game clears a record this way.
+       devSetLegal() in the script carries the reasoning. UNLIKE THE FOUR
+       ABOVE IT WRITES ON RELEASE, NOT WHILE DRAGGED, AND IT SAVES. -->
+  <div class="row">
+    <label>Legal status <i><span id="vLg"></span></i></label>
+    <input type="range" id="sLg" min="0" max="30" step="1">
+    <div class="note">Dev control, not a pardon. <b>0 is Clean, 1 to 9 Offender, 10 and up
+      Fugitive.</b> It writes <b>when you let go</b>, saves at once, and leaves a line in the
+      <i>legal log</i> below. <b>It does not change the ships already here</b>: police that have
+      turned on you stay turned, and the extra police stay, until the next draw —
+      <b>close the app and reopen it, or jump</b>. The slider runs to 30, or to your own figure
+      if that is higher. Every legal figure is <b>[ASSUMED]</b> and unruled (S287).</div>
   </div>
 
   <div class="tunevals" id="tv"></div>
@@ -2071,7 +2087,21 @@ let mktTaken = { key:"", by:{} };
    (discards a list whose key is not here-and-today).
    LIVE CONTACTS ARE STILL NEVER SAVED: a ship that was hit and lived
    comes back whole after a reload. [ASSUMED] — ruling 47 names the
-   dead and nothing else. */
+   dead and nothing else.
+   094b — THE FLOWN RECORD, from the s095 handover §1. [TESTED],
+   Ripley's iPhone, reported in session 094 (5 October), `093b` and
+   `094a`: the bag is
+   written and reaches the file; the four Xavialbe pirates came back
+   ONCE and were paid again (kills 8 to 12, +3200) — the ships killed
+   before the list existed, WORLD §9.8's prediction; a jump clears the
+   live list; under 094a's extra police the list still names the right
+   ships. NOT SEEN: whether the two dead Tiruzuxa police stayed dead
+   after the reopen — the report could not show it and the question is
+   still Ripley's.
+   S284 (094) IS WITHDRAWN, 095. "jump() is not touched" above STANDS:
+   after a jump the FILE carries the old list under the old key until
+   the next save, and WORLD §9.8 says so and rejects clearing it in
+   jump(). saveFileLine() now says so too. */
 let killedHere = { key:"", idx:[] };
 function hereKey(){
   const c = state.commander;
@@ -2272,7 +2302,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 094a (094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 094b (094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -2799,7 +2829,17 @@ function saveFileLine(){
            const b = o.moduleState && o.moduleState[COMBAT_NS];
            const k = b && b.killed;
            if(!k || !Array.isArray(k.idx)) return "BAG ABSENT";
-           return "["+k.idx.map(function(v){ return v+1; }).join(",")+"] for "+(k.key || "(none)");
+           /* 094b — S284, WITHDRAWN. 094 read this line after a jump,
+              saw the last system's list under the last system's key
+              and called it a fault to be fixed in jump(). WORLD v1.25
+              §9.8 says it in so many words — "After a jump the file
+              carries the old list under the old key until something
+              saves again — as it carries a stale counter — and nothing
+              reads it" — and REJECTS clearing the list in jump() by
+              name. So jump() is not touched and THE LINE SAYS SO. */
+           const own = c.galaxy+":"+c.system+":"+c.gameDay;
+           return "["+k.idx.map(function(v){ return v+1; }).join(",")+"] for "+(k.key || "(none)")+
+                  (k.key && k.key !== own ? "  (an EARLIER system's list — expected after a jump: nothing reads it, the next save drops it. WORLD §9.8)" : "");
          })();
 }
 
@@ -2935,6 +2975,42 @@ function devSetShip(cls){
   state.ship.speed  = was.speed;
   state.ship.docked = was.docked;
   shipChanged();
+  saveGame();
+  return true;
+}
+
+/* 094b. THE DEV LEGAL SLIDER — the s095 handover's job a. ARCH §2.3's
+   exception, devSetShip()'s and devFitLaser()'s precedent: a dev
+   control writes state direct, IS NOT AN ACTION, signals nothing and is
+   not to be copied as a pattern. THERE IS NO GAME RULE HERE: nothing in
+   COMBAT §9 clears a record but decay (§9.5), and this is not that.
+   WHY IT EXISTS: `legalStatus` went 0 to 60 in one sitting on 5 October
+   (S287, unruled), a Fugitive is attacked on sight, and at -1 every
+   tenth day 60 is 600 jumps from Clean. Without this the commander he
+   has cannot test the Offender's band, or anything else in peace.
+   WHAT IT DOES, all [ASSUMED]:
+   · Writes through legalAdd() — the one writer — so the change is in
+     the legal log, named as the slider's. The four sliders above it
+     leave no trace (the DEV STATE block's own complaint); this one does.
+   · SAVES AT ONCE, as the ship switch does and the four sliders do
+     not: the band is read at a DRAW, and the next draw he can reach
+     without jumping is a reopen — which reads the file.
+   · DOES NOT REDRAW AND DOES NOT CALL OFF THE POLICE. Step 4's decision
+     4: extras are added at a draw, not when the band changes; a police
+     ship that has turned stays turned until the next draw. A dev
+     control that rewrote live ships would be a second rule.
+   · Whole numbers, floor 0 — the loader refuses anything else. NO
+     CEILING, as step 4's decision 7; the slider's own top is
+     LEGAL_SLIDER_MAX or the commander's figure, whichever is higher,
+     so the control never shows a number state does not hold (084a's
+     lesson, syncDev()).
+   Returns true if it wrote. */
+const LEGAL_SLIDER_MAX = 30;              /* presentation, [ASSUMED], this build's */
+function devSetLegal(n){
+  if(!Number.isInteger(n) || n < 0) return false;
+  const was = state.commander.legalStatus;
+  if(n === was) return false;
+  legalAdd(n - was, "DEV SLIDER, TUNE — not a game change", true);
   saveGame();
   return true;
 }
@@ -3285,7 +3361,11 @@ function drawPad(){
      is taken on the next frame, so a ship crossing the ring's edge in
      that one frame can still give a shot that misses.
    · S277: the touch log keeps fight-mode touches only.
-   [BUILT] 4 October 2026 — as exported, 093a has run on no device. */
+   [BUILT] 4 October 2026 — as exported, 093a had run on no device.
+   094b — FLOWN, from the s095 handover §1: [TESTED], Ripley's iPhone,
+   reported in session 094: on DOUBLE a pad tap with no ship in the
+   ring fires nothing, and is counted as `held back` (ruling 41); the
+   touch log keeps fight-mode touches only (S277). */
 let padDownX=0, padDownY=0, padDownT=0, padMoved=false, padReturn=false, padFar=0, padFiredNow=false;
 let padHold=false, padHoldUntil=0, padHoldVec=[0,0], padShort=false, padLastLift=null, padGapNow=null;
 const padStats = { taps:0, returns:0, shots:0, holds:0, regrips:0, heldBack:0 };
@@ -3948,10 +4028,28 @@ const contacts = [];
 const debris = [];
 /* ==================================================================
    core.combat — STEP 4, THE LEGAL SIDE. 094a. COMBAT §9, §11, §15.
-   Built on `093b`. AS EXPORTED, 094a HAS RUN ON NO DEVICE.
+   Built on `093b`. [BUILT] 5 October 2026 — as exported, 094a had run
+   on no device. (Dated, so it ages visibly — S257's lesson.)
+   094b — THE FLOWN RECORD, from the s095 handover §1. [TESTED],
+   Ripley's iPhone, session 094's reports (5 October), build 094a: the
+   first hit
+   on a police ship +2, once a ship; a police kill +8; a trader kill
+   +4; no bounty for either; Clean to Offender to Fugitive; police turn
+   and fire; `file on disk` agrees (`legal N`); `legalStatus` survives a
+   full close and reopen; `+ 2 for Fugitive`, drawn last, numbered after
+   the table's ships, the kill list still naming the right ships;
+   Tiruzuxa on day 32 drew 0 pirates, 2 police, 1 trader, as the
+   harness said. EVERY FIGURE STAYS [ASSUMED] — seen working is not
+   tuned, and S287 says these spiral: 0 to 60 in one sitting.
+   NOT RUN ON A DEVICE as of that date: decay (first chance, arriving
+   on day 40); the Offender's +1 police; police turning on an Offender
+   whose shot lands on ANOTHER ship; no extras in an Anarchy.
+   094b ADDS A FOURTH WRITER THAT IS NOT THE GAME'S: devSetLegal(), the
+   dev slider in TUNE (ARCH §2.3's exception) — beside devSetShip().
    `commander.legalStatus` has been saved, loaded and validated since
    the envelope was written and had NO WRITER but freshCommander() and
-   the loader. It has three now, and no field was added:
+   the loader. It has three now (094b: and a dev slider, at the foot of
+   this record), and no field was added:
    · recordKill() — §9.2: trader +4, police +8, pirate 0. IN THE KILL'S
      ONE SAVE, with `kills`, the bounty and the kill list. Pays S273.
    · hitContact() — §9.2: the first hit on a police ship that does not
@@ -4021,9 +4119,10 @@ const LEGAL_LOG        = 6;
 const legalLog = [];                      /* runtime, TUNE's. Never saved */
 function legalBand(n){ return n >= LEGAL_FUGITIVE ? "Fugitive" : n >= LEGAL_OFFENDER ? "Offender" : "Clean"; }
 function policeExtra(n){ return n >= LEGAL_FUGITIVE ? 2 : n >= LEGAL_OFFENDER ? 1 : 0; }   /* §9.4 */
-/* THE ONE WRITER the three callers share. Whole numbers, floor 0 — the
-   loader refuses anything else. `saved` is what the caller does next:
-   true inside an action's own save, false for the per-frame +2. */
+/* THE ONE WRITER the three callers share (094b: FOUR — devSetLegal(),
+   the dev slider, which is not a game writer). Whole numbers, floor 0 —
+   the loader refuses anything else. `saved` is what the caller does
+   next: true inside an action's own save, false for the per-frame +2. */
 function legalAdd(d, why, saved){
   const cm = state.commander, was = cm.legalStatus;
   cm.legalStatus = Math.max(0, was + d);
@@ -4111,6 +4210,7 @@ function spawnContacts(why){
                     shieldFore:hr.shieldMax, shieldAft:hr.shieldMax,
                     energy:hr.energyMax, hullPts:hr.hullMax,
                     cool:0, shot:0, flash:0, firing:false, fled:false,
+                    dry:false,                           /* 094b, S285 — pirateFire() */
                     hostile:false, struck:false });      /* 094a: police only. Runtime, never saved */
   }
   /* 093b, RULING 47. THE WHOLE DAY IS DRAWN FIRST, THEN THE DEAD ARE
@@ -4185,6 +4285,7 @@ function contactsStep(dt){
     if(c.shot  > 0) c.shot  = Math.max(0, c.shot  - dt);
     c.cool = Math.max(-dt, c.cool - dt);          /* as the player's: see playerFire() */
     c.firing = false;
+    c.dry = false;                                /* 094b */
     /* 094a, §9.4: a Fugitive is attacked ON SIGHT. Read every frame, so
        a ship that comes into sight later turns then. */
     if(c.role === "police" && !c.hostile &&
@@ -4262,7 +4363,7 @@ function contactRows(){
        whole. `FIRING` is the last flown frame's — the report is a snapshot. */
     return "  "+(c.idx+1)+" "+(c.role+"      ").slice(0,7)+" "+ID_NS+":"+c.hull+"  "+c.laser+
            "  ·  "+d.toFixed(0)+" u away"+(d > T.radarRange ? " (off radar)" : "")+
-           "  ·  "+c.speed.toFixed(0)+"/s  ·  "+doing+(c.firing ? "  ·  FIRING" : "")+
+           "  ·  "+c.speed.toFixed(0)+"/s  ·  "+doing+(c.firing ? "  ·  FIRING" : c.dry ? "  ·  LASER DRY — bank cannot pay" : "")+
            "  ·  sh "+c.shieldFore.toFixed(0)+"/"+c.shieldAft.toFixed(0)+
            " hull "+Math.max(0,c.hullPts).toFixed(0)+" en "+c.energy.toFixed(0)+"\n";
   }).join("");
@@ -4351,6 +4452,8 @@ spawnContacts("at boot (the pose stands in for the arrival point)");
       contact "the same shields, same order"; nothing says its shields
       refill or its laser costs it energy. BUILT AS: both, on §6.1's
       and §4.1's own figures — "a contact is a ship" (ruling 7).
+      (094b, S285: IT DID NOT PAY. From an empty bank the laser fired
+      every frame on one frame's refill. Fixed in pirateFire().)
    4. WHAT "HELD" COSTS. §4.1 gives "energy / s held". BUILT AS: the
       drain runs while the trigger is held with a laser that can fire,
       hit or miss. At energy 0 the laser stops and the ship does not
@@ -4380,7 +4483,8 @@ spawnContacts("at boot (the pose stands in for the arrival point)");
    are a bag under `core.combat`, not an envelope field, so §12's "no
    new field, no `schema` change" still holds and its "no bag" does
    not. See `killedHere`, above the loader. [BUILT] 4 October 2026 — as
-   exported, 093b has run on no device.
+   exported, 093b had run on no device. (094b: IT HAS — the flown
+   record is with `killedHere`.)
    S272 — THE FRAME RUNS UNDER TUNE AND UNDER EVERY PANEL (S254, since
    091a), so SINCE 092a A PIRATE SHOOTS YOU WHILE YOU READ THE REPORT
    OR TRADE. Not changed here: whether the world waits for a panel is
@@ -4441,6 +4545,7 @@ let inF = 0, inA = 0;                          /* damage landed on the player, u
 const KILL_LOG = 6;
 const fireStats = { shots:0, hits:0, held:0, dealt:0 };
 const taken = { pts:0, fore:0, aft:0, shield:0, hull:0, last:null };
+const theirFire = { on:0, dry:0 };             /* 094b, S285: ship-seconds their lasers fired, and were held back for want of energy. TUNE's */
 const killLog = [];
 
 /* §5.1: "fore if the shooter is within 90° of the target's forward
@@ -4633,17 +4738,50 @@ function playerFire(dt){
 /* §3.4, a pirate's laser, per frame — called from contactsStep() with
    the range and vector it has already worked out. It FIRES when the
    player is inside PIRATE_FIRE_RANGE and PIRATE_FIRE_CONE of its nose
-   and it has energy; the shot LANDS only if the player is also inside
-   the laser's own cone and range (§4.1) — so a pirate can be seen
-   firing and missing. Decisions 1 to 4. */
+   and ITS BANK CAN PAY FOR THE FRAME (094b, below); the shot LANDS only
+   if the player is also inside the laser's own cone and range (§4.1) —
+   so a pirate can be seen firing and missing. Decisions 1 to 4.
+
+   094b — S285, FIXED. Through 094a the test was `c.energy <= 0`, read
+   BEFORE the drain, and contactRecharge() runs after this every frame —
+   so an empty bank held one frame's refill (+6/s x dt), passed the
+   test, and the laser fired every frame for ever. The drain clamped at
+   0 and took what was there. A beam costs 12/s against 6/s back: HALF
+   OF EVERY SECOND OF BEAM FROM AN EMPTY BANK WAS NEVER PAID FOR.
+   Harness, 094a: a beam held on the player for 60 s landed 3,600
+   points; its bank paid for 2,300. COMBAT §4.1: "the energy drain is
+   the limit"; §6.1: "energy at 0 stops the laser, not the ship".
+   THE RULE NOW: a contact's laser fires in a frame ONLY IF ITS BANK
+   HOLDS THAT FRAME'S COST, and then pays all of it. From an empty bank
+   a beam fires as often as the refill covers — 6/12, half the frames.
+   A PULSE COSTS 5/s AGAINST 6/s BACK AND IS NEVER SHORT (shields refill
+   off): in a pulse system this build flies exactly as 094a did.
+   THE PLAYER'S RULE IS THE SAME IN WHOLE POINTS (decision 4, S252): his
+   laser stops at energy 0 and each point of recharge buys 1/12 s of
+   beam. A contact's bank is a float, so the test is on the frame's
+   cost rather than on a whole point. The form is [ASSUMED] and
+   Ripley's to overturn; that the laser must be paid for is the spec's.
+   `dry` is the last flown frame's — in the cone, in range, could not
+   pay. `theirFire` adds up both, in ship-seconds, for TUNE.
+   WHERE IT BITES — harness, 095, his commander at Tulosare, 180 s,
+   094a against 094b: SITTING STILL, NOTHING CHANGES (7,437 points
+   both; the ships pass and break off, fire about a third of the time
+   and never empty a bank). RUNNING STRAIGHT, with ships sat on his
+   tail: 10,549 down to 6,128 at full throttle, 20,694 down to 11,400
+   at half. So this is S275's damage — "most arrives from behind" —
+   and not all of S274. A harness figure is [BUILT]; none is flown. */
 function pirateFire(c, rel, d, dt){
-  if(d < 1e-6 || d > PIRATE_FIRE_RANGE || c.energy <= 0) return;
+  c.dry = false;
+  if(d < 1e-6 || d > PIRATE_FIRE_RANGE) return;
   const fw = qrot(c.q,[0,0,1]);
   const cs = (fw[0]*rel[0]+fw[1]*rel[1]+fw[2]*rel[2])/d;
   if(cs < Math.cos(PIRATE_FIRE_CONE)) return;
   const L = LASERS[c.laser];
+  const need = L.energy*dt;
+  if(c.energy < need){ c.dry = true; theirFire.dry += dt; return; }      /* 094b, S285 */
   c.firing = true;
-  c.energy = Math.max(0, c.energy - L.energy*dt);
+  theirFire.on += dt;
+  c.energy -= need;
   const on = d <= L.range && cs >= Math.cos(T.pirateCone*Math.PI/180);   /* 092b: their own cone */
   if(L.continuous){
     c.shot = SHOT_SHOW;
@@ -4718,6 +4856,14 @@ function takenLine(){
          "  ·  "+taken.shield+" to shields, "+taken.hull+" to hull"+
          (taken.pts > taken.shield + taken.hull ? ", "+(taken.pts - taken.shield - taken.hull)+" landed on a hull already at 0" : "")+
          "  ·  last "+new Date(taken.last.t).toTimeString().slice(0,8)+", "+taken.last.who;
+}
+/* 094b, S285. Ship-seconds: two ships firing for one second is 2.0. */
+function theirFireLine(){
+  const here = state.system.techLevel >= SPAWN_BEAM_TECH ? "beam" : "pulse", L = LASERS[here];
+  return "fired "+theirFire.on.toFixed(1)+" s  ·  held back "+theirFire.dry.toFixed(1)+
+         " s for want of energy (094b, S285)  ·  here: "+here+", "+L.energy+"/s against +"+RECHARGE_ENERGY+"/s back — "+
+         (L.energy > RECHARGE_ENERGY ? "an empty bank fires "+Math.round(100*RECHARGE_ENERGY/L.energy)+"% of the time"
+                                     : "never short")+"  [ASSUMED]";
 }
 function killsLine(){
   const cm = state.commander;
@@ -5154,6 +5300,13 @@ function syncDev(){
     document.getElementById(sid).value=state[grp][key];
     document.getElementById(vid).textContent=state[grp][key];
   }
+  /* 094b. The legal slider: its top first, then the value — the three
+     ship sliders' rule above. The label is state's figure and the band
+     derived from it, never the slider's position. */
+  const lg = state.commander.legalStatus, sLg = document.getElementById("sLg");
+  sLg.max = Math.max(LEGAL_SLIDER_MAX, lg);
+  sLg.value = lg;
+  document.getElementById("vLg").textContent = lg+" — "+legalBand(lg);
   document.getElementById("bShip").textContent =
     "SHIP: "+ID_NS+":"+state.ship.class+" — TAP TO SWITCH";
   /* 092a. The label is the fore mount, read from state — not a flag
@@ -5179,6 +5332,17 @@ for(const [sid,vid,grp,key] of devMap){
     document.getElementById(vid).textContent=state[grp][key];
   });
 }
+/* 094b. `input` (the drag) writes NOTHING — it shows where the slider is
+   and says so. `change` (the release) writes, saves, and repaints the
+   label and the report from state. */
+document.getElementById("sLg").addEventListener("input",function(){
+  const v = parseInt(this.value, 10);
+  document.getElementById("vLg").textContent = v+" — "+legalBand(v)+"  (let go to set)";
+});
+document.getElementById("sLg").addEventListener("change",function(){
+  devSetLegal(parseInt(this.value, 10));
+  refreshTune();
+});
 function syncUI(){
   for(const [sid,vid,key,dp] of map){
     document.getElementById(sid).value=T[key];
@@ -5345,7 +5509,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 094a — settings\n"+
+    "ELITE: THE CLONES 094b — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -5431,6 +5595,7 @@ function writeReport(){
     "laser         "+laserLine()+"\n"+
     "fired         "+fireLine()+"\n"+
     "hits taken    "+takenLine()+"\n"+
+    "their lasers  "+theirFireLine()+"\n"+
     "kills         "+killsLine()+"\n"+
     "bounty        "+bountyLine()+"\n"+
     "legalStatus   "+legalLine()+"\n"+
