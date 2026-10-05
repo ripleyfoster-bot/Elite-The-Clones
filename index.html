@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 093b</title>
+<title>ELITE: THE CLONES — 094a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -891,7 +891,7 @@
       white is police, bright green is a trader, and a ship's blip is 2 px bigger
       than an object's. Who is here today is on the <i>contacts</i> lines of the
       report below. Colours and size are <b>[ASSUMED]</b>. <b>Since 092a pirates fire</b>,
-      Police and traders do not fire. <b>Since 092b everything stops while this panel is open</b> —
+      Traders do not fire. <b>Since 094a police fire once they have turned on you</b> — see the <i>police</i> line of the report. <b>Since 092b everything stops while this panel is open</b> —
       your ship, theirs, the lasers — and carries on at FLY. Under PANEL (market, charts) it all keeps going.</div>
   </div>
 
@@ -2272,7 +2272,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 093b (093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 094a (094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -2790,6 +2790,7 @@ function saveFileLine(){
             these must agree with the live lines above the moment either
             has run. */
          "  kills "+(c.kills===undefined ? "KEY ABSENT" : c.kills)+
+         "  legal "+(c.legalStatus===undefined ? "KEY ABSENT" : c.legalStatus)+      /* 094a */
          "  equipment "+(o.equipment && typeof o.equipment === "object"
                            ? (Object.keys(o.equipment).join(",") || "none") : "KEY ABSENT")+
          /* 093b: the kill list AS THE FILE HOLDS IT — draw numbers as
@@ -3843,6 +3844,7 @@ function hitsLine(){
    WHAT IS NOT: lasers firing, hits, kills, bounty (step 3); the legal
    model, so NO +1/+2 police by band and no police attack (§9.4, step
    4 — `legalStatus` has no writer yet, so neither could be reached).
+   (094a: BUILT — the step 4 block below, above spawnContacts().)
    `laser` is ASSIGNED and READ BY NOTHING but TUNE until step 3. A
    contact carries NO shields, energy or hull yet: nothing can hit one,
    and a field that is present reads as implemented. Step 3 adds them
@@ -3944,6 +3946,102 @@ const contacts = [];
    in the step 3 block. Declared here because spawnContacts() clears it
    and runs at boot, before that block. Runtime, presentation, never saved. */
 const debris = [];
+/* ==================================================================
+   core.combat — STEP 4, THE LEGAL SIDE. 094a. COMBAT §9, §11, §15.
+   Built on `093b`. AS EXPORTED, 094a HAS RUN ON NO DEVICE.
+   `commander.legalStatus` has been saved, loaded and validated since
+   the envelope was written and had NO WRITER but freshCommander() and
+   the loader. It has three now, and no field was added:
+   · recordKill() — §9.2: trader +4, police +8, pirate 0. IN THE KILL'S
+     ONE SAVE, with `kills`, the bounty and the kill list. Pays S273.
+   · hitContact() — §9.2: the first hit on a police ship that does not
+     kill it, +2, ONCE A SHIP. PER-FRAME (§11's right column): no save,
+     no signal — the next save that runs carries it. So until then
+     `file on disk` and `legalStatus` differ, and a reload before any
+     save loses the +2 with the ship's memory of the hit (COMBAT [A] 9,
+     10: the living are not saved).
+   · jump() — §9.5, decay. See S283 below.
+   NO NEW SAVED FIELD, NO `schema` CHANGE, NO NEW ACTION. For a commander
+   at 0 the file and the day's draw are `093b`'s exactly.
+
+   WHAT POLICE DO — §9.4, by band. Bands are derived, never stored:
+   · Clean (0): patrol.
+   · Offender (1-9): +1 police in the draw; they patrol until one of
+     your shots LANDS on anything within POLICE_SIGHT of them.
+   · Fugitive (10+): +2 police; they attack on sight.
+   A police ship that has turned on you flies and fires as a pirate does
+   (§3.4) and stays that way until the next draw.
+
+   DECIDED HERE, each [ASSUMED] and Ripley's to overturn — the spec does
+   not say:
+   1. "In their sight" is POLICE_SIGHT units from the police ship to
+      YOU. It is a constant, not the radar slider: a player setting
+      must not move a rule.
+   2. "Fire on" is a shot that LANDS (§9.2 says "(hit)"). A miss is seen
+      by nobody.
+   3. THE BAND IS READ AFTER THE HIT'S OWN CHANGE. §15's test is "kill a
+      trader, band changes, police respond": the killing shot makes you
+      an Offender and is itself seen. It follows that §9.4's Clean row
+      for police ("attack the ship you fired on if it was police") can
+      never be met alone — the first hit on police makes you an
+      Offender, so every police ship in sight turns, not that one only.
+   4. THE EXTRA POLICE ARE DRAWN LAST, after the whole table, from the
+      same stream — so every other ship's hull, heading and DRAW NUMBER
+      is what it was, and the kill list (ruling 47) still names the
+      right ships. They are added at a DRAW (arrival, boot, wipe), not
+      the moment the band changes: a reload after a trader kill meets
+      one more police ship than was there before it. The band can only
+      rise between two jumps, so the extras never shrink under a list.
+   5. NO EXTRAS WHERE THE TABLE'S POLICE CEILING IS 0 — §9.4: "Anarchy
+      has no police, so a Fugitive's refuge is an Anarchy".
+   6. Killing a police ship you had already hit costs +2 and then +8.
+   7. No ceiling on `legalStatus`.
+
+   S283, FOUND READING §9.5 FOR THIS BUILD. Its formula is
+   `legalStatus - floor(daysElapsed / 10)`; a jump is one day, so
+   floor(1/10) is 0 and it NEVER DECAYS, though the same paragraph says
+   "-1 every tenth jump" and forbids a counter. BUILT: -1, floor 0, on
+   a jump that ARRIVES ON A DAY DIVISIBLE BY 10. No counter, no field.
+   [ASSUMED]. COMBAT §9.5 owes the sentence.
+
+   WHAT IS NOT, each named: the customs roll on a sale (§9.3, loop
+   110b); missiles, ECM, the energy bomb, the pod (§4.2-4.4, §8);
+   bounty hunters (loop 109); docked consequences; the `legal.change`
+   event (§11 — the declarative tier is not built); and the console.
+   CONSTRAINT 2 makes legal status an instrument; the console has no
+   place for it until PANEL §7's status page is built. TUNE prints it.
+   ================================================================== */
+const LEGAL_KILL       = Object.freeze({ pirate:0, police:8, trader:4 });   /* [ASSUMED] §9.2 */
+const LEGAL_HIT_POLICE = 2;               /* [ASSUMED] §9.2 — once a ship */
+const LEGAL_OFFENDER   = 1;               /* §9.1 */
+const LEGAL_FUGITIVE   = 10;              /* §9.1 */
+const LEGAL_DECAY_DAYS = 10;              /* [ASSUMED] §9.5, S283 */
+const POLICE_SIGHT     = 1200;            /* [ASSUMED], this build's — decision 1 */
+const LEGAL_LOG        = 6;
+const legalLog = [];                      /* runtime, TUNE's. Never saved */
+function legalBand(n){ return n >= LEGAL_FUGITIVE ? "Fugitive" : n >= LEGAL_OFFENDER ? "Offender" : "Clean"; }
+function policeExtra(n){ return n >= LEGAL_FUGITIVE ? 2 : n >= LEGAL_OFFENDER ? 1 : 0; }   /* §9.4 */
+/* THE ONE WRITER the three callers share. Whole numbers, floor 0 — the
+   loader refuses anything else. `saved` is what the caller does next:
+   true inside an action's own save, false for the per-frame +2. */
+function legalAdd(d, why, saved){
+  const cm = state.commander, was = cm.legalStatus;
+  cm.legalStatus = Math.max(0, was + d);
+  if(cm.legalStatus === was) return;
+  legalLog.unshift({ t:Date.now(), d:cm.legalStatus - was, was:was, now:cm.legalStatus, why:why, saved:saved });
+  if(legalLog.length > LEGAL_LOG) legalLog.length = LEGAL_LOG;
+}
+/* §9.4. Called when one of the player's shots has landed and its own
+   change has been written (decision 3). Offender or worse: every police
+   ship with the player in sight turns. Returns how many did. */
+function policeWitness(){
+  if(state.commander.legalStatus < LEGAL_OFFENDER) return 0;
+  let n = 0;
+  for(const p of contacts)
+    if(p.role === "police" && !p.hostile && contactRange(p) <= POLICE_SIGHT){ p.hostile = true; n++; }
+  return n;
+}
+
 let spawnLast = null;                     /* TUNE: what the last draw was made for */
 
 /* §3.2. ONE DRAW PER ARRIVAL: r = rng(hash32(WORLD_SEED, galaxy, system,
@@ -3972,7 +4070,14 @@ function spawnContacts(why){
   const laser = sys.techLevel >= SPAWN_BEAM_TECH ? "beam" : "pulse";
   let fallbacks = 0;
   let drawNo = 0;                        /* 093b: each ship's number in the day's draw */
-  for(const role of ROLES) for(let i=0; i<n[role]; i++){
+  /* 094a, §9.4: +1 police for an Offender, +2 for a Fugitive — DRAWN
+     LAST (decision 4), and none where the table allows no police
+     (decision 5). At `legalStatus` 0 `order` is 093b's loop exactly. */
+  const extra = row.police[1] > 0 ? policeExtra(cm.legalStatus) : 0;
+  const order = [];
+  for(const role of ROLES) for(let i=0; i<n[role]; i++) order.push(role);
+  for(let i=0; i<extra; i++) order.push("police");
+  for(const role of order){
     const hull = r() < SPAWN_WREN_SHARE ? "shipWren" : "shipDray";
     const u1 = r(), u2 = r()*2*Math.PI, u3 = r()*2*Math.PI;
     const a = Math.sqrt(1-u1), b = Math.sqrt(u1);
@@ -4005,7 +4110,8 @@ function spawnContacts(why){
                     breakFor:0,
                     shieldFore:hr.shieldMax, shieldAft:hr.shieldMax,
                     energy:hr.energyMax, hullPts:hr.hullMax,
-                    cool:0, shot:0, flash:0, firing:false, fled:false });
+                    cool:0, shot:0, flash:0, firing:false, fled:false,
+                    hostile:false, struck:false });      /* 094a: police only. Runtime, never saved */
   }
   /* 093b, RULING 47. THE WHOLE DAY IS DRAWN FIRST, THEN THE DEAD ARE
      TAKEN OUT — so the stream, and every survivor's hull, heading and
@@ -4022,7 +4128,8 @@ function spawnContacts(why){
       if(killedHere.idx.indexOf(contacts[i].idx) !== -1) contacts.splice(i, 1);
   spawnLast = { why:why, g:cm.galaxy, s:cm.system, day:cm.gameDay,
                 danger:row.danger, n:n, row:row, fallbacks:fallbacks,
-                drawn:drawn, removed:drawn - contacts.length };
+                drawn:drawn, removed:drawn - contacts.length,
+                extra:extra, legal:cm.legalStatus };       /* 094a */
 }
 
 /* CONSTRAINT 1, FOR A CONTACT. Returns [pitch, roll], each in -1..1,
@@ -4067,6 +4174,8 @@ function steerTo(c, row, to, dt){
      vector. It does not stop fleeing. [ASSUMED]: §3.4 gives no end.
    · POLICE STILL FLY THE TRADER'S LOOP AND DO NOT RESPOND TO BEING
      SHOT. "Until provoked (§9.4)" is the legal model's — step 4.
+     (094a: NO LONGER. A police ship that has turned — `hostile` —
+     takes the pirate's branch below, steering, throttle and fire.)
    · EVERY CONTACT RECHARGES (contactRecharge(), step 3 block). */
 function contactsStep(dt){
   for(const c of contacts){
@@ -4076,7 +4185,11 @@ function contactsStep(dt){
     if(c.shot  > 0) c.shot  = Math.max(0, c.shot  - dt);
     c.cool = Math.max(-dt, c.cool - dt);          /* as the player's: see playerFire() */
     c.firing = false;
-    if(c.role === "pirate"){
+    /* 094a, §9.4: a Fugitive is attacked ON SIGHT. Read every frame, so
+       a ship that comes into sight later turns then. */
+    if(c.role === "police" && !c.hostile &&
+       state.commander.legalStatus >= LEGAL_FUGITIVE && contactRange(c) <= POLICE_SIGHT) c.hostile = true;
+    if(c.role === "pirate" || c.hostile){          /* 094a: `hostile` is only ever set on police */
       const rel = [wrap(pos[0]-c.pos[0]), wrap(pos[1]-c.pos[1]), wrap(pos[2]-c.pos[2])];
       const d = Math.hypot(rel[0], rel[1], rel[2]);
       if(c.breakFor <= 0 && d < PIRATE_BREAK_RANGE) c.breakFor = PIRATE_BREAK_S;
@@ -4120,7 +4233,8 @@ function contactsLine(){
   const L = spawnLast, here = state.commander;
   const same = L.g === here.galaxy && L.s === here.system && L.day === here.gameDay;
   return ROLES.map(function(role){
-      return role+" "+L.n[role]+" (table "+L.row[role][0]+(L.row[role][1] !== L.row[role][0] ? "-"+L.row[role][1] : "")+")";
+      return role+" "+L.n[role]+" (table "+L.row[role][0]+(L.row[role][1] !== L.row[role][0] ? "-"+L.row[role][1] : "")+")"+
+             (role === "police" && L.extra ? " + "+L.extra+" for "+legalBand(L.legal)+" (legalStatus "+L.legal+" at the draw)" : "");
     }).join(" · ")+
     "  ·  drawn for g"+L.g+" s"+L.s+" day "+L.day+" "+L.why+
     (same ? "" : "  — MISMATCH: here is g"+here.galaxy+" s"+here.system+" day "+here.gameDay)+
@@ -4138,10 +4252,12 @@ function contactRows(){
   if(!contacts.length) return "  (no ships in this system today)\n";
   return contacts.map(function(c, i){
     const d = contactRange(c);
-    const doing = c.role !== "pirate" ? (c.fled ? "FLEEING — it was hit" : "straight line")
+    const attacks = c.role === "pirate" || c.hostile;                       /* 094a */
+    const doing = (c.hostile ? "TURNED ON YOU — " : "")+
+                  (!attacks          ? (c.fled ? "FLEEING — it was hit" : c.role === "police" ? "patrol, straight line" : "straight line")
                 : c.breakFor > 0     ? "BREAKING OFF, "+c.breakFor.toFixed(1)+" s left"
                 : d > PIRATE_NEAR    ? "closing, full throttle"
-                                     : "closing, 60%";
+                                     : "closing, 60%");
     /* 092a: what the contact holds, read at write time. Floats, shown
        whole. `FIRING` is the last flown frame's — the report is a snapshot. */
     return "  "+(c.idx+1)+" "+(c.role+"      ").slice(0,7)+" "+ID_NS+":"+c.hull+"  "+c.laser+
@@ -4195,6 +4311,8 @@ spawnContacts("at boot (the pose stands in for the arrival point)");
      §15: recordKill writes `kills` and the bounty and NOT
      `legalStatus`. So in 092a KILLING A TRADER OR A POLICE SHIP COSTS
      NOTHING, and police do not respond to being shot. S273.
+     (094a: PAID. recordKill() writes it; police respond — the step 4
+     block above spawnContacts().)
    · EQUIPMENT LOSS (§6.3, and §5.2 item 3). It is in no step of §15 —
      S261's shape, S269 — and on any file this build can produce it
      could not fire: it excludes lasers and nothing else can be fitted.
@@ -4361,7 +4479,17 @@ function hitContact(c, dmg){
   c.flash = HIT_SHOW;
   if(c.role === "trader") c.fled = true;
   fireStats.dealt += dmg;
-  if(c.hullPts <= 0 && recordKill(c).ok) spawnDebris(c);
+  /* 094a, COMBAT §9.2 and §9.4. A kill's change is recordKill()'s, in
+     its save. A police ship hit and not killed turns on you, and the
+     FIRST such hit on each ship costs LEGAL_HIT_POLICE — per-frame, no
+     save. Then the witnesses, with the band as this shot left it. */
+  if(c.hullPts <= 0){
+    if(recordKill(c).ok) spawnDebris(c);
+  } else if(c.role === "police"){
+    c.hostile = true;
+    if(!c.struck){ c.struck = true; legalAdd(LEGAL_HIT_POLICE, "hit a police ship (once a ship)", false); }
+  }
+  policeWitness();
 }
 
 /* 092b — THE EXPLOSION. Ripley, 092: "show the ship explode when killed
@@ -4410,7 +4538,8 @@ function debrisStep(dt){
    write state -> saveGame() once -> stateChanged(name) -> { ok }.
    "`kills` +1; bounty §5.4" — credits += 100 x (dangerRating + 1)
    tenths for a PIRATE, nothing for a trader or police — "so a kill is
-   one save". THE LEGAL CHANGE IS NOT WRITTEN: step 4, S273, above.
+   one save". 094a: THE LEGAL CHANGE IS WRITTEN HERE, in that same save —
+   §9.2, trader +4, police +8, pirate 0. Through 093b it was not (S273).
    Issued from the frame loop (hitContact), never from a listener —
    noCascade() would throw. The one listener ignores this name: the
    scene and the population are not redrawn by a kill.
@@ -4426,6 +4555,8 @@ function recordKill(c){
   const was = cm.credits;
   cm.kills   += 1;
   cm.credits += bounty;
+  const legalWas = cm.legalStatus;
+  legalAdd(LEGAL_KILL[c.role] || 0, "killed a "+c.role, true);          /* 094a, §9.2 */
   /* 093b, ruling 47: and the ship's draw number goes on the kill list,
      IN THE SAME SAVE as the kill and the bounty — so the file can never
      hold a paid bounty for a ship that would come back. */
@@ -4437,7 +4568,8 @@ function recordKill(c){
   }
   contacts.splice(i, 1);
   killLog.unshift({ role:c.role, hull:c.hull, bounty:bounty, danger:state.system.dangerRating,
-                    name:state.system.name, was:was, now:cm.credits, t:Date.now() });
+                    name:state.system.name, was:was, now:cm.credits, t:Date.now(),
+                    legalWas:legalWas, legalNow:cm.legalStatus });
   if(killLog.length > KILL_LOG) killLog.length = KILL_LOG;
   saveGame();
   stateChanged("recordKill");
@@ -4597,11 +4729,40 @@ function bountyLine(){
   return BOUNTY_STEP+" x (danger "+s.dangerRating+" + 1) = "+(BOUNTY_STEP*(s.dangerRating+1))+
          " tenths CR a pirate, here  [ASSUMED]  ·  trader, police: 0";
 }
+/* 094a. Read at write time from state and the runtime log. The band is
+   derived here and nowhere stored (§9.1). */
+function legalLine(){
+  const cm = state.commander;
+  const next = (Math.floor(cm.gameDay / LEGAL_DECAY_DAYS) + 1) * LEGAL_DECAY_DAYS;
+  return cm.legalStatus+"  ·  "+legalBand(cm.legalStatus)+" — derived, never saved (COMBAT §9.1); names are placeholders"+
+         "  ·  kill a trader +"+LEGAL_KILL.trader+", police +"+LEGAL_KILL.police+", pirate 0; first hit on a police ship +"+LEGAL_HIT_POLICE+
+         "  ·  -1 on a jump that arrives on day "+next+" (every "+LEGAL_DECAY_DAYS+"th)  — every figure [ASSUMED]";
+}
+function policeLine(){
+  const n = contacts.filter(function(c){ return c.role === "police"; });
+  const h = n.filter(function(c){ return c.hostile; }).length;
+  const s = n.filter(function(c){ return contactRange(c) <= POLICE_SIGHT; }).length;
+  const ls = state.commander.legalStatus;
+  return n.length+" here, "+s+" with you in sight ("+POLICE_SIGHT+" u), "+h+" turned on you  ·  "+
+         (ls >= LEGAL_FUGITIVE ? "Fugitive: they attack on sight"
+        : ls >= LEGAL_OFFENDER ? "Offender: they attack if a shot of yours lands on anything in their sight"
+                               : "Clean: they patrol; hit one and you are an Offender")+"  [ASSUMED]";
+}
+function legalRows(){
+  if(!legalLog.length) return "  (no change this session)\n";
+  return legalLog.map(function(k){
+    return "  "+new Date(k.t).toTimeString().slice(0,8)+" "+(k.d > 0 ? "+" : "")+k.d+"  "+k.why+
+           "  ·  "+k.was+" to "+k.now+
+           (legalBand(k.was) !== legalBand(k.now) ? "  ·  "+legalBand(k.was)+" to "+legalBand(k.now) : "")+
+           "  ·  "+(k.saved ? "saved with it" : "NOT saved by itself — the next save carries it")+"\n";
+  }).join("");
+}
 function killRows(){
   if(!killLog.length) return "  (no kill this session)\n";
   return killLog.map(function(k){
     return "  "+new Date(k.t).toTimeString().slice(0,8)+" "+k.role+" "+ID_NS+":"+k.hull+" at "+k.name+
-           " (danger "+k.danger+")  ·  bounty "+k.bounty+"  ·  credits "+k.was+" to "+k.now+"\n";
+           " (danger "+k.danger+")  ·  bounty "+k.bounty+"  ·  credits "+k.was+" to "+k.now+
+           "  ·  legalStatus "+k.legalWas+" to "+k.legalNow+"\n";
   }).join("");
 }
 
@@ -5184,7 +5345,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 093b — settings\n"+
+    "ELITE: THE CLONES 094a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -5263,16 +5424,19 @@ function writeReport(){
     /* 092a, COMBAT step 3. Every line read at write time from state,
        the table and the runtime logs; nothing stored for display.
        `kills` and `credits` are the commander's own record — printed
-       always (constraint 6). `legalStatus` is printed BECAUSE nothing
-       writes it yet: a trader kill that leaves it at 0 is step 4's
-       absence, not a fault in this build. */
+       always (constraint 6). 094a: `legalStatus` HAS WRITERS NOW — a
+       trader kill that leaves it at 0 IS a fault. The band, the police
+       and the session's changes are printed beside it. */
     "equipment     "+equipLine()+"\n"+
     "laser         "+laserLine()+"\n"+
     "fired         "+fireLine()+"\n"+
     "hits taken    "+takenLine()+"\n"+
     "kills         "+killsLine()+"\n"+
     "bounty        "+bountyLine()+"\n"+
-    "legalStatus   "+state.commander.legalStatus+"  — no writer until step 4: a trader or police kill costs nothing yet\n"+
+    "legalStatus   "+legalLine()+"\n"+
+    "police        "+policeLine()+"\n"+
+    "legal log     newest first\n"+
+    legalRows()+
     "kill log      newest first\n"+
     killRows()+
     "tuning for    "+ID_NS+":"+T.forShip+"  ·  "+overrideLine()+"\n"+
@@ -6072,6 +6236,11 @@ function jump(){
   state.commander.system   = o.index;
   state.system             = World.system(o.galaxy, o.index);
   state.commander.gameDay += 1;               /* World Model §7.2 */
+  /* 094a, COMBAT §9.5, S283: -1, floor 0, on arriving on every
+     LEGAL_DECAY_DAYS-th day. Before the save and before the listener
+     draws the arrival's ships, so the new band sets the extra police. */
+  if(state.commander.gameDay % LEGAL_DECAY_DAYS === 0)
+    legalAdd(-1, "decay — arrived on day "+state.commander.gameDay, true);
   state.commander.hyperspaceTarget = null;
 
   /* LOOP 93: `visited` writers are here, the loader, cold-start boot and wipe(). Bare indices, S91. */
