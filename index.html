@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 096a</title>
+<title>ELITE: THE CLONES — 097a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -930,6 +930,24 @@
     <div class="note">COMBAT §4.1 default 2. <b>[ASSUMED]</b>. Every other ship's laser. Through 092a
       the slider above set both. A stored tuning from 092a carries no value for this and reads 2.</div>
   </div>
+  <!-- 097a, S274 and S275. COMBAT §4.1's damage column is [ASSUMED] and
+       was flown on 5 October at 71,559 points in a session, against a
+       Wren that holds 300. This scales what EVERY OTHER SHIP's laser
+       lands on you — pirates, and police who have turned. It is tuning:
+       stored with T, put back to 100 by RESET. It is not a ship's and no
+       ship's row carries it. NOT SCALED: your laser, their energy cost,
+       their rate of fire, their cone, collisions. The range and the step
+       are this build's, [ASSUMED]; 0 is on the slider on purpose — their
+       lasers fire and are drawn and land nothing. -->
+  <div class="row">
+    <label>Their laser damage <i><span id="vDmg"></span>%</i></label>
+    <input type="range" id="sDmg" min="0" max="100" step="5">
+    <div class="note">100 = COMBAT §4.1's figures, <b>[ASSUMED]</b>, and how every build up to 096a flew:
+      71,559 points taken on 5 October against a ship that holds 300. <b>Every other ship's laser</b>,
+      pirate or police. Yours is not changed, nor how often they fire or what it costs them.
+      At 0 they fire and land nothing. Collisions are not scaled. <b>The figure is yours to find by flying</b> —
+      <i>hits taken</i> in the report shows what landed and what 100% would have landed.</div>
+  </div>
   <div class="toggles">
     <button id="tRefill">SHIPS' SHIELDS REFILL</button>
     <button id="bPadFire">PAD FIRE</button>
@@ -1189,6 +1207,9 @@ const SPEC = { dead:6, defl:55, exp:1.6,
                laserCone:2,              /* 092a. degrees EITHER SIDE of the nose. [ASSUMED] COMBAT §4.1, S268. 092b: YOURS only */
                pirateCone:2,             /* 092b. the same figure for every CONTACT's laser. [ASSUMED] */
                contactRefill:false,      /* 092b. do contacts' SHIELDS refill? S271. Off: 092a could not be won with it on */
+               theirDamage:100,          /* 097a, S274/S275. PER CENT of COMBAT §4.1's damage that every CONTACT's laser lands on
+                                            you. 100 = the table, and every build before this one. A NEW KEY: a stored tuning
+                                            from 096a has none and reads this 100, so the build arrives flying as 096a did */
                padFire:"double",         /* 092b, loop 65 (B) and the gesture decision (C): off | single | double */
                /* 092c. `tapGap` (092b, 200) IS RETIRED AND RENAMED, ON PURPOSE. A stored
                   tuning outranks a changed constant (S52's shape), and 092b stored 200 on
@@ -2305,7 +2326,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 096a (096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 097a (097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -4064,8 +4085,11 @@ const debris = [];
        (i)  the Fugitive's on-sight turn, contactsStep() — the case the
             ruling was asked about;
        (ii) policeWitness() — police who turn because his shot landed on
-            ANOTHER ship. THIS HALF IS NOT HIS RULING. It is the s096
-            handover's edge, [ASSUMED], behind ONE constant,
+            ANOTHER ship. ~THIS HALF IS NOT HIS RULING. It is the s096
+            handover's edge, [ASSUMED]~ (097a, S295: IT IS HIS RULING
+            NOW — RULING 51, [DECISION], Ripley, session 096, 6 October,
+            option 1; [TESTED] on 096a the day before as the edge),
+            behind ONE constant,
             WITNESS_TURN_IS_FREE, so overturning it is one word.
             WHAT IT LETS HIM DO, stated so it is not found by accident:
             an Offender lands one shot on a trader (a hit costs nothing;
@@ -4170,7 +4194,7 @@ const LEGAL_HIT_POLICE = 2;               /* [ASSUMED] §9.2 — once a ship */
 const LEGAL_OFFENDER   = 1;               /* §9.1 */
 const LEGAL_FUGITIVE   = 10;              /* §9.1 */
 const LEGAL_DECAY_JUMP = 1;               /* 096a, RULING 50: off the record on EVERY jump. The rule is his; the 1 is [ASSUMED], unflown. Replaces 094a's LEGAL_DECAY_DAYS (S283) */
-const WITNESS_TURN_IS_FREE = true;        /* 096a, ruling 49's EDGE — [ASSUMED], the s096 handover's, NOT his ruling: police who turn because his shot landed on ANOTHER ship also count as having come at him. false = only the Fugitive's on-sight turn is free */
+const WITNESS_TURN_IS_FREE = true;        /* 096a, ruling 49's EDGE. 097a, S295: RULING 51, [DECISION], Ripley, session 096 — no longer [ASSUMED]: police who turn because his shot landed on ANOTHER ship also count as having come at him. false = only the Fugitive's on-sight turn is free */
 const POLICE_SIGHT     = 1200;            /* [ASSUMED], this build's — decision 1 */
 const LEGAL_LOG        = 6;
 const legalLog = [];                      /* runtime, TUNE's. Never saved */
@@ -4196,7 +4220,7 @@ function policeWitness(){
   for(const p of contacts)
     if(p.role === "police" && !p.hostile && contactRange(p) <= POLICE_SIGHT){
       p.hostile = true; n++;
-      if(WITNESS_TURN_IS_FREE) p.cameFirst = true;          /* 096a, ruling 49's edge — [ASSUMED] */
+      if(WITNESS_TURN_IS_FREE) p.cameFirst = true;          /* 096a, ruling 49's edge — ruling 51 (097a, S295) */
     }
   return n;
 }
@@ -4511,7 +4535,9 @@ spawnContacts("at boot (the pose stands in for the arrival point)");
       shot every 1/rate s and lands `damage` if the test passes at that
       moment; a beam or military lands damage x rate x dt in every
       frame the test passes — 60 a second on target for a beam, however
-      fast the frames come.
+      fast the frames come. (097a: A CONTACT's shot lands that figure
+      times `T.theirDamage` per cent — theirScale(), above pirateFire().
+      Yours is unscaled.)
    3. A CONTACT RECHARGES AND PAYS FOR ITS LASER — S271 (092b: the
       SHIELD refill is a TUNE switch, off by default — contactRecharge()). §5.3 gives a
       contact "the same shields, same order"; nothing says its shields
@@ -4609,7 +4635,7 @@ let fireNow = "idle";                          /* idle | firing | noEnergy | noL
 let inF = 0, inA = 0;                          /* damage landed on the player, under one point. S252 */
 const KILL_LOG = 6;
 const fireStats = { shots:0, hits:0, held:0, dealt:0 };
-const taken = { pts:0, fore:0, aft:0, shield:0, hull:0, last:null };
+const taken = { pts:0, fore:0, aft:0, shield:0, hull:0, last:null, raw:0 };   /* 097a: `raw` — what 100% would have landed */
 const theirFire = { on:0, dry:0 };             /* 094b, S285: ship-seconds their lasers fired, and were held back for want of energy. TUNE's */
 const killLog = [];
 
@@ -4804,6 +4830,44 @@ function playerFire(dt){
   }
 }
 
+/* 097a — THEIR DAMAGE ON A TUNE SLIDER. The s097 handover's job a,
+   Ripley's letter, 6 October 2026. Answers S274 and S275; COMBAT §18
+   names both as "Tuning". [BUILT] 6 October 2026 — as exported, 097a
+   had run on no device. (Dated, so it ages visibly.)
+   WHAT IT IS: `T.theirDamage`, per cent, 0 to 100 in steps of 5, default
+   100. pirateFire() multiplies what a contact's shot LANDS by it — the
+   one place a contact's laser reaches the player, so it covers pirates
+   and police who have turned (§3.4: "then pirate's loop").
+   WHAT IT IS NOT: a change to COMBAT §4.1's table. LASERS is still the
+   spec's, row for row, and YOUR laser reads it unscaled. Their energy
+   cost, rate, range and cone are not scaled either: a ship at 25% fires
+   exactly as often and for as long as it did, and lands a quarter.
+   Collision (§7) does not pass through here.
+   THE INTEGER RULE (S252) IS UNTOUCHED: hurtPlayer() already carries
+   the part of a point in `inF` / `inA`, so a pulse at 5% (0.4 of a
+   point) lands 2 whole points every fifth shot.
+   `taken.raw` adds up what 100% WOULD have landed, shot for shot, so a
+   report from a flight where the slider moved still says what was
+   flown. It is a float; the report rounds it.
+   DECIDED HERE, each [ASSUMED] and Ripley's to overturn:
+   1. The range, 0 to 100, and the step, 5. Nothing above 100: the
+      finding is that 100 is too much.
+   2. 0 is allowed. Their lasers fire, are drawn, cost them energy and
+      land nothing.
+   3. ONE figure for every laser and every role.
+   4. COMBAT [A] 2 says the hull mix "is the only lever" on difficulty.
+      This is a second one, and it is a TUNE figure, not a rule: the
+      figure he settles on is owed to §4.1 or §3.4 as a number, and
+      what happens to the slider then is not yet defined.
+   NO NEW SAVED FIELD, NO `schema` CHANGE, NO ACTION ADDED OR TOUCHED.
+   ONE NEW TUNING KEY. A stored tuning from 096a or earlier has no
+   `theirDamage` and reads the default — S52's shape, working for once
+   in the build's favour. */
+function theirScale(){
+  const v = T.theirDamage;                       /* a stored value that is not a NUMBER in range flies as the spec — and the report prints what flew, not what was stored */
+  return (typeof v === "number" && v >= 0 && v <= 100) ? v / 100 : 1;
+}
+
 /* §3.4, a pirate's laser, per frame — called from contactsStep() with
    the range and vector it has already worked out. It FIRES when the
    player is inside PIRATE_FIRE_RANGE and PIRATE_FIRE_CONE of its nose
@@ -4852,13 +4916,14 @@ function pirateFire(c, rel, d, dt){
   theirFire.on += dt;
   c.energy -= need;
   const on = d <= L.range && cs >= Math.cos(T.pirateCone*Math.PI/180);   /* 092b: their own cone */
+  const k = theirScale();                                                /* 097a, S274/S275 */
   if(L.continuous){
     c.shot = SHOT_SHOW;
-    if(on) hurtPlayer(L.damage * L.rate * dt, c);
+    if(on){ const raw = L.damage * L.rate * dt; taken.raw += raw; hurtPlayer(raw * k, c); }
   } else if(c.cool <= 1e-9){
     c.cool += 1 / L.rate;
     c.shot = SHOT_SHOW;
-    if(on) hurtPlayer(L.damage, c);
+    if(on){ taken.raw += L.damage; hurtPlayer(L.damage * k, c); }
   }
 }
 
@@ -4920,8 +4985,12 @@ function fireLine(){
          "trigger held "+fireStats.held.toFixed(1)+" s  ·  "+fireStats.dealt.toFixed(0)+" points landed on ships";
 }
 function takenLine(){
-  if(!taken.pts) return "none this session";
-  return taken.pts+" points this session: fore "+taken.fore+", aft "+taken.aft+
+  /* 097a. `raw` is printed only when it differs from what landed by 2
+     points or more: at 100% the two differ by the parts of a point
+     still waiting in `inF` and `inA`, under 2, and that is not news. */
+  if(!taken.pts) return "none this session"+(taken.raw >= 2 ? "  ·  at 100% their shots would have landed "+Math.round(taken.raw)+" (097a)" : "");
+  return taken.pts+" points this session"+
+         (Math.abs(taken.raw - taken.pts) >= 2 ? " ("+Math.round(taken.raw)+" at 100% — 097a)" : "")+": fore "+taken.fore+", aft "+taken.aft+
          "  ·  "+taken.shield+" to shields, "+taken.hull+" to hull"+
          (taken.pts > taken.shield + taken.hull ? ", "+(taken.pts - taken.shield - taken.hull)+" landed on a hull already at 0" : "")+
          "  ·  last "+new Date(taken.last.t).toTimeString().slice(0,8)+", "+taken.last.who;
@@ -5325,6 +5394,7 @@ const map=[["sDead","vDead","dead",0],["sDefl","vDefl","defl",0],["sExp","vExp",
            ["sRad","vRad","radarRange",0],["sBlip","vBlip","blip",0],
            ["sCone","vCone","laserCone",0],                       /* 092a */
            ["sCone2","vCone2","pirateCone",0],["sTap","vTap","tapMs",0],
+           ["sDmg","vDmg","theirDamage",0],                       /* 097a */
            ["sGrace","vGrace","grace",0],                         /* 092b */
            ["sMove","vMove","tapMove",0]];                        /* 092c */
 
@@ -5580,7 +5650,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 096a — settings\n"+
+    "ELITE: THE CLONES 097a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -5600,6 +5670,7 @@ function writeReport(){
     "blip size     "+T.blip+" px\n"+
     "laser cone    "+T.laserCone+" deg either side  (spec 2)\n"+
     "their cone    "+T.pirateCone+" deg either side  (spec 2)\n"+
+    "their damage  "+Math.round(theirScale()*100)+"% of COMBAT §4.1  (spec 100)  [ASSUMED] S274, S275 — 097a\n"+
     "ships refill  "+(T.contactRefill ? "ON — shields +"+RECHARGE_SHIELD+"/s, as 092a" : "off")+"  [ASSUMED] S271\n"+
     "pad fire      "+T.padFire+"  ·  hold "+T.grace+" ms  ·  quick touch "+T.tapMs+" ms, "+T.tapMove+" px  [ASSUMED]"+
        "  ·  fight mode now: "+(fightMode() ? "ON" : "off")+
