@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 098b</title>
+<title>ELITE: THE CLONES — 099a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -372,6 +372,10 @@
      six labels for eight governments and gives no mapping, and an
      invented one would read as an instrument. Logged, not guessed. */
   .mwarn{font-size:10px;letter-spacing:.08em;color:var(--warn);
+         padding-bottom:8px;}
+  /* 099a, ruling 54. A rolled sale that got through. `.mwarn`'s box in
+     the panel's own ink: a caught sale is a warning, a clear one is not. */
+  .mcust{font-size:10px;letter-spacing:.08em;color:var(--ink);
          padding-bottom:8px;}
   .mgrp{margin-top:8px;}
   .mgrp:first-child{margin-top:0;}
@@ -2326,7 +2330,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 098b (098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 099a (099a: NO ACTION ADDED OR TOUCHED — rulings 53 and 54: the market draws one line on the sold good's open row saying what customs did with the sale; the line is presentation, read from the roll customsRoll() already logs and from state either side of sell(); sell(), customsRoll() and the save are 098b's to the byte. 098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -5646,7 +5650,7 @@ document.getElementById("bWipe").addEventListener("click",function(){
     this.textContent = "TAP AGAIN TO DESTROY SAVE"; return;
   }
   const r = wipe();
-  if(r.ok){ chartSel = state.system; mktOpen = null; mktBuyQ = 0; mktSellQ = 0; }
+  if(r.ok){ chartSel = state.system; mktOpen = null; mktBuyQ = 0; mktSellQ = 0; mktCustoms = null; /* 099a */ }
   disarmWipe();
   syncUI();
   if(panelEl.classList.contains("open")) PANELS[panelCur].render();
@@ -5672,7 +5676,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 098b — settings\n"+
+    "ELITE: THE CLONES 099a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -5771,6 +5775,7 @@ function writeReport(){
        printed here and NOT on the market: PANEL §3.4 rules a percentage
        off that panel, and this is the settings report. */
     "customs       "+customsLine()+"\n"+
+    "mkt customs   "+mktCustomsReport()+"\n"+
     "customs log   newest first — one row a roll; a sale of a good that is legal here makes none\n"+
     customsRows()+
     "kill log      newest first\n"+
@@ -6605,7 +6610,7 @@ function courseButton(){
   if(sameSys(targetSystem(), chartSel)){
     if(!jump().ok) return;
     chartSel = state.system;
-    mktOpen = null; mktBuyQ = 0; mktSellQ = 0;
+    mktOpen = null; mktBuyQ = 0; mktSellQ = 0; mktCustoms = null;     /* 099a */
     closePanel();
   } else {
     if(setCourse(chartSel.galaxy, chartSel.index).ok) PANELS[panelCur].render();
@@ -7484,6 +7489,59 @@ function cr(t){ return (t/10).toFixed(1); }
 
 /* ---------- accordion state. One row open at a time (§3.1). ---------- */
 let mktOpen = null, mktBuyQ = 0, mktSellQ = 0;
+
+/* 099a — THE MARKET SAYS WHAT CUSTOMS DID WITH A SALE. PANEL §10 item
+   25's "how a consequence is shown", which §11 calls Not yet defined.
+   RULING 53 — [DECISION], Ripley, 099, 6 October 2026, option (a): the
+   line is drawn ON THE SOLD GOOD'S OWN ROW, under the illegal marker.
+   Rejected: (b) a line in the market's sticky header. Not offered: a
+   pop-up needing a tap (the game runs behind the panel), MUNGO's block
+   (a fine is read from state, not an opinion — constraint 2, PANEL
+   §2.2), a percentage or a posture (PANEL §3.4).
+   RULING 54 — [DECISION], Ripley, 099, option (b): A ROLLED SALE THAT
+   GOT THROUGH SAYS SO TOO. Rejected: (a) caught only, which cannot tell
+   "rolled and passed" from "not rolled here". NO LINE MEANS NO ROLL.
+   WHAT IT IS: presentation. Module-local, never saved, never in
+   `state`. It is set by the market's own tap handler from two reads —
+   the roll customsRoll() put at the head of `customsLog`, and
+   `commander.legalStatus` either side of sell() — so the figures are
+   what the sale wrote, not a second calculation of them. sell() and
+   customsRoll() are NOT TOUCHED (S305 does not ride).
+   DECIDED HERE, each [ASSUMED] and Ripley's to overturn:
+   1. THE WORDS. `CUSTOMS: CAUGHT · fined 193.4 CR · record +13` and
+      `CUSTOMS: CLEAR` — the two strings he was shown when he ruled.
+      No tonnage, no chance, no roll, no government.
+   2. IT GOES when another row is tapped (or this one is closed), when
+      HOLD ONLY is toggled, on leaving the market for another panel or
+      for FLY, on a jump and on a wipe. A stepper tap or a BUY on the
+      same row leaves it: it is the record of the last sale there.
+   3. THE NEXT SALE ON THE ROW REPLACES IT. Two clear sales running
+      draw the same words; nothing marks the second as new.
+   4. A ROW CARRYING THE LINE STAYS LISTED. Selling ALL with HOLD ONLY
+      on would hide the row, and the line with it, in the tap that
+      made it. The row stays, at `—` held, until the line goes (2).
+      This is the one place the filter shows a good he does not hold.
+   5. TUNE CANNOT BE OPENED OVER A PANEL, so the line is gone by the
+      time a report is written. `mkt customs` in the report is cached
+      when the line is drawn — loop 81's rule, `mkt figure`'s shape. */
+let mktCustoms = null;                   /* { row, g, s, text, caught } — presentation, never saved */
+let mktCustomsDrawn = "";                /* TUNE's: the last line DRAWN, cached at render */
+function mktCustomsLine(id){
+  const k = mktCustoms, here = state.system;
+  if(!k || k.row !== id || !here) return null;
+  if(k.g !== here.galaxy || k.s !== here.index) return null;      /* another market: not this sale's line */
+  return k;
+}
+function mktCustomsSet(c, rec, recordDelta){
+  const here = state.system;
+  mktCustoms = { row:c.id, g:here.galaxy, s:here.index, caught:rec.caught,
+                 text: rec.caught ? "CUSTOMS: CAUGHT \u00b7 fined "+cr(rec.fine)+" CR \u00b7 record +"+recordDelta
+                                  : "CUSTOMS: CLEAR" };
+}
+function mktCustomsReport(){
+  if(!mktCustomsDrawn) return "no line drawn this session";
+  return "last drawn "+mktCustomsDrawn+"  \u00b7  "+(mktCustoms && mktCustomsLine(mktCustoms.row) ? "still held for that row" : "since cleared");
+}
 /* §3.2. Off by default — the unfiltered list is the one that teaches
    position, which is the whole argument for the fixed sort.
    Named for the label it drives (§3.2's HOLD ONLY), not for the
@@ -7549,6 +7607,7 @@ function renderMarket(){
      not re-sort them, and it does not change what a row means. */
   const shown = COMMODITIES.filter(function(c){
     const held = heldQty(c.id);
+    if(mktCustomsLine(c.id)) return true;          /* 099a, decision 4: a row carrying the customs line stays listed */
     /* Sell-only goods have no counter presence. The row exists only
        when the hold does, which today is never — nothing scoops. */
     if(c.legal === "S" && held === 0) return false;
@@ -7673,6 +7732,14 @@ function mktExpansion(s, c, price, avail, held, illegal){
   let h = '<div class="mexp">';
   /* §3.4, marker only — the posture mapping does not exist. */
   if(illegal) h += '<div class="mwarn">\u26a0 ILLEGAL HERE</div>';
+  /* 099a, rulings 53 and 54. What customs did with the last sale on
+     this row. Words and figures only — §3.4 keeps a percentage and a
+     posture off this panel. */
+  const cu = mktCustomsLine(c.id);
+  if(cu){
+    h += '<div class="'+(cu.caught ? 'mwarn' : 'mcust')+'" data-customs="'+(cu.caught ? 'caught' : 'clear')+'">'+esc(cu.text)+'</div>';
+    mktCustomsDrawn = new Date().toTimeString().slice(0,8)+" on "+c.name+": "+cu.text;
+  }
 
   if(held > 0){
     const slot = state.cargo[c.id];
@@ -7733,7 +7800,10 @@ function mktExpansion(s, c, price, avail, held, illegal){
    Exotic Hides, each rolled 6 against 36, each fined 149 of 595 tenths
    and +1 on the record, 8 to 13; Offender to Fugitive on the fourth
    and two police turned. The harness replayed it to the tenth. A CLEAR
-   roll was not seen on the device on 098a.)
+   roll was not seen on the device on 098a WHEN THIS WAS WRITTEN.
+   099a, S306: it was, later the same day — 12:32, an 11 t sale rolled
+   72 against 36, after 098b had been exported. And on 098b itself,
+   12:45 to 12:47: five rolls, two caught, three clear.)
    THE RULE IS WORLD §7.3's, WIDENED BY COMBAT §9.3, TO THE LETTER
    (098b: ALL BUT THE SEED — RULING 52, below):
      SELLING a Restricted good at government > 3, or an Illegal good at
@@ -7748,8 +7818,12 @@ function mktExpansion(s, c, price, avail, held, illegal){
    anywhere, rolled at government >= 5 on (government - 4) * 12. NOTHING
    GIVES SALVAGE YET (no scoop; the market offers none), so that branch
    has run in the harness and can run nowhere else.
-   WHAT THE PLAYER IS TOLD: NOTHING, YET. The handover says so and it
-   is Not yet defined — MUNGO's `customs-caught` and `customs-evaded`
+   WHAT THE PLAYER IS TOLD (099a: THE NEXT SENTENCES ARE THE RECORD OF
+   098a AND 098b. SINCE 099a THE MARKET SAYS SO — rulings 53 and 54,
+   mktCustomsLine(), below the market's accordion state; TUNE's
+   `customs log` is no longer the only place a roll is named, and it is
+   still the only place a CHANCE is printed): NOTHING, YET. The handover
+   says so and it is Not yet defined — MUNGO's `customs-caught` and `customs-evaded`
    lines are written and MUNGO is not built. The console's credits and
    TUNE's `legalStatus` are read from state and are right (constraint
    2); TUNE's `customs log` is the only place a roll is NAMED. PANEL
@@ -7917,7 +7991,7 @@ mktBody.addEventListener("click", function(e){
       mktHoldOnly = !mktHoldOnly;
       /* An open row the filter is about to hide would stay open and
          invisible. Close on toggle — predictable, and one rule. */
-      mktOpen = null; mktBuyQ = 0; mktSellQ = 0;
+      mktOpen = null; mktBuyQ = 0; mktSellQ = 0; mktCustoms = null;   /* 099a, decision 2 */
       renderMarket();
       return;
     }
@@ -7948,7 +8022,16 @@ mktBody.addEventListener("click", function(e){
     if(a === "s+")   mktSellQ = Math.min(heldQty(c.id), mktSellQ+1);
     if(a === "sall") mktSellQ = heldQty(c.id);
     if(a === "buy"){  buy(c.id, mktBuyQ);   mktBuyQ = 0; }
-    if(a === "sell"){ sell(c.id, mktSellQ); mktSellQ = 0; }
+    if(a === "sell"){
+      /* 099a. Two reads either side of the action; sell() is 098b's. */
+      const head = customsLog[0], was = state.commander.legalStatus;
+      const sold = sell(c.id, mktSellQ); mktSellQ = 0;
+      if(sold.ok){
+        const rec = customsLog[0];
+        if(rec && rec !== head) mktCustomsSet(c, rec, state.commander.legalStatus - was);
+        else mktCustoms = null;                    /* a sale nobody rolled: NO LINE MEANS NO ROLL */
+      }
+    }
     renderMarket();
     return;
   }
@@ -7956,7 +8039,7 @@ mktBody.addEventListener("click", function(e){
     const id = row.getAttribute("data-row");
     /* §3.1: one row open at a time. Tapping the open row closes it. */
     mktOpen = (mktOpen === id) ? null : id;
-    mktBuyQ = 0; mktSellQ = 0;
+    mktBuyQ = 0; mktSellQ = 0; mktCustoms = null;                     /* 099a, decision 2 */
     renderMarket();
   }
 });
@@ -7970,6 +8053,7 @@ const PANELS = {
 let panelCur = "sys";
 
 function showPanel(id){
+  if(id !== "mkt") mktCustoms = null;              /* 099a, decision 2: leaving the market for another panel */
   panelCur = id;
   for(const k in PANELS){
     const on = (k === id);
@@ -7984,6 +8068,7 @@ function openPanel(){
   showPanel(panelCur);
 }
 function closePanel(){
+  mktCustoms = null;                               /* 099a, decision 2: FLY */
   panelEl.classList.remove("open");
   document.body.classList.remove("panelon");
   resetPageZoom();              /* FAULT E: never fly a zoomed console */
