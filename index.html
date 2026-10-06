@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 097a</title>
+<title>ELITE: THE CLONES — 098a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -2326,7 +2326,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 097a (097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 098a (098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -4182,8 +4182,9 @@ const debris = [];
    (096a: SUPERSEDED BY RULING 50. That rule is not in this build; the
    paragraph is the record of 094a and 094b. Never seen on a device.)
 
-   WHAT IS NOT, each named: the customs roll on a sale (§9.3, loop
-   110b); missiles, ECM, the energy bomb, the pod (§4.2-4.4, §8);
+   WHAT IS NOT, each named: ~the customs roll on a sale (§9.3, loop
+   110b)~ (098a: BUILT — customsRoll(), beside sell(); loop 110b);
+   missiles, ECM, the energy bomb, the pod (§4.2-4.4, §8);
    bounty hunters (loop 109); docked consequences; the `legal.change`
    event (§11 — the declarative tier is not built); and the console.
    CONSTRAINT 2 makes legal status an instrument; the console has no
@@ -5042,6 +5043,26 @@ function legalRows(){
            "  ·  "+(k.saved ? "saved with it" : "NOT saved by itself — the next save carries it")+"\n";
   }).join("");
 }
+/* 098a. Both read at write time: the rule from state.system and the
+   table, the rows from the runtime log. */
+function customsLine(){
+  const s = state.system, g = s.government;
+  const pct = customsChance({ legal:"I" }, g);      /* the table's own function — no second copy of the figures */
+  if(g === 0) return s.govName+" (government 0): every good is legal here; no sale is rolled";
+  return s.govName+" (government "+g+"): not legal here — "+(g > 3 ? "Restricted and Illegal" : "Illegal only")+
+         "  ·  selling one is rolled once a sale, "+pct+" in 100"+(g < 5 ? " [ASSUMED]" : "")+
+         "  ·  caught: "+CUSTOMS_FINE_PCT+"% of the sale fined and +1 a tonne on the record; the sale stands"+
+         "  ·  buying and carrying: nothing  ·  the roll is fixed by system, day and tonnes sold (S299)";
+}
+function customsRows(){
+  if(!customsLog.length) return "  (no roll this session)\n";
+  return customsLog.map(function(k){
+    return "  "+new Date(k.t).toTimeString().slice(0,8)+" "+k.qty+" t "+k.name+"  ·  "+k.sys+" day "+k.day+", government "+k.gov+
+           "  ·  chance "+k.chance+", rolled "+k.roll+"  ·  "+
+           (k.caught ? "CAUGHT — fined "+k.fine+" of "+k.gross+" tenths CR, record +"+k.qty
+                     : "clear — "+k.gross+" tenths CR kept whole")+"\n";
+  }).join("");
+}
 function killRows(){
   if(!killLog.length) return "  (no kill this session)\n";
   return killLog.map(function(k){
@@ -5650,7 +5671,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 097a — settings\n"+
+    "ELITE: THE CLONES 098a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -5744,6 +5765,13 @@ function writeReport(){
     "police        "+policeLine()+"\n"+
     "legal log     newest first\n"+
     legalRows()+
+    /* 098a, loop 110b. The rule as it stands HERE, read from state.system
+       at write time, then every roll made this session. The chance is
+       printed here and NOT on the market: PANEL §3.4 rules a percentage
+       off that panel, and this is the settings report. */
+    "customs       "+customsLine()+"\n"+
+    "customs log   newest first — one row a roll; a sale of a good that is legal here makes none\n"+
+    customsRows()+
     "kill log      newest first\n"+
     killRows()+
     "tuning for    "+ID_NS+":"+T.forShip+"  ·  "+overrideLine()+"\n"+
@@ -7211,7 +7239,11 @@ gFindIn.addEventListener("blur", resetPageZoom);
       invented posture would be an instrument reporting a number
       nobody chose — constraint 2.
 
-   C. ILLEGAL GOODS HAVE NO CONSEQUENCE — IN THIS BUILD. No customs
+   C. (098a: THIS PARAGRAPH IS THE RECORD OF EVERY BUILD TO 097a. THE
+      ROLL IS BUILT — customsRoll(), beside sell(). SELLING a good that
+      is not legal here is rolled; buying and carrying still cost
+      nothing. What follows is no longer true of the build.)
+      ~ILLEGAL GOODS HAVE NO CONSEQUENCE — IN THIS BUILD.~ No customs
       roll of any kind is built: not salvage's, not the widened one.
       WORLD §7.3 (v1.23, session 081) widens the roll from Xeno Salvage
       to every good not legal here, ON SALE (COMBAT §9.3); buying and
@@ -7692,6 +7724,87 @@ function mktExpansion(s, c, price, avail, held, illegal){
   return h + '</div>';
 }
 
+/* 098a — THE CUSTOMS ROLL ON A SALE. Loop 110b; COMBAT §15 step 4's
+   last unbuilt legal item. The s098 handover's job b, Ripley's letter,
+   6 October 2026. [BUILT] 6 October 2026 — as exported, 098a had run
+   on no device. (Dated, so it ages visibly.)
+   THE RULE IS WORLD §7.3's, WIDENED BY COMBAT §9.3, TO THE LETTER:
+     SELLING a Restricted good at government > 3, or an Illegal good at
+     government > 0, is rolled ONCE per transaction:
+       r      = rng(hash32(systemSeed, gameDay, tonnesSold))
+       chance = government >= 5 ? (government - 4) * 12 : government * 6
+       caught = floor(r() * 100) < chance
+     Caught: legalStatus +1 per tonne sold, 25% of the gross fined, and
+     THE SALE COMPLETES at the market price. Buying and carrying cost
+     nothing — "a customs desk, not a pursuit".
+   SALVAGE'S OWN RULE IS BUILT WITH IT, in the same function: sold
+   anywhere, rolled at government >= 5 on (government - 4) * 12. NOTHING
+   GIVES SALVAGE YET (no scoop; the market offers none), so that branch
+   has run in the harness and can run nowhere else.
+   WHAT THE PLAYER IS TOLD: NOTHING, YET. The handover says so and it
+   is Not yet defined — MUNGO's `customs-caught` and `customs-evaded`
+   lines are written and MUNGO is not built. The console's credits and
+   TUNE's `legalStatus` are read from state and are right (constraint
+   2); TUNE's `customs log` is the only place a roll is NAMED. PANEL
+   §3.4's posture line stays undrawn — [DECISION], Ripley, 017.
+   DECIDED HERE, each [ASSUMED] and Ripley's to overturn:
+   1. THE FINE ROUNDS TO THE NEAREST TENTH OF A CREDIT —
+      Math.round(gross / 4). §7.3 says "25% of the gross" and credits
+      are whole tenths; a gross not divisible by 4 has to land somewhere.
+   2. The roll is made after the sale's own arithmetic and before its
+      ONE save, so the fine and the record are in the file the sale
+      writes. `saved` is true on the legal log.
+   3. `tonnesSold` is the quantity sold, whatever the unit. Every good
+      sold by the kg or the g is Legal, so no roll ever reads one.
+   4. Salvage's roll is built here although nothing can reach it.
+   TWO THINGS THE SPEC'S OWN FIGURES DO, FOUND BY BUILDING THEM AND NOT
+   CHANGED — both are his to rule on:
+   S299. THE SEED IS (system, day, tonnes) AND NOTHING ELSE. So two
+      sales OF THE SAME SIZE in one system on one day are THE SAME
+      ROLL, whatever the good: if 1 t is clear today, every 1 t sale
+      here today is clear. §7.3's own sentence says "selling in two
+      smaller lots produces two independent rolls" — true of a 3 and a
+      2, false of a 1 and a 1. DECLARATIVE §5.1 seeds a `roll` on a
+      different list, ending in `eventCounter`, which no document
+      defines and no build holds. The seed is made in ONE place,
+      customsSeed(), so a ruling is one line.
+   S300. THE CHANCE IS NOT IN ORDER OF GOVERNMENT. 6, 12, 18, 24 for
+      governments 1 to 4, then 12, 24, 36 for 5 to 7: a Communist
+      system (4) is twice as watchful as a Confederacy (5). It is the
+      [ASSUMED] x 6 meeting salvage's kept figures. Tuning.
+   NO NEW SAVED FIELD, NO `schema` CHANGE, NO ACTION ADDED. sell() IS
+   TOUCHED. `customsLog` is runtime, TUNE's, never saved. */
+const CUSTOMS_FINE_PCT = 25;              /* WORLD §7.3. [ASSUMED] there: "untuned" */
+const CUSTOMS_LOG      = 6;
+const customsLog = [];                    /* runtime, TUNE's. Never saved */
+/* Per cent. 0 = no desk for this good under this government: no roll is made. */
+function customsChance(c, gov){
+  if(c.legal === "S") return gov >= 5 ? (gov - 4) * 12 : 0;      /* §7.3, the original salvage rule, unchanged */
+  if(mktLegalHere(c, gov)) return 0;                             /* §7.1: R legal at gov <= 3, I at gov 0, L everywhere */
+  return gov >= 5 ? (gov - 4) * 12 : gov * 6;                    /* COMBAT §9.3 — the x 6 is [ASSUMED] there */
+}
+/* S299: the ONE place the roll's seed is made. §7.3's list, in its order. */
+function customsSeed(sys, gameDay, tonnes){
+  return hash32(hash32(WORLD_SEED, sys.galaxy, sys.index), gameDay, tonnes);
+}
+/* Called by sell() and by nothing else. Returns null where no roll is
+   made; otherwise the roll, which sell() applies. Writes `customsLog`
+   and nothing in `state`. */
+function customsRoll(c, qty, gross){
+  const sys = state.system, gov = sys.government;
+  const chance = customsChance(c, gov);
+  if(chance <= 0) return null;
+  const r = rng(customsSeed(sys, state.commander.gameDay, qty));
+  const roll = Math.floor(r() * 100);                            /* §7.3's ri(r, 100): the stream's first draw */
+  const caught = roll < chance;
+  const out = { t:Date.now(), id:c.id, name:c.name, qty:qty, gov:gov, sys:sys.name, day:state.commander.gameDay,
+                chance:chance, roll:roll, caught:caught, gross:gross,
+                fine: caught ? Math.round(gross * CUSTOMS_FINE_PCT / 100) : 0 };     /* decision 1 */
+  customsLog.unshift(out);
+  if(customsLog.length > CUSTOMS_LOG) customsLog.length = CUSTOMS_LOG;
+  return out;
+}
+
 /* §3.3.1's accounting table, applied literally. Actions, ARCH §3.4. */
 function buy(id, qty){
   noCascade();
@@ -7728,6 +7841,16 @@ function sell(id, qty){
   /* LOOP 55: the counter is net trade, no floor — [DECISION], Ripley, 019. */
   mktTaken.by[id] = (mktTaken.by[id] || 0) - qty;
   state.ship.cargoUsed = holdUsed();
+  /* 098a, loop 110b. THE SALE ABOVE HAS COMPLETED, at the market price
+     — §7.3. The roll takes a fine back out and marks the record, and
+     both ride in the one save below. A fine is at most a quarter of
+     the gross just credited, so credits cannot go below where they
+     stood before the sale. */
+  const cu = customsRoll(commodityById(id), qty, qty * price);
+  if(cu && cu.caught){
+    state.commander.credits -= cu.fine;
+    legalAdd(qty, "customs: "+qty+" t of "+cu.name+" sold at "+cu.sys+", caught (COMBAT §9.3)", true);
+  }
   saveGame();   /* LOOP 87, 94 */
   stateChanged("sell");
   return { ok:true };
