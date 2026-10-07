@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 099a</title>
+<title>ELITE: THE CLONES — 100a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -651,6 +651,39 @@
     font:inherit;font-size:10px;letter-spacing:.12em;padding:5px 9px;
     z-index:20;
   }
+  /* 100a — THE DEATH SCREEN, PANEL §9A. Full screen and OPAQUE: §9A
+     rejects showing the 3D view behind it ("it implies a ship"). It sits
+     above the flying view, the console, the controls and the panel
+     (z 25) and BELOW TUNE (z 30). §9A.4: the TUNE corner is drawn on
+     it, so while it is up the corner is lifted above it and the PANEL
+     corner is not drawn — "no panel is available". The same box draws
+     §9A.5's EJECTED variant. */
+  #death{
+    position:fixed;inset:0;z-index:25;display:none;
+    background:#000;color:var(--ink);
+    align-items:center;justify-content:center;
+    padding:calc(env(safe-area-inset-top) + 40px) 18px calc(env(safe-area-inset-bottom) + 24px);
+    touch-action:none;-webkit-user-select:none;user-select:none;
+  }
+  #death.open{display:flex;}
+  #death .dbox{width:100%;max-width:340px;}
+  #death .dtitle{font-size:15px;letter-spacing:.24em;margin-bottom:20px;}
+  #death .dsub{font-size:11px;color:var(--ink-dim);letter-spacing:.06em;line-height:1.7;}
+  #death .drows{margin-top:18px;}
+  #death .drow{display:flex;justify-content:space-between;gap:12px;
+               font-size:11px;line-height:1.9;letter-spacing:.04em;}
+  #death .drow span:first-child{color:var(--ink-dim);}
+  #death .dkl{display:flex;margin-top:18px;font-size:11px;line-height:1.7;letter-spacing:.04em;}
+  #death .dkl b{flex:0 0 52px;color:var(--ink-dim);font-weight:400;}
+  #death .dkl span{flex:1;min-width:0;}
+  #death .dact{margin-top:34px;text-align:center;min-height:48px;}
+  #deathBtn{
+    min-height:44px;padding:0 22px;background:#000;color:var(--ink);
+    border:1px solid var(--ink-dim);border-radius:2px;
+    font:inherit;font-size:12px;letter-spacing:.18em;
+  }
+  body.dead #tuneBtn{ z-index:26; }
+  body.dead #sysBtn{ display:none; }
 </style>
 </head>
 <body>
@@ -816,6 +849,18 @@
      One button, the nav strip switches once inside. See the panel router. -->
 <button id="sysBtn">PANEL</button>
 <button id="tuneBtn">TUNE</button>
+
+<!-- 100a — PANEL §9A, the death screen, and §9A.5, EJECTED. One box,
+     two fillings; deathSync() in the script fills it from `state` and
+     shows it. The button is NOT DRAWN AT ONCE (§9A.3, [ASSUMED] 40):
+     it is hidden until every touch has lifted and 1.5 s have passed. -->
+<div id="death">
+  <div class="dbox">
+    <div class="dtitle" id="deathTitle"></div>
+    <div id="deathBody"></div>
+    <div class="dact"><button id="deathBtn" style="visibility:hidden"></button></div>
+  </div>
+</div>
 
 <div id="tuner">
   <!-- S62, session 037. This read ALL VALUES [ASSUMED] from session 002
@@ -1011,6 +1056,40 @@
     zone</b> — or Space.</div>
   </div>
 
+  <!-- 100a, RULING 55 ([DECISION], Ripley, session 100, option a): THE
+       DEATH BUILD INCLUDES THE ESCAPE POD. Nothing sells one — no
+       equipment panel, no dock (PANEL §9A.5 called the pod "unreachable"
+       for that reason) — so, as the laser above, a dev control hands it
+       over. ARCH §2.3's exception: NOT AN ACTION, NOT A PRICE (EQUIPMENT
+       §5.2 prices it at 1000.0 CR, minTech 6). devFitPod() carries the
+       reasoning. -->
+  <div class="row">
+    <div class="acts" style="margin-top:0"><button id="bPod">FIT ESCAPE POD</button></div>
+    <div class="note">Dev control, not a purchase. Fits <b>one escape pod</b> and saves at once.
+    <b>With a pod fitted, hull 0 does not lose the commander:</b> you eject, keep credits, legal
+    status, kills and the chart record, and <b>lose the ship, the cargo and every other fitting —
+    the laser too</b>. You are put in a new Wren at this system's arrival point, <b>unarmed</b>, and
+    the pod is used up: fit another here, and the laser above. <b>It cannot be fitted to a
+    commander who is already lost</b> — REPAIR first. Every part of that is <b>[ASSUMED]</b>
+    beyond COMBAT §8's own list.</div>
+  </div>
+
+  <!-- 100a, PANEL §9A.4, [ASSUMED] 41: REPAIR. "Hull, both shields and
+       energy to the ship's maxima, saved at once. On a dead commander it
+       also dismisses the death screen, because the file no longer holds
+       hull 0." It ships with the death screen because ruling 48 kills
+       the commander he has — hull 0 on file since 4 October — the
+       moment this build loads it. §9A.4 says plainly what it is: A
+       RESURRECTION BUTTON, a dev control that goes when TUNE goes. -->
+  <div class="row">
+    <div class="acts" style="margin-top:0"><button id="bRepair">REPAIR</button></div>
+    <div class="note">Dev control, not a service. <b>Hull, both shields and energy to this ship's
+    maxima, saved at once.</b> On a lost commander it <b>undoes the loss</b>: the death screen goes
+    and you are back in the same ship, in the same place — <b>with whatever was shooting at you
+    still there</b>. Nothing in the game repairs a hull yet (COMBAT §6.1: a docked service, Not yet
+    defined).</div>
+  </div>
+
   <div class="sep"></div>
   <h1>DEV STATE — DRIVES THE GAUGES, NOT A GAME MECHANIC</h1>
 
@@ -1025,7 +1104,8 @@
     other class — hull, shields and energy at that ship's maxima, hold at its default — and
     <b>resets pitch, roll and max speed to that ship's row</b>; any override you were flying
     is dropped. Cargo rides. Every Dray figure is <b>[ASSUMED]</b>. Saves at once, so
-    <i>file on disk</i> below reads the class.</div>
+    <i>file on disk</i> below reads the class. <b>Since 100a a fresh hull also undoes a lost
+    commander</b>, as REPAIR does.</div>
   </div>
 
   <div class="row">
@@ -1787,7 +1867,8 @@ function setArrival(p){ pos = [p[0], p[1], p[2]]; }
    which something outside the integrator moves the ship, on FLIGHT
    [D] 1 (b)'s pattern: the flight model keeps the owner, the caller
    calls in. It sets `pos` AND ZEROES `speed`. Never `q`, never
-   `throttle` — those are the pilot's. One caller: collide().
+   `throttle` — those are the pilot's. One caller: collide(). (100a: TWO
+   — ejectPod() puts the new ship at the day's arrival point, at rest.)
    THE ZERO IS THIS BUILD'S, NOT COMBAT'S — S251, [ASSUMED]; collide()
    carries the reasoning. FLIGHT §3 owes this writer a sentence. */
 function bump(p){ pos = [p[0], p[1], p[2]]; speed = 0; }
@@ -1796,7 +1877,8 @@ function bump(p){ pos = [p[0], p[1], p[2]]; speed = 0; }
    not the ship T's three rates were laid over, they are replaced by the
    flown ship's row and T is saved. Same ship: nothing moves, so an
    override survives a reload and a wipe that leaves the class alone.
-   Callers: boot (after the load), wipe(), devSetShip().
+   Callers: boot (after the load), wipe(), devSetShip() — and, 100a,
+   ejectPod(): a Dray lost puts him in a Wren.
    WHAT THE SPEC DID NOT SAY, DECIDED HERE AND NAMED — S226: whether an
    override SURVIVES a ship change. BUILT AS: it does not. Wren at pitch
    50 -> Dray -> Wren comes back at the row's 60. That is the literal
@@ -2131,6 +2213,27 @@ let mktTaken = { key:"", by:{} };
    the next save, and WORLD §9.8 says so and rejects clearing it in
    jump(). saveFileLine() now says so too. */
 let killedHere = { key:"", idx:[] };
+/* 100a — WHAT KILLED HIM. PANEL §9A.7's proposal, [ASSUMED] 45, built:
+   the cause of death is kept in `core.combat`'s bag beside the kill
+   list — `cause: { by: "pirate" | "police" | "collision" }`. A BAG, SO
+   NO `schema` CHANGE: the kill list's argument (WORLD §9.8), and 099a's
+   loader reads a file that carries it — it looks at `killed` and nothing
+   else — so rolling back a build does not refuse a played commander.
+   THIS IS ITS ONE RUNTIME COPY, as `killedHere` is the list's.
+   · WRITTEN at the blow that takes hull to 0: collide() and
+     hurtPlayer(). Nothing else writes a cause.
+   · SAVED ONLY WHILE HULL IS 0 — saveGame(). A cause on a living
+     commander means nothing, so the key is ABSENT then (PANEL §9A.2:
+     "absent when the file holds no cause"; absent, not `null`).
+   · CLEARED by whatever ends the death: wipe(), ejectPod(), and the two
+     dev controls that hand back a hull — devRepair(), devSetShip().
+   · A FILE AT HULL 0 WITH NO CAUSE IS LEGAL and is what Ripley's own
+     commander is: hull 0 since 4 October, on builds with no death. The
+     screen's cause row is then absent.
+   A trader cannot be a cause: only a pirate or a police ship that has
+   turned ever fires (contactsStep()). */
+const DEATH_BY = ["pirate","police","collision"];
+let deathCause = null;
 function hereKey(){
   const c = state.commander;
   return c.galaxy + ":" + c.system + ":" + c.gameDay;
@@ -2330,10 +2433,12 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 099a (099a: NO ACTION ADDED OR TOUCHED — rulings 53 and 54: the market draws one line on the sold good's open row saying what customs did with the sale; the line is presentation, read from the roll customsRoll() already logs and from state either side of sell(); sell(), customsRoll() and the save are 098b's to the byte. 098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 100a (100a: TWO ACTIONS ADDED, die() AND ejectPod() — THE DEATH BUILD, loop 117, COMBAT §8, PANEL §9A, rulings 48, 55 and 56: the fatal hit saves once at hull 0 and the death screen is raised; with an escape pod fitted ejectPod() runs instead and the commander lives in a new ship; wipe() gains one line and one caller, the NEW COMMANDER tap; the save gains an OPTIONAL `cause` in `core.combat`'s bag and `schema` stays 4. 099a: NO ACTION ADDED OR TOUCHED — rulings 53 and 54: the market draws one line on the sold good's open row saying what customs did with the sale; the line is presentation, read from the roll customsRoll() already logs and from state either side of sell(); sell(), customsRoll() and the save are 098b's to the byte. 098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
+   (100a: IT ALSO HEARS `ejectPod` AND DRAWS THE DAY'S SHIPS AGAIN; `die`
+   is signalled and nothing listens for it.)
    079a registers ONE listener — the scene rebuild after `jump` and
    `wipe` (LOOP 106a, below the object field). 091a: STILL ONE — it
    also calls spawnContacts(), COMBAT §3.2. A listener may read and
@@ -2445,8 +2550,12 @@ function saveGame(){
         /* 093b, ruling 47. Written from `killedHere`, its one runtime
            copy, as `core.trade` is. Always written; an empty list is
            spelled, not omitted. */
-        [COMBAT_NS]: { killed: { key: killedHere.key,
-                                 idx: killedHere.idx.slice() } }
+        /* 100a: and `cause`, ONLY WHILE HULL IS 0 — the fatal save
+           writes it, the screen reads it back from `deathCause`. Absent
+           on a living commander and on a death with no cause on file. */
+        [COMBAT_NS]: Object.assign(
+          { killed: { key: killedHere.key, idx: killedHere.idx.slice() } },
+          (sh.hull <= 0 && deathCause) ? { cause: { by: deathCause.by } } : {})
       })
     };
     /* `cargoUsed` rides in `ship`? NO — it is not in SHIP_SAVED. It is
@@ -2674,6 +2783,7 @@ function loadFrom(raw){
      is not today's market, which is how it expires on the next jump. */
   let trade = null;
   let combat = null;                   /* 093b */
+  let cause  = null;                   /* 100a */
   let moduleState = {};
   if(o.moduleState !== undefined){
     moduleState = Object.assign({}, o.moduleState);
@@ -2721,6 +2831,18 @@ function loadFrom(raw){
         idx.push(v);
       }
       combat = { key: kd.key, idx: idx };
+      /* 100a. `cause` — OPTIONAL. Absent on every file written before
+         100a and on every living commander since. PRESENT AND MALFORMED
+         REFUSES THE FILE: it is core's own bag ([DECISION] 29's rule,
+         as the list above). It is NOT checked against the hull: a cause
+         on a file whose hull is above 0 is loaded, read by nothing and
+         dropped by the next save — the stale kill list's rule. */
+      if(cb.cause !== undefined){
+        const cz = cb.cause;
+        if(!cz || typeof cz !== "object" || Array.isArray(cz) || DEATH_BY.indexOf(cz.by) === -1){
+          saveStatus = "REFUSED — moduleState."+COMBAT_NS+".cause is malformed"; return false; }
+        cause = { by: cz.by };
+      }
     }
   }
 
@@ -2779,6 +2901,7 @@ function loadFrom(raw){
   state.moduleState = moduleState;                     /* LOOP 94 */
   mktTaken          = trade || { key:"", by:{} };      /* LOOP 104 */
   killedHere        = combat || { key:"", idx:[] };    /* 093b, ruling 47 */
+  deathCause        = cause;                           /* 100a: null when the file holds none */
 
   /* THE RECONCILE, LOOP 104. `cargoUsed` is a stored total and is the
      field that lies — loop 81. It is deliberately NOT in SHIP_SAVED,
@@ -2868,6 +2991,11 @@ function saveFileLine(){
            const own = c.galaxy+":"+c.system+":"+c.gameDay;
            return "["+k.idx.map(function(v){ return v+1; }).join(",")+"] for "+(k.key || "(none)")+
                   (k.key && k.key !== own ? "  (an EARLIER system's list — expected after a jump: nothing reads it, the next save drops it. WORLD §9.8)" : "");
+         })()+
+         /* 100a: the cause of death AS THE FILE HOLDS IT. */
+         "  cause "+(function(){
+           const b = o.moduleState && o.moduleState[COMBAT_NS];
+           return b && b.cause && typeof b.cause === "object" ? String(b.cause.by) : "none";
          })();
 }
 
@@ -2945,6 +3073,7 @@ function wipe(){
 
   mktTaken    = { key:"", by:{} };
   killedHere  = { key:"", idx:[] };       /* 093b: the new commander has killed nobody */
+  deathCause  = null;                     /* 100a: and has not died of anything */
   svcFuelLast = null;
   /* LOOP 105. The pose is saved ship state now, so a wipe that rebuilds
      the ship rebuilds it too — otherwise the new commander's first file
@@ -2964,6 +3093,11 @@ function wipe(){
   stateChanged("wipe");
   return { ok:true };
 }
+
+/* 100a: wipe() HAS A SECOND CALLER — the death screen's NEW COMMANDER
+   (PANEL §9A.3, ruling 48: "the commander is wiped only when NEW
+   COMMANDER is tapped"). The action is the same one; nothing in it
+   knows who called. */
 
 /* THE LOAD ITSELF. Above the boot IIFE — see the note at the top. */
 const SAVE_LOADED = loadGame();
@@ -2986,7 +3120,8 @@ shipChanged();
    build's own loader refuses (§9.7).
    090a: SINCE COLLISION COSTS HULL AND NOTHING REPAIRS IT (COMBAT
    §6.1 — repair is a docked service, Not yet defined), THIS SWITCH IS
-   THE ONLY WAY TO GET A HULL BACK. That makes a dev control the repair
+   THE ONLY WAY TO GET A HULL BACK (100a: REPAIR IS THE OTHER, and keeps
+   the ship). That makes a dev control the repair
    shop until docking exists. Named, not fixed; loop 89's shape.
    CARGO RIDES. Dray (35 t) to Wren (20 t) with more than 20 t aboard
    leaves an OVER-FULL HOLD, which is a legal state (PRIMER §3,
@@ -3002,6 +3137,11 @@ function devSetShip(cls){
   state.ship.cargoUsed = holdUsed();
   state.ship.speed  = was.speed;
   state.ship.docked = was.docked;
+  /* 100a. A FRESH SHIP HAS A HULL, SO THIS SWITCH ALSO UNDOES A DEATH —
+     it always handed back a hull (090a, above) and since 100a hull 0 is
+     a lost commander. Reachable from the death screen through TUNE, as
+     REPAIR is. Named, not blocked: [ASSUMED], Ripley's to overturn. */
+  deathCause = null;
   shipChanged();
   saveGame();
   return true;
@@ -3154,6 +3294,11 @@ onStateChanged(function(name){
     spawnContacts(name === "jump" ? "on arrival"
                                   : "after the wipe (the start pose stands in)");
   }
+  /* 100a, ejectPod()'s decision 4. Same system, same day, so the SCENE
+     is not rebuilt — it is the same field. The day's SHIPS are drawn
+     again round the new ship: `pos` is already the arrival point
+     (ejectPod() sets it before it signals, as jump() does). */
+  if(name === "ejectPod") spawnContacts("after an ejection (the day's arrival point)");
 });
 
 /* LOOP 106b, session 082 — HYPERSPACE ARRIVAL, FLIGHT §5.1 and §5.2.
@@ -3181,6 +3326,8 @@ onStateChanged(function(name){
    longer only felt: an arrival at speed towards an object costs hull.
    (Through 088a this said "There is no collision model, so clearance
    is felt, not fatal (FLIGHT §7)".) Death is NOT built — ruling 38.
+   (100a: DEATH IS BUILT. An arrival at full speed into an object is now
+   a lost commander, or an ejection.)
    Returns the point and what TUNE prints about it; writes nothing. */
 const ARRIVE_TAG    = 0x41525256;          /* "ARRV" */
 const CLEARANCE     = 150;                 /* [ASSUMED] — 082b. FLIGHT §5.2
@@ -3745,6 +3892,11 @@ function integrate(input, dt){
    step 1 only; the s092 handover asked the `Death` letter and it came
    back blank. Built on its option (a), the recommendation — [ASSUMED],
    not a ruling.
+   100a: NO LONGER SO. EVERYTHING ABOVE FROM "DEATH —" IS THE RECORD OF
+   090a TO 099a. Death is built — the DEATH block below devFitLaser():
+   at hull 0 the pod ejects if one is fitted, otherwise the fatal save
+   and PANEL §9A's screen. Hull still stops at 0; the ship no longer
+   flies on.
    NOT RAISED: `combat.collision` (§11) — there is no declarative tier
    to hear it. NOT WRITTEN: Integrity (BIBLE §4.1) — no MUNGO runtime.
 
@@ -3811,7 +3963,8 @@ function recharge(dt){
    distance. One test per object per frame.
      hullLoss = hullMax x (speed / maxSpeed)^2, rounded to a whole point
    COLLISION BYPASSES SHIELDS. Fatal at full speed "shields or not" —
-   except that nothing is fatal yet (above).
+   and since 100a it is: hull 0 is death (through 099a this read "except
+   that nothing is fatal yet").
    `maxSpeed` IS T.maxSpeed — the speed the ship is being FLOWN at, the
    same divisor the speed gauge uses, so A FULL SPEED BAR IS A FULL
    HULL. [ASSUMED]: §7 says "maxSpeed" and does not say whose; with no
@@ -3874,6 +4027,7 @@ function collide(){
       loss = Math.round(row.hullMax * ratio * ratio);
       const was = sh.hull;
       sh.hull = Math.max(0, sh.hull - loss);
+      if(was > 0 && sh.hull <= 0) deathCause = { by:"collision" };   /* 100a: the blow that took it to 0 */
       touchCount++;
       if(loss > 0){
         hitCount++;
@@ -3898,12 +4052,23 @@ function collide(){
    contactsStep(), before the player does — so in a frame where both
    would kill, the player's hull is charged first and the kill still
    lands. Recharge last, as it was: a point spent this frame is spent. */
+/* 100a — DEATH, COMBAT §8, PANEL §9A.1: "the frame `ship.hull` reaches
+   0 — by a hit or a collision". Read ONCE, at the end of the step:
+   · A COLLISION that kills stops the step there — nothing else flies.
+   · A SHOT that kills does not: the 092a rule above stands, so in the
+     frame he dies his own laser still fires and a kill still lands and
+     is paid. In that one frame recordKill() saves before the fatal save
+     does — two saves, the second the fatal one. [ASSUMED], mine.
+   Then playerDown(): the pod if one is fitted, otherwise die(). */
 function combatStep(dt){
   collide();
-  contactsStep(dt);
-  playerFire(dt);
-  debrisStep(dt);                        /* 092b: the wreckage drifts */
-  recharge(dt);
+  if(state.ship.hull > 0){
+    contactsStep(dt);
+    playerFire(dt);
+    debrisStep(dt);                        /* 092b: the wreckage drifts */
+    recharge(dt);
+  }
+  if(state.ship.hull <= 0) playerDown();
 }
 /* TUNE. Read from state and the runtime log at write time; nothing
    stored for display. S250: THIS LINE IS THE ONLY PLACE HULL CAN BE
@@ -3911,7 +4076,7 @@ function combatStep(dt){
    report is a snapshot from when TUNE opened, not a live gauge. */
 function hullLine(){
   const sh = state.ship, row = SHIPS[sh.class];
-  return sh.hull+" of "+row.hullMax+(sh.hull <= 0 ? "  — AT ZERO. Death is not built; the ship flies on" : "");
+  return sh.hull+" of "+row.hullMax+(sh.hull <= 0 ? "  — AT ZERO. THE COMMANDER IS LOST (ruling 48): the death screen is up and the world holds" : "");
 }
 function chargeLine(){
   const sh = state.ship, row = SHIPS[sh.class];
@@ -3999,7 +4164,7 @@ function hitsLine(){
       weapons", so NO STEP OWNS IT — S261 — and whether 090a's stop and
       latch (S251) apply between ships is a ruling nobody has made.
       Not built rather than guessed: a pirate that rams costs hull, and
-      nothing repairs hull but the dev ship switch.
+      nothing repairs hull but the dev ship switch (100a: and REPAIR).
    4. WHAT A BREAK-OFF FLIES. §3.4: "breaks off for 3 s after passing
       within 150 units". BUILT AS: no steering, full throttle, straight
       on for the 3 s — a pass, then it comes round again.
@@ -4233,7 +4398,8 @@ function policeWitness(){
 let spawnLast = null;                     /* TUNE: what the last draw was made for */
 
 /* §3.2. ONE DRAW PER ARRIVAL: r = rng(hash32(WORLD_SEED, galaxy, system,
-   gameDay, SPAWN_TAG)). Called at boot, and by the scene listener after
+   gameDay, SPAWN_TAG)). (100a: ALSO AFTER `ejectPod` — the same day's
+   draw, made again round the new ship.) Called at boot, and by the scene listener after
    `jump` and `wipe`. THE STREAM, IN ORDER, and it is fixed whatever the
    table or the pose says: three counts (one draw per role, even where
    lo = hi); then per contact, pirates first — one hull draw, three for
@@ -4511,13 +4677,17 @@ spawnContacts("at boot (the pose stands in for the arrival point)");
    · EQUIPMENT LOSS (§6.3, and §5.2 item 3). It is in no step of §15 —
      S261's shape, S269 — and on any file this build can produce it
      could not fire: it excludes lasers and nothing else can be fitted.
+     (100a: A POD CAN BE FITTED NOW — and §6.3 excludes the pod by name,
+     so there is still nothing for it to take.)
    · INTEGRITY −1 per 10% of hull (§5.2 item 2) — no MUNGO runtime.
    · THE AFT MOUNT. §4.1: "aft fires astern (CONTROL §4.7's rear view
      is how you aim it)". There is no rear view in this build, so an
      aft laser is not read and cannot fire.
    · DEATH (§5.2 item 4, §8). Hull stops at 0 and the ship flies on —
      step 1's block carries the reasoning and the blank `Death` letter.
-   · MISSILES, ECM, the bomb, the pod — step 4.
+     (100a: BUILT — the DEATH block below devFitLaser().)
+   · MISSILES, ECM, the bomb, the pod — step 4. (100a: THE POD IS BUILT,
+     ruling 55, with a dev control to fit it. The other three are not.)
    · NOT RAISED: `combat.hit`, `combat.kill` (§11) — no declarative
      tier to hear them.
 
@@ -4634,6 +4804,143 @@ function devFitLaser(){
   return true;
 }
 
+/* ==================================================================
+   core.combat — DEATH. 100a, loop 117. COMBAT §8 (ruling 4), PANEL §9A
+   (ruling 48), and rulings 55 and 56, [DECISION], Ripley, session 100.
+   IT ENDS RULINGS 38 AND 43's INTERIM STATE — "hull 0 flies on until
+   the death screen". This is the screen.
+
+   THE RULE (ruling 48): A SAVE AT HULL 0 IS A DEAD COMMANDER. So
+   "dead" is NOT a flag and is not stored: it is `state.ship.hull <= 0`,
+   read every frame by deathSync(), in flight and at launch alike. The
+   file is the fact; closing the app cannot undo a death or lose the
+   record.
+
+   AT HULL 0, IN FLIGHT — playerDown(), called by combatStep():
+   · A POD FITTED (ruling 55): ejectPod(). The commander lives.
+   · NO POD: die(). THE FATAL HIT SAVES ONCE, hull 0 and the cause, and
+     that is all it does (PANEL §9A.7: "`die()` is no longer the wipe").
+     The wipe is the NEW COMMANDER tap.
+   AT LAUNCH: a file that loads with hull 0 opens on the death screen;
+   deathSync() runs once before the first frame, so the flying view is
+   never drawn. A pod on such a file does NOT eject — ejection is at
+   the blow, and no build can write hull 0 with a pod aboard.
+
+   ejectPod() — AN ACTION. COMBAT §8, to the letter where it speaks:
+   pod consumed; KEEPS credits, legal status, kills and `visited`;
+   LOSES cargo, all other equipment and the ship; a new `shipWren` at
+   "the nearest system with a station — [ASSUMED] the current system
+   until stations exist". Saves once.
+   WHAT §8 DID NOT SAY, DECIDED HERE AND NAMED — all [ASSUMED], mine:
+   1. THE NEW SHIP IS FREE. COMBAT [DECISION] 2 is open and nothing
+      sells a ship.
+   2. FUEL, the day, the course set and the Cunning Plans tally are in
+      neither of §8's lists and are LEFT AS THEY WERE. Fuel is a
+      commander field in this model (WORLD §9), not the ship's.
+   3. `equipment` IS EMPTIED, pod and all: a second pod, were one ever
+      fitted, is "other equipment".
+   4. WHERE: the day's ARRIVAL POINT for this system, at rest — FLIGHT
+      §5.2's point, the one a jump in today would have used — and THE
+      DAY'S SHIPS ARE DRAWN AGAIN (the scene listener, as after a jump):
+      the dead stay dead (ruling 47), the living are back where the day
+      put them, whole, and none has turned yet. Left where he died he
+      would be killed again before the screen cleared, with no pod.
+      A FUGITIVE IS STILL ATTACKED ON SIGHT, and he is now unarmed.
+   5. NOT WRITTEN: Integrity −20 (BIBLE §4.1, COMBAT §8). There is no
+      MUNGO runtime and no Integrity field — step 1's note, unchanged.
+   The action returns what it took — `lost` — and the screen is handed
+   it once (PANEL §9A.5: "this one IS a snapshot, and says so"). It is
+   never saved: close the app and the screen is gone, the commander
+   alive in the new ship.
+
+   THE TWO DEV CONTROLS — ARCH §2.3's exception, devFitLaser()'s
+   precedent: they write state direct, ARE NOT ACTIONS, signal nothing
+   and are not to be copied as a pattern. Both save at once.
+   · devFitPod() — ruling 55. One pod; refuses a second, and refuses a
+     commander already lost ([ASSUMED], mine: ejection is at the blow).
+   · devRepair() — PANEL §9A.4. Hull, both shields and energy to the
+     ship's maxima. On a lost commander that ends the death; the next
+     frame's deathSync() takes the screen down. Same ship, same place,
+     same ships round him. A RESURRECTION BUTTON, and §9A.4 says so.
+
+   NOTHING HERE HAS RUN ON A DEVICE. [BUILT] 6 October 2026.
+   ================================================================== */
+function podFitted(){
+  const e = state.equipment.escapePod;
+  return !!(e && e.qty > 0);
+}
+function die(){
+  noCascade();
+  if(state.ship.hull > 0) return fail(["alive"]);
+  saveGame();                            /* THE FATAL SAVE: hull 0 and `cause`, once */
+  stateChanged("die");
+  return { ok:true };
+}
+function ejectPod(){
+  noCascade();
+  if(state.ship.hull > 0) return fail(["alive"]);
+  if(!podFitted())        return fail(["noPod"]);
+  const cm = state.commander;
+  const lost = { ship:  state.ship.class,
+                 cargo: holdUsed(),
+                 fittings: Object.keys(state.equipment).filter(function(k){ return k !== "escapePod"; }),
+                 by:    deathCause ? deathCause.by : null,
+                 name:  state.system.name,
+                 day:   cm.gameDay };
+  state.ship      = freshShip(START_SHIP);
+  state.cargo     = {};
+  state.equipment = {};
+  deathCause      = null;
+  inF = 0; inA = 0; rcE = 0; rcF = 0; rcA = 0;     /* the parts of a point belonged to the old ship */
+  bump(arrivalPoint(cm.galaxy, cm.system, cm.gameDay));
+  shipChanged();                         /* a Dray's three rates do not fly a Wren */
+  saveGame();
+  stateChanged("ejectPod");              /* the scene listener draws the day's ships again */
+  return { ok:true, lost:lost };
+}
+/* Presentation's: what the last ejection took, for §9A.5's screen. Set
+   here, cleared by CONTINUE and by a wipe. Runtime, never saved. */
+let ejected = null;
+let lastEject = null;                    /* TUNE's: the same record, kept after CONTINUE */
+function playerDown(){
+  if(podFitted()){
+    const r = ejectPod();
+    if(r.ok){
+      ejected = r.lost; lastEject = { lost:r.lost, t:Date.now() };
+      mktOpen = null; mktBuyQ = 0; mktSellQ = 0; mktCustoms = null;   /* the hold is empty: no row is open on it */
+    }
+    return r;
+  }
+  return die();
+}
+function devFitPod(){
+  if(podFitted() || state.ship.hull <= 0) return false;
+  state.equipment.escapePod = { qty:1 };
+  saveGame();
+  return true;
+}
+function devRepair(){
+  const sh = state.ship, row = SHIPS[sh.class];
+  sh.hull = row.hullMax; sh.shieldFore = row.shieldMax; sh.shieldAft = row.shieldMax; sh.energy = row.energyMax;
+  deathCause = null;
+  inF = 0; inA = 0; rcE = 0; rcF = 0; rcA = 0;
+  saveGame();
+  return true;
+}
+function deathLine(){
+  const dead = state.ship.hull <= 0;
+  return (dead ? "COMMANDER LOST — "+(deathCause ? "by "+deathCause.by : "no cause on file")+
+                 "  ·  the file holds hull 0 until NEW COMMANDER (a wipe) or REPAIR"
+               : "alive")+
+         "  ·  escape pod "+(podFitted() ? "FITTED — hull 0 ejects (ruling 55)" : "not fitted — hull 0 loses the commander")+
+         "  ·  last ejection: "+(lastEject
+            ? new Date(lastEject.t).toTimeString().slice(0,8)+", "+(lastEject.lost.by ? "by "+lastEject.lost.by : "no cause")+
+              " at "+lastEject.lost.name+" day "+lastEject.lost.day+" — lost "+ID_NS+":"+lastEject.lost.ship+", "+lastEject.lost.cargo+" t, "+
+              (lastEject.lost.fittings.length ? lastEject.lost.fittings.map(function(k){ return ID_NS+":"+k; }).join(", ") : "no other fitting")
+            : "none this session")+
+         "  ·  button drawn "+DEATH_EXIT_MS+" ms after the last touch lifts  [ASSUMED]";
+}
+
 /* Runtime only, never saved, never read by the game beyond this block. */
 let pCool = 0, pEn = 0, pShow = 0;             /* the player's laser: s to the next shot, energy owed, s the shot stays drawn */
 let fireNow = "idle";                          /* idle | firing | noEnergy | noLaser — what the zone says */
@@ -4664,6 +4971,7 @@ function hurtPlayer(dmg, c){
   sh[key] -= s;
   const h = Math.min(sh.hull, n - s);
   sh.hull -= h;
+  if(h > 0 && sh.hull <= 0) deathCause = { by:c.role };   /* 100a: the blow that took it to 0. Only a pirate or a turned police ship fires */
   taken.pts += n; taken[fore ? "fore" : "aft"] += n; taken.shield += s; taken.hull += h;
   taken.last = { t:Date.now(), who:c.role+" "+ID_NS+":"+c.hull+" "+c.laser };
 }
@@ -5363,7 +5671,13 @@ function frame(now){
      until FLY. The frame still draws, so the view is a still picture.
      [ASSUMED], Ripley's to overturn. NOT held: under PANEL (market,
      charts) everything runs as before — that ruling is unmade. */
-  const held = tuner.classList.contains("open");
+  /* 100a, PANEL §9A.1: "WHILE IT IS UP THE WORLD HOLDS: no flight, no
+     contacts, no recharge, no save." deathSync() shows or hides the
+     death screen and the EJECTED screen from state and says whether
+     either is up. Read BEFORE the step: the frame he dies in runs to
+     its end, and the next frame is the first held one. */
+  const down = deathSync(now);
+  const held = tuner.classList.contains("open") || down;
   let input = makeFlightInput(0, 0, throttle), rates = { wx:0, wz:0 };
   if(!held){
   const kb=keyAxes(dt);
@@ -5384,6 +5698,8 @@ function frame(now){
   // 092a: and the lasers (step 3). Hits write the same four fields.
   // ONE THING IN HERE NOW SAVES: a kill issues recordKill(), an action —
   // `kills` and `credits`, one save, one signal (COMBAT §11).
+  // 100a: THREE THINGS. At hull 0 the step issues die() — the fatal
+  // save — or, with a pod aboard, ejectPod(). Each saves once.
   combatStep(dt);
 
   // the one write OF SPEED: the integrator's speed (or a collision's
@@ -5481,6 +5797,12 @@ function syncDev(){
   document.getElementById("bLaser").textContent = foreLaser()
     ? "FORE LASER: "+ID_NS+":"+foreLaser()+"LaserFore — FITTED"
     : "FIT PULSE LASER — FORE MOUNT";
+  /* 100a. Both labels are read from state, as the laser's is. */
+  document.getElementById("bPod").textContent = podFitted()
+    ? "ESCAPE POD: "+ID_NS+":escapePod — FITTED"
+    : (state.ship.hull <= 0 ? "FIT ESCAPE POD — NOT ON A LOST COMMANDER: REPAIR FIRST" : "FIT ESCAPE POD");
+  document.getElementById("bRepair").textContent =
+    "REPAIR — HULL "+state.ship.hull+" OF "+row.hullMax+(state.ship.hull <= 0 ? " · COMMANDER LOST: THIS UNDOES IT" : "");
   document.getElementById("bsPr").textContent = row.pitchRate;
   document.getElementById("bsRr").textContent = row.rollRate;
   document.getElementById("bsSp").textContent = row.maxSpeed;
@@ -5601,6 +5923,16 @@ document.getElementById("bLaser").addEventListener("click",function(){
   devFitLaser();
   syncUI();
 });
+/* 100a. The dev pod and REPAIR. Each saves; the repaint is here. The
+   death screen is deathSync()'s and comes down on the next frame. */
+document.getElementById("bPod").addEventListener("click",function(){
+  devFitPod();
+  syncUI();
+});
+document.getElementById("bRepair").addEventListener("click",function(){
+  devRepair();
+  syncUI();
+});
 /* LOOP 87: two taps, the label is the confirmation. 042b: the repaint belongs here.
 
    LOOP 113, 088a — S239. AN ARMED WIPE NOW STANDS DOWN.
@@ -5650,7 +5982,8 @@ document.getElementById("bWipe").addEventListener("click",function(){
     this.textContent = "TAP AGAIN TO DESTROY SAVE"; return;
   }
   const r = wipe();
-  if(r.ok){ chartSel = state.system; mktOpen = null; mktBuyQ = 0; mktSellQ = 0; mktCustoms = null; /* 099a */ }
+  if(r.ok){ chartSel = state.system; mktOpen = null; mktBuyQ = 0; mktSellQ = 0; mktCustoms = null; /* 099a */
+            ejected = null; /* 100a: an EJECTED screen left up is the old commander's */ }
   disarmWipe();
   syncUI();
   if(panelEl.classList.contains("open")) PANELS[panelCur].render();
@@ -5676,7 +6009,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 099a — settings\n"+
+    "ELITE: THE CLONES 100a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -5743,6 +6076,7 @@ function writeReport(){
     /* 090a, COMBAT step 1. Hull's only readout — S250. The row above
        prints the MAXIMA; these three print what the ship holds. */
     "hull          "+hullLine()+"\n"+
+    "death         "+deathLine()+"\n"+
     "charge        "+chargeLine()+"\n"+
     "recharge      energy +"+RECHARGE_ENERGY+"/s · shields +"+RECHARGE_SHIELD+"/s each from energy, off below "+SHIELD_ENERGY_FLOOR+"  [ASSUMED]\n"+
     "collisions    "+hitsLine()+"\n"+
@@ -8127,15 +8461,117 @@ document.addEventListener("visibilitychange",function(){
    never becomes a pagehide. `beforeunload` is NOT used — it is
    unreliable on iOS and is the one every desktop tutorial reaches
    for first. */
-window.addEventListener("pagehide", saveGame);
+/* 100a, PANEL §9A.1: "while it is up ... no save". The fatal save has
+   already put hull 0 on disk and the world is holding, so the safety
+   net has nothing to catch; it stands down while the commander is lost.
+   The dev controls in TUNE still save for themselves. */
+function lifeSave(){ if(state.ship.hull > 0) saveGame(); }
+window.addEventListener("pagehide", lifeSave);
 document.addEventListener("visibilitychange", function(){
-  if(document.visibilityState === "hidden") saveGame();
+  if(document.visibilityState === "hidden") lifeSave();
+});
+
+/* ---------- 100a — THE DEATH SCREEN, PANEL §9A, and EJECTED, §9A.5 ----------
+   PRESENTATION. Nothing here writes `state`; the one action it issues
+   is wipe(), on the NEW COMMANDER tap.
+   deathSync() IS THE WHOLE MECHANISM, called every frame and once
+   before the first: WHICH SCREEN IS WANTED IS READ FROM STATE —
+     hull 0            -> COMMANDER LOST   (ruling 48: the file is the fact)
+     `ejected` is set  -> EJECTED          (the action's snapshot, §9A.5)
+     otherwise         -> none
+   so every way a death can end takes the screen down without being
+   told to: the wipe, REPAIR, the dev ship switch. It returns true
+   while either is up and frame() holds the world on that.
+   · THE ROWS ARE READ FROM `state` EVERY FRAME and written to the page
+     only when the text changes — §9A.2: "nothing here is a snapshot".
+     (EJECTED's Lost row IS the snapshot; its Kept row is state.)
+   · RAISED OVER A PANEL, it replaces it (§9A.1): the panel is closed.
+   · THE BUTTON (§9A.3, [ASSUMED] 40) is drawn only once EVERY TOUCH HAS
+     LIFTED AND 1.5 s HAVE THEN PASSED — his thumb rests on the pad and
+     a tap is a lift (S276). DEATH_EXIT_MS is §9A.3's guess, not a
+     measurement. A touch landing during the wait starts it again. Once
+     drawn it stays drawn. NO SECOND TAP, as §9A.3 rules.
+   · THE SHIP ROW PRINTS THE CLASS ID (§9A.2: FLIGHT [DECISION] 3 is
+     open), and EJECTED's Lost row prints fitting ids for the same
+     reason — no document gives a fitting a display name in the build.
+   · NO KEY is bound to either button (§9A.6).
+   · NO MUNGO LINE (§9A.2, [ASSUMED] 42). */
+const DEATH_EXIT_MS = 1500;              /* [ASSUMED] — PANEL §9A.3, [ASSUMED] 40 */
+const deathEl = document.getElementById("death");
+const deathBtn = document.getElementById("deathBtn");
+let deathMode = "", deathText = "", deathLift = null, deathBtnOn = false;
+let touchesDown = 0, mouseIsDown = false;
+for(const ev of ["touchstart","touchend","touchcancel"]){
+  document.addEventListener(ev, function(e){ touchesDown = e.touches ? e.touches.length : 0; }, { capture:true, passive:true });
+}
+window.addEventListener("mousedown", function(){ mouseIsDown = true;  }, true);
+window.addEventListener("mouseup",   function(){ mouseIsDown = false; }, true);
+const DEATH_BY_WORDS = { pirate:"Destroyed by a pirate", police:"Destroyed by the police", collision:"Destroyed in a collision" };
+function deathRow(k, v){ return '<div class="drow"><span>'+esc(k)+'</span><span>'+esc(v)+'</span></div>'; }
+function deathHtml(mode){
+  const cm = state.commander;
+  if(mode === "lost"){
+    return (deathCause ? '<div class="dsub">'+esc(DEATH_BY_WORDS[deathCause.by])+'</div>' : '')+
+      '<div class="dsub">'+esc(state.system.name)+'  ·  day '+cm.gameDay+'</div>'+
+      '<div class="drows">'+
+      deathRow("Kills", cm.kills)+
+      deathRow("Rating", ratingBand(cm.kills))+
+      deathRow("Legal Status", legalBand(cm.legalStatus))+
+      deathRow("Credits", cr(cm.credits)+" CR")+
+      deathRow("Systems visited", state.visited.length)+
+      deathRow("Ship", ID_NS+":"+state.ship.class)+
+      deathRow("Cargo aboard", holdUsed()+" t")+
+      (cm.cunningPlans > 0 ? deathRow("Cunning Plans", cm.cunningPlans) : "")+
+      '</div>';
+  }
+  const L = ejected;
+  return (L.by ? '<div class="dsub">'+esc(DEATH_BY_WORDS[L.by])+'</div>' : '')+
+    '<div class="dsub">'+esc(L.name)+'  ·  day '+L.day+'</div>'+
+    '<div class="dkl"><b>Kept</b><span>Credits '+cr(cm.credits)+' CR · Legal Status · Kills '+cm.kills+' · Chart record</span></div>'+
+    '<div class="dkl"><b>Lost</b><span>'+esc(ID_NS+":"+L.ship)+' · '+L.cargo+' t of cargo'+
+      (L.fittings.length ? ' · '+esc(L.fittings.map(function(k){ return ID_NS+":"+k; }).join(" · ")) : '')+'</span></div>';
+}
+function deathSync(now){
+  const want = state.ship.hull <= 0 ? "lost" : (ejected ? "ejected" : "");
+  if(want !== deathMode){
+    deathMode = want; deathText = ""; deathLift = null; deathBtnOn = false;
+    deathBtn.style.visibility = "hidden";
+    deathEl.classList.toggle("open", want !== "");
+    document.body.classList.toggle("dead", want !== "");
+    if(want){
+      if(panelEl.classList.contains("open")) closePanel();     /* §9A.1: the screen replaces it */
+      document.getElementById("deathTitle").textContent = want === "lost" ? "COMMANDER LOST" : "EJECTED";
+      deathBtn.textContent = want === "lost" ? "NEW COMMANDER" : "CONTINUE";
+    }
+  }
+  if(!want) return false;
+  const html = deathHtml(want);
+  if(html !== deathText){ deathText = html; document.getElementById("deathBody").innerHTML = html; }
+  if(!deathBtnOn){
+    if(touchesDown > 0 || mouseIsDown) deathLift = null;
+    else {
+      if(deathLift === null) deathLift = now;
+      if(now - deathLift >= DEATH_EXIT_MS){ deathBtnOn = true; deathBtn.style.visibility = "visible"; }
+    }
+  }
+  return true;
+}
+deathBtn.addEventListener("click", function(){
+  if(!deathBtnOn) return;
+  if(deathMode === "ejected"){ ejected = null; return; }       /* CONTINUE: it informs and gates nothing */
+  if(deathMode !== "lost") return;
+  /* NEW COMMANDER — wipe(), ARCH §3.4. Not undoable, no second tap
+     (§9A.3). The view follow-up is the TUNE wipe button's, to the line. */
+  const r = wipe();
+  if(r.ok){ chartSel = state.system; mktOpen = null; mktBuyQ = 0; mktSellQ = 0; mktCustoms = null; ejected = null; }
+  syncUI();
 });
 
 /* ---------- go ---------- */
 document.addEventListener("gesturestart",e=>e.preventDefault());
 document.addEventListener("dblclick",e=>e.preventDefault());
 resize(); syncUI(); paintThrottle();
+deathSync(performance.now());            /* 100a, PANEL §9A.1: a file at hull 0 opens on the death screen — before the first frame draws */
 requestAnimationFrame(frame);
 </script>
 </body>
