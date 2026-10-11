@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 103a</title>
+<title>ELITE: THE CLONES — 104a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -93,6 +93,17 @@
   .g .track{flex:1 1 auto;height:9px;border:1px solid var(--ink-faint);
             position:relative;min-width:0;}
   .g .fillpos{position:absolute;top:0;bottom:0;left:0;background:var(--ink);opacity:.78;}
+  /* 104a, LOOP 122, RULING 60 ([DECISION], Ripley, 104). The HULL row's two
+     warning stages, CONTROL v1.9 §3.5.3. `hwarn`: the bar's fill takes the
+     console's amber — the ink live numbers already wear, no new colour.
+     `hcrit`: the fill AND the label blink, once a second, the build's first
+     animation. The classes are set in paintConsole() every frame from state
+     and the two TUNE thresholds; nothing here decides anything. The 50%
+     keyframe sets opacity 0; the rest of the second is the element's own
+     opacity (.78 on the fill, 1 on the label). */
+  .g.hwarn .fillpos,.g.hcrit .fillpos{background:var(--warn);}
+  .g.hcrit .fillpos,.g.hcrit .lbl{animation:hullblink 1s steps(1,end) infinite;}
+  @keyframes hullblink{50%{opacity:0;}}
   .g .num{flex:0 0 48px;text-align:right;color:var(--warn);
           font-variant-numeric:tabular-nums;font-size:9px;}
   .banks{flex:1 1 auto;display:flex;gap:3px;min-width:0;}
@@ -846,7 +857,10 @@
            (a): under the shields, the order damage travels (COMBAT
            §5.2). CONTROL v1.8 §3.4 item 3a, §3.5.3. Constraint 6: the
            player's own ship — never gated. -->
-      <div class="g"><div class="lbl">HULL</div>
+      <!-- 104a, LOOP 122, RULING 60: the row carries `hwarn` or `hcrit` from
+           paintConsole() when hull is at or under the two TUNE thresholds
+           (hullWarn 50%, hullCrit 25%, both [ASSUMED]). CONTROL v1.9 §3.5.3. -->
+      <div class="g" id="rHull"><div class="lbl">HULL</div>
         <div class="track"><div class="fillpos" id="gHull"></div></div>
         <div class="num" id="nHull">100%</div></div>
       <div class="g"><div class="lbl">ENERGY</div>
@@ -1059,6 +1073,19 @@
       pirate or police. Yours is not changed, nor how often they fire or what it costs them.
       At 0 they fire and land nothing. Collisions are not scaled. <b>The figure is yours to find by flying</b> —
       <i>hits taken</i> in the report shows what landed and what 100% would have landed.</div>
+  </div>
+  <!-- 104a, LOOP 122, RULING 60 ([DECISION], Ripley, 104, option d). -->
+  <div class="row">
+    <label>Hull warns at <i><span id="vHw"></span>%</i></label>
+    <input type="range" id="sHw" min="0" max="100" step="5">
+    <div class="note">The HULL row's bar turns amber at or under this percent of the flown ship's hull.
+      <b>50 is your figure, [ASSUMED]</b> — Wren 50 pt, Dray 80. CONTROL v1.9 §3.5.3.</div>
+  </div>
+  <div class="row">
+    <label>Hull critical at <i><span id="vHc"></span>%</i></label>
+    <input type="range" id="sHc" min="0" max="100" step="5">
+    <div class="note">The bar and the HULL label blink at or under this percent. <b>25 is your figure, [ASSUMED]</b> —
+      Wren 25 pt, Dray 40. Must not be above the warn figure: if it is, both fly as the defaults and the report says so.</div>
   </div>
   <div class="toggles">
     <button id="tRefill">SHIPS' SHIELDS REFILL</button>
@@ -1358,6 +1385,11 @@ const SPEC = { dead:6, defl:55, exp:1.6,
                theirDamage:100,          /* 097a, S274/S275. PER CENT of COMBAT §4.1's damage that every CONTACT's laser lands on
                                             you. 100 = the table, and every build before this one. A NEW KEY: a stored tuning
                                             from 096a has none and reads this 100, so the build arrives flying as 096a did */
+               hullWarn:50, hullCrit:25, /* 104a, LOOP 122, RULING 60 ([DECISION], Ripley, 104, option d: two stages).
+                                            PER CENT of the flown ship's hullMax at or under which the HULL row warns
+                                            (amber) and then blinks. Both figures are his guesses, [ASSUMED], on TUNE
+                                            sliders. NEW KEYS: a stored tuning from 103a has neither and reads these.
+                                            CONTROL v1.9 §3.5.3, §11 items 40, 41. */
                padFire:"double",         /* 092b, loop 65 (B) and the gesture decision (C): off | single | double */
                /* 092c. `tapGap` (092b, 200) IS RETIRED AND RENAMED, ON PURPOSE. A stored
                   tuning outranks a changed constant (S52's shape), and 092b stored 200 on
@@ -2497,7 +2529,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 103a (103a: NO ACTION ADDED OR TOUCHED — the death screen's way out, loop 123, ruling 59: NEW COMMANDER is a slide-to-confirm and a second screen with a KILL button; KILL is wipe()'s one caller on that screen, as the button was; presentation only, nothing saved, `schema` stays 4. 102a: ONE ACTION ADDED — buyHull(), loop 121, ruling 58, EQUIPMENT §7.3: hull repair bought by the point at the Market's SERVICES block, the fuel row's shape (loop 83) to the byte — stepper, MAX, a `room` figure in points, the stop reason on the figure line; 5 tenths a point, whole points so nothing is lost; writes `ship.hull` UP only and saves once; `schema` stays 4. 101a: NO ACTION ADDED OR TOUCHED — HULL ON THE CONSOLE, loop 120, S250, CONTROL v1.8 §3.4 item 3a and §3.5: one gauge row under the shields, read from `ship.hull` and the flown ship's `hullMax` in paintConsole(); nothing writes, nothing saves, `schema` stays 4. 100b: NO ACTION ADDED OR TOUCHED — two strings: the report's `laser` line and the FIT PULSE LASER note gave ruling 1 as the only reason for an empty fore mount, and since 100a an ejection is another. 100a: TWO ACTIONS ADDED, die() AND ejectPod() — THE DEATH BUILD, loop 117, COMBAT §8, PANEL §9A, rulings 48, 55 and 56: the fatal hit saves once at hull 0 and the death screen is raised; with an escape pod fitted ejectPod() runs instead and the commander lives in a new ship; wipe() gains one line and one caller, the NEW COMMANDER tap; the save gains an OPTIONAL `cause` in `core.combat`'s bag and `schema` stays 4. 099a: NO ACTION ADDED OR TOUCHED — rulings 53 and 54: the market draws one line on the sold good's open row saying what customs did with the sale; the line is presentation, read from the roll customsRoll() already logs and from state either side of sell(); sell(), customsRoll() and the save are 098b's to the byte. 098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 104a (104a: NO ACTION ADDED OR TOUCHED — the low-hull warning, loop 122, ruling 60 ([DECISION], Ripley, 104): two stages on the console's HULL row, read in paintConsole() from `ship.hull` against the flown ship's `hullMax` and two new TUNING keys, `hullWarn` 50 and `hullCrit` 25 per cent, both [ASSUMED], both on TUNE sliders; at or under `hullWarn` the bar is amber, at or under `hullCrit` the bar and the label blink; presentation only, nothing written, nothing saved, `schema` stays 4; CONTROL v1.9 §3.5.3 is written with it. 103a: NO ACTION ADDED OR TOUCHED — the death screen's way out, loop 123, ruling 59: NEW COMMANDER is a slide-to-confirm and a second screen with a KILL button; KILL is wipe()'s one caller on that screen, as the button was; presentation only, nothing saved, `schema` stays 4. 102a: ONE ACTION ADDED — buyHull(), loop 121, ruling 58, EQUIPMENT §7.3: hull repair bought by the point at the Market's SERVICES block, the fuel row's shape (loop 83) to the byte — stepper, MAX, a `room` figure in points, the stop reason on the figure line; 5 tenths a point, whole points so nothing is lost; writes `ship.hull` UP only and saves once; `schema` stays 4. 101a: NO ACTION ADDED OR TOUCHED — HULL ON THE CONSOLE, loop 120, S250, CONTROL v1.8 §3.4 item 3a and §3.5: one gauge row under the shields, read from `ship.hull` and the flown ship's `hullMax` in paintConsole(); nothing writes, nothing saves, `schema` stays 4. 100b: NO ACTION ADDED OR TOUCHED — two strings: the report's `laser` line and the FIT PULSE LASER note gave ruling 1 as the only reason for an empty fore mount, and since 100a an ejection is another. 100a: TWO ACTIONS ADDED, die() AND ejectPod() — THE DEATH BUILD, loop 117, COMBAT §8, PANEL §9A, rulings 48, 55 and 56: the fatal hit saves once at hull 0 and the death screen is raised; with an escape pod fitted ejectPod() runs instead and the commander lives in a new ship; wipe() gains one line and one caller, the NEW COMMANDER tap; the save gains an OPTIONAL `cause` in `core.combat`'s bag and `schema` stays 4. 099a: NO ACTION ADDED OR TOUCHED — rulings 53 and 54: the market draws one line on the sold good's open row saying what customs did with the sale; the line is presentation, read from the roll customsRoll() already logs and from state either side of sell(); sell(), customsRoll() and the save are 098b's to the byte. 098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -5244,6 +5276,29 @@ function playerFire(dt){
    ONE NEW TUNING KEY. A stored tuning from 096a or earlier has no
    `theirDamage` and reads the default — S52's shape, working for once
    in the build's favour. */
+/* 104a, LOOP 122, RULING 60. The two thresholds, read the way theirScale()
+   reads its key: a stored value that is not a number in 0..100 flies as
+   the spec, and a pair where crit is above warn flies as the spec too —
+   two sliders can be dragged past each other and the row must not have
+   two meanings at once. The report prints what flew. */
+function hullThresholds(){
+  const w = T.hullWarn, c = T.hullCrit;
+  const ok = v => typeof v === "number" && v >= 0 && v <= 100;
+  if(ok(w) && ok(c) && c <= w) return { warn:w, crit:c };
+  return { warn:SPEC.hullWarn, crit:SPEC.hullCrit };
+}
+function hullStage(hull, hullMax){
+  const pct = hull / Math.max(1, hullMax) * 100, t = hullThresholds();
+  return pct <= t.crit ? "crit" : pct <= t.warn ? "warn" : "";
+}
+function hullWarnLine(){
+  const t = hullThresholds(), sh = state.ship, row = SHIPS[sh.class];
+  const st = hullStage(sh.hull, row.hullMax);
+  return "warn at "+t.warn+"% (Wren "+Math.floor(SHIPS.shipWren.hullMax*t.warn/100)+" pt, Dray "+Math.floor(SHIPS.shipDray.hullMax*t.warn/100)+" pt)"+
+         " · crit at "+t.crit+"% (Wren "+Math.floor(SHIPS.shipWren.hullMax*t.crit/100)+" pt, Dray "+Math.floor(SHIPS.shipDray.hullMax*t.crit/100)+" pt)"+
+         "  [ASSUMED]  ·  now: "+(st === "crit" ? "CRIT — bar and label blink" : st === "warn" ? "WARN — bar amber" : "nominal, plain bar")+
+         ((T.hullWarn !== t.warn || T.hullCrit !== t.crit) ? "  ·  STORED PAIR INVALID, flying the spec" : "");
+}
 function theirScale(){
   const v = T.theirDamage;                       /* a stored value that is not a NUMBER in range flies as the spec — and the report prints what flew, not what was stored */
   return (typeof v === "number" && v >= 0 && v <= 100) ? v / 100 : 1;
@@ -5697,6 +5752,7 @@ const gSpd=document.getElementById("gSpd"), gFore=document.getElementById("gFore
       nAft=document.getElementById("nAft"), nEne=document.getElementById("nEne"),
       nFuel=document.getElementById("nFuel"),
       gHull=document.getElementById("gHull"), nHull=document.getElementById("nHull"),
+      rHull=document.getElementById("rHull"),            /* 104a, loop 122 */
       bk=[0,1,2,3].map(i=>document.getElementById("bk"+i));
 function fillBar(el,frac){
   el.style.width=(Math.max(0,Math.min(1,frac))*100)+"%";
@@ -5723,8 +5779,20 @@ function paintConsole(){
      item 38). Painted every frame like
      the rest: under PANEL the band is live; under TUNE and the death
      screen it is covered and the world holds. No colour change, no
-     alarm — none is specified (CONTROL v1.8 §12). */
+     alarm — none is specified (CONTROL v1.8 §12).
+     104a, LOOP 122, RULING 60: NOW THERE IS. Two stages, CONTROL v1.9
+     §3.5.3: at or under T.hullWarn per cent the row is `hwarn` (amber
+     fill); at or under T.hullCrit it is `hcrit` (fill and label blink).
+     The comparison is on the UNROUNDED percent, so a Dray at 80 of 160
+     is exactly 50 and warns, and "at or under" is the reading of the
+     ruling — [ASSUMED], his to flip. Set every frame from state, like
+     the bar: no display-side copy, nothing held between frames. At hull
+     0 the row reads `hcrit` under the death screen, where nobody sees
+     it — PANEL §9A.1. */
   fillBar(gHull, sh.hull/row.hullMax);         nHull.textContent=(sh.hull/row.hullMax*100).toFixed(0)+"%";
+  const hst = hullStage(sh.hull, row.hullMax);
+  rHull.classList.toggle("hwarn", hst === "warn");
+  rHull.classList.toggle("hcrit", hst === "crit");
   const per=row.energyMax/4;
   for(let i=0;i<4;i++) fillBar(bk[i], (sh.energy-i*per)/per);
   nEne.textContent=(sh.energy/per).toFixed(1);
@@ -5824,6 +5892,7 @@ const map=[["sDead","vDead","dead",0],["sDefl","vDefl","defl",0],["sExp","vExp",
            ["sCone","vCone","laserCone",0],                       /* 092a */
            ["sCone2","vCone2","pirateCone",0],["sTap","vTap","tapMs",0],
            ["sDmg","vDmg","theirDamage",0],                       /* 097a */
+           ["sHw","vHw","hullWarn",0],["sHc","vHc","hullCrit",0], /* 104a, loop 122, ruling 60 */
            ["sGrace","vGrace","grace",0],                         /* 092b */
            ["sMove","vMove","tapMove",0]];                        /* 092c */
 
@@ -6096,7 +6165,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 103a — settings\n"+
+    "ELITE: THE CLONES 104a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -6164,6 +6233,7 @@ function writeReport(){
        101a: the console's HULL row is the live one.) The row above
        prints the MAXIMA; these three print what the ship holds. */
     "hull          "+hullLine()+"\n"+
+    "hull warning  "+hullWarnLine()+"\n"+          /* 104a, loop 122, ruling 60 */
     "death         "+deathLine()+"\n"+
     "charge        "+chargeLine()+"\n"+
     "recharge      energy +"+RECHARGE_ENERGY+"/s · shields +"+RECHARGE_SHIELD+"/s each from energy, off below "+SHIELD_ENERGY_FLOOR+"  [ASSUMED]\n"+
