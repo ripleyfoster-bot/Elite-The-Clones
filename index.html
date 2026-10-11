@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 102a</title>
+<title>ELITE: THE CLONES — 103a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -682,11 +682,37 @@
   #death .dkl b{flex:0 0 52px;color:var(--ink-dim);font-weight:400;}
   #death .dkl span{flex:1;min-width:0;}
   #death .dact{margin-top:34px;text-align:center;min-height:48px;}
-  #deathBtn{
+  #deathBtn, #killBtn, #killBack{
     min-height:44px;padding:0 22px;background:#000;color:var(--ink);
     border:1px solid var(--ink-dim);border-radius:2px;
     font:inherit;font-size:12px;letter-spacing:.18em;
   }
+  /* 103a — LOOP 123, RULING 59. The way out is a SLIDE, not a tap.
+     A 44 px track (§2's minimum) with a knob dragged to the far end;
+     a short slide snaps back. Hidden until §9A.3's draw rule lets it
+     be drawn, as the button was. */
+  #deathSlide{
+    position:relative;height:44px;border:1px solid var(--ink-dim);
+    border-radius:22px;overflow:hidden;background:#000;
+  }
+  #deathSlide .strack{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:11px;letter-spacing:.18em;color:var(--ink-dim);padding-left:44px;
+  }
+  #deathSlide .sknob{
+    position:absolute;top:2px;left:2px;width:38px;height:38px;border-radius:19px;
+    background:var(--ink-faint);border:1px solid var(--ink);
+    display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--ink);
+    touch-action:none;
+  }
+  /* The second screen — skull, the warning, KILL and BACK. */
+  #deathKill{text-align:center;}
+  #deathKill svg{width:84px;height:84px;display:block;margin:0 auto 22px;}
+  #deathKill .kwarn{font-size:11px;line-height:1.8;letter-spacing:.06em;color:var(--ink);margin:0 0 30px;}
+  #deathKill .kwarn b{display:block;font-size:13px;letter-spacing:.2em;margin-bottom:12px;font-weight:400;}
+  #killBtn{border-color:var(--ink);letter-spacing:.3em;min-width:140px;}
+  #deathKill .kback{margin-top:18px;}
+  #killBack{border-color:var(--ink-faint);color:var(--ink-dim);font-size:10px;min-height:44px;}
   body.dead #tuneBtn{ z-index:26; }
   body.dead #sysBtn{ display:none; }
 </style>
@@ -864,13 +890,38 @@
 
 <!-- 100a — PANEL §9A, the death screen, and §9A.5, EJECTED. One box,
      two fillings; deathSync() in the script fills it from `state` and
-     shows it. The button is NOT DRAWN AT ONCE (§9A.3, [ASSUMED] 40):
-     it is hidden until every touch has lifted and 1.5 s have passed. -->
+     shows it. The control is NOT DRAWN AT ONCE (§9A.3, [ASSUMED] 40):
+     it is hidden until every touch has lifted and 1.5 s have passed.
+     103a, LOOP 123, RULING 59 ([DECISION], Ripley, 103): on COMMANDER
+     LOST the way out is a SLIDE, then a second screen — the skull, a
+     warning, KILL (wipe) and BACK (to the record). EJECTED keeps its
+     CONTINUE button: it gates nothing, and the ruling was about the
+     wipe ([ASSUMED], 103a). The skull is drawn here as an inline SVG
+     in the console's ink, not the emoji glyph, which iOS colours. -->
 <div id="death">
-  <div class="dbox">
+  <div class="dbox" id="deathRecord">
     <div class="dtitle" id="deathTitle"></div>
     <div id="deathBody"></div>
-    <div class="dact"><button id="deathBtn" style="visibility:hidden"></button></div>
+    <div class="dact">
+      <button id="deathBtn" style="visibility:hidden;display:none"></button>
+      <div id="deathSlide" style="visibility:hidden;display:none">
+        <div class="strack">SLIDE FOR A NEW COMMANDER</div>
+        <div class="sknob" id="deathKnob">&#x203A;</div>
+      </div>
+    </div>
+  </div>
+  <div class="dbox" id="deathKill" style="display:none">
+    <svg viewBox="0 0 64 64" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M32 6c-12 0-20 8.5-20 19 0 6 3 11 7 14v6h26v-6c4-3 7-8 7-14 0-10.5-8-19-20-19z"/>
+      <circle cx="24" cy="27" r="4.5"/><circle cx="40" cy="27" r="4.5"/>
+      <path d="M32 33l-2.5 5h5z"/>
+      <path d="M25 45v4M30 45v5M34 45v5M39 45v4"/>
+      <path d="M12 46l40 14M52 46L12 60"/>
+      <circle cx="11" cy="45" r="2.5"/><circle cx="53" cy="45" r="2.5"/><circle cx="11" cy="61" r="2.5"/><circle cx="53" cy="61" r="2.5"/>
+    </svg>
+    <p class="kwarn"><b>THIS DELETES THE COMMANDER</b>The file is wiped and cannot be recovered. The game restarts with a new commander.</p>
+    <div><button id="killBtn">KILL</button></div>
+    <div class="kback"><button id="killBack">BACK TO THE RECORD</button></div>
   </div>
 </div>
 
@@ -2446,7 +2497,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 102a (102a: ONE ACTION ADDED — buyHull(), loop 121, ruling 58, EQUIPMENT §7.3: hull repair bought by the point at the Market's SERVICES block, the fuel row's shape (loop 83) to the byte — stepper, MAX, a `room` figure in points, the stop reason on the figure line; 5 tenths a point, whole points so nothing is lost; writes `ship.hull` UP only and saves once; `schema` stays 4. 101a: NO ACTION ADDED OR TOUCHED — HULL ON THE CONSOLE, loop 120, S250, CONTROL v1.8 §3.4 item 3a and §3.5: one gauge row under the shields, read from `ship.hull` and the flown ship's `hullMax` in paintConsole(); nothing writes, nothing saves, `schema` stays 4. 100b: NO ACTION ADDED OR TOUCHED — two strings: the report's `laser` line and the FIT PULSE LASER note gave ruling 1 as the only reason for an empty fore mount, and since 100a an ejection is another. 100a: TWO ACTIONS ADDED, die() AND ejectPod() — THE DEATH BUILD, loop 117, COMBAT §8, PANEL §9A, rulings 48, 55 and 56: the fatal hit saves once at hull 0 and the death screen is raised; with an escape pod fitted ejectPod() runs instead and the commander lives in a new ship; wipe() gains one line and one caller, the NEW COMMANDER tap; the save gains an OPTIONAL `cause` in `core.combat`'s bag and `schema` stays 4. 099a: NO ACTION ADDED OR TOUCHED — rulings 53 and 54: the market draws one line on the sold good's open row saying what customs did with the sale; the line is presentation, read from the roll customsRoll() already logs and from state either side of sell(); sell(), customsRoll() and the save are 098b's to the byte. 098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 103a (103a: NO ACTION ADDED OR TOUCHED — the death screen's way out, loop 123, ruling 59: NEW COMMANDER is a slide-to-confirm and a second screen with a KILL button; KILL is wipe()'s one caller on that screen, as the button was; presentation only, nothing saved, `schema` stays 4. 102a: ONE ACTION ADDED — buyHull(), loop 121, ruling 58, EQUIPMENT §7.3: hull repair bought by the point at the Market's SERVICES block, the fuel row's shape (loop 83) to the byte — stepper, MAX, a `room` figure in points, the stop reason on the figure line; 5 tenths a point, whole points so nothing is lost; writes `ship.hull` UP only and saves once; `schema` stays 4. 101a: NO ACTION ADDED OR TOUCHED — HULL ON THE CONSOLE, loop 120, S250, CONTROL v1.8 §3.4 item 3a and §3.5: one gauge row under the shields, read from `ship.hull` and the flown ship's `hullMax` in paintConsole(); nothing writes, nothing saves, `schema` stays 4. 100b: NO ACTION ADDED OR TOUCHED — two strings: the report's `laser` line and the FIT PULSE LASER note gave ruling 1 as the only reason for an empty fore mount, and since 100a an ejection is another. 100a: TWO ACTIONS ADDED, die() AND ejectPod() — THE DEATH BUILD, loop 117, COMBAT §8, PANEL §9A, rulings 48, 55 and 56: the fatal hit saves once at hull 0 and the death screen is raised; with an escape pod fitted ejectPod() runs instead and the commander lives in a new ship; wipe() gains one line and one caller, the NEW COMMANDER tap; the save gains an OPTIONAL `cause` in `core.combat`'s bag and `schema` stays 4. 099a: NO ACTION ADDED OR TOUCHED — rulings 53 and 54: the market draws one line on the sold good's open row saying what customs did with the sale; the line is presentation, read from the roll customsRoll() already logs and from state either side of sell(); sell(), customsRoll() and the save are 098b's to the byte. 098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -3107,10 +3158,11 @@ function wipe(){
   return { ok:true };
 }
 
-/* 100a: wipe() HAS A SECOND CALLER — the death screen's NEW COMMANDER
+/* 100a: wipe() HAS A SECOND CALLER — the death screen's way out
    (PANEL §9A.3, ruling 48: "the commander is wiped only when NEW
-   COMMANDER is tapped"). The action is the same one; nothing in it
-   knows who called. */
+   COMMANDER is tapped"; 103a, ruling 59: that is now the KILL button
+   behind the slide, loop 123). The action is the same one; nothing in
+   it knows who called. */
 
 /* THE LOAD ITSELF. Above the boot IIFE — see the note at the top. */
 const SAVE_LOADED = loadGame();
@@ -4836,7 +4888,7 @@ function devFitLaser(){
    · A POD FITTED (ruling 55): ejectPod(). The commander lives.
    · NO POD: die(). THE FATAL HIT SAVES ONCE, hull 0 and the cause, and
      that is all it does (PANEL §9A.7: "`die()` is no longer the wipe").
-     The wipe is the NEW COMMANDER tap.
+     The wipe is the death screen's KILL (103a: behind a slide, ruling 59).
    AT LAUNCH: a file that loads with hull 0 opens on the death screen;
    deathSync() runs once before the first frame, so the flying view is
    never drawn. A pod on such a file does NOT eject — ejection is at
@@ -4946,7 +4998,7 @@ function devRepair(){
 function deathLine(){
   const dead = state.ship.hull <= 0;
   return (dead ? "COMMANDER LOST — "+(deathCause ? "by "+deathCause.by : "no cause on file")+
-                 "  ·  the file holds hull 0 until NEW COMMANDER (a wipe) or REPAIR"
+                 "  ·  the file holds hull 0 until KILL (a wipe, behind the slide) or REPAIR"
                : "alive")+
          "  ·  escape pod "+(podFitted() ? "FITTED — hull 0 ejects (ruling 55)" : "not fitted — hull 0 loses the commander")+
          "  ·  last ejection: "+(lastEject
@@ -6044,7 +6096,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 102a — settings\n"+
+    "ELITE: THE CLONES 103a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -7799,7 +7851,9 @@ function svcFuelReportLine(){
    service — Not yet defined"; EQUIPMENT §7 priced four services and
    none of them was hull. EQUIPMENT v1.3 §7.3 is written with this
    build and is where the price lives; COMBAT §6.1's row is owed a
-   pointer to it — recorded there, not paid here.
+   pointer to it — the debt is RECORDED IN EQUIPMENT v1.3 (S321), not
+   in COMBAT, and not paid here. (103a, S324: this line said "recorded
+   there", which read as COMBAT.)
 
    THE SHAPE IS THE FUEL ROW'S (loop 83, 037, [TESTED]) AND NOTHING IN
    IT IS NEW: a service row under Fuel in the SERVICES block, one
@@ -8659,7 +8713,8 @@ document.addEventListener("visibilitychange", function(){
 
 /* ---------- 100a — THE DEATH SCREEN, PANEL §9A, and EJECTED, §9A.5 ----------
    PRESENTATION. Nothing here writes `state`; the one action it issues
-   is wipe(), on the NEW COMMANDER tap.
+   is wipe(), on KILL (103a — behind the slide; the NEW COMMANDER tap
+   through 102a).
    deathSync() IS THE WHOLE MECHANISM, called every frame and once
    before the first: WHICH SCREEN IS WANTED IS READ FROM STATE —
      hull 0            -> COMMANDER LOST   (ruling 48: the file is the fact)
@@ -8672,20 +8727,41 @@ document.addEventListener("visibilitychange", function(){
      only when the text changes — §9A.2: "nothing here is a snapshot".
      (EJECTED's Lost row IS the snapshot; its Kept row is state.)
    · RAISED OVER A PANEL, it replaces it (§9A.1): the panel is closed.
-   · THE BUTTON (§9A.3, [ASSUMED] 40) is drawn only once EVERY TOUCH HAS
+   · THE CONTROL (§9A.3, [ASSUMED] 40) is drawn only once EVERY TOUCH HAS
      LIFTED AND 1.5 s HAVE THEN PASSED — his thumb rests on the pad and
      a tap is a lift (S276). DEATH_EXIT_MS is §9A.3's guess, not a
      measurement. A touch landing during the wait starts it again. Once
-     drawn it stays drawn. NO SECOND TAP, as §9A.3 rules.
+     drawn it stays drawn.
+   · 103a, LOOP 123, RULING 59 ([DECISION], Ripley, 103, S323): on
+     COMMANDER LOST the control is a SLIDE, not a tap — one tap was
+     "no second tap, as §9A.3 rules" in 100a, and the first real death
+     (10 October) ended in a mistaken tap that cost the reading of the
+     record. The slide is the intent. Completing it (the knob past
+     DEATH_SLIDE_DONE of the track) swaps the record for a SECOND
+     SCREEN: the skull, a warning, KILL and BACK. KILL is wipe()'s one
+     caller here, as the button was. BACK restores the record and the
+     slide, drawn at once — the touches had already lifted ([ASSUMED]).
+     A short slide snaps back. Nothing here is saved; `deathStage` is
+     runtime and resets whenever the screen comes up. The two-tap shape
+     (TUNE's wipe, loops 87/113) was REJECTED by Ripley, 103: a tap is
+     not intent. EJECTED keeps CONTINUE as a button ([ASSUMED]).
+   · DEATH_SLIDE_DONE is 0.85 of the track — [ASSUMED], never flown.
    · THE SHIP ROW PRINTS THE CLASS ID (§9A.2: FLIGHT [DECISION] 3 is
      open), and EJECTED's Lost row prints fitting ids for the same
      reason — no document gives a fitting a display name in the build.
    · NO KEY is bound to either button (§9A.6).
    · NO MUNGO LINE (§9A.2, [ASSUMED] 42). */
 const DEATH_EXIT_MS = 1500;              /* [ASSUMED] — PANEL §9A.3, [ASSUMED] 40 */
+const DEATH_SLIDE_DONE = 0.85;           /* 103a, [ASSUMED] — how far the knob must go, as a fraction of its travel */
 const deathEl = document.getElementById("death");
 const deathBtn = document.getElementById("deathBtn");
+const deathRecordEl = document.getElementById("deathRecord");
+const deathKillEl   = document.getElementById("deathKill");
+const deathSlideEl  = document.getElementById("deathSlide");
+const deathKnob     = document.getElementById("deathKnob");
 let deathMode = "", deathText = "", deathLift = null, deathBtnOn = false;
+let deathStage = "record";               /* 103a: "record" | "kill" — runtime, never saved */
+let slidePtr = null, slideX0 = 0, slideFrac = 0;
 let touchesDown = 0, mouseIsDown = false;
 for(const ev of ["touchstart","touchend","touchcancel"]){
   document.addEventListener(ev, function(e){ touchesDown = e.touches ? e.touches.length : 0; }, { capture:true, passive:true });
@@ -8721,13 +8797,17 @@ function deathSync(now){
   const want = state.ship.hull <= 0 ? "lost" : (ejected ? "ejected" : "");
   if(want !== deathMode){
     deathMode = want; deathText = ""; deathLift = null; deathBtnOn = false;
-    deathBtn.style.visibility = "hidden";
+    deathBtn.style.visibility = "hidden"; deathSlideEl.style.visibility = "hidden";
+    deathStageSet("record"); slideReset();
+    /* 103a: COMMANDER LOST draws the slide; EJECTED draws the button */
+    deathBtn.style.display     = want === "ejected" ? "" : "none";
+    deathSlideEl.style.display = want === "lost"    ? "" : "none";
     deathEl.classList.toggle("open", want !== "");
     document.body.classList.toggle("dead", want !== "");
     if(want){
       if(panelEl.classList.contains("open")) closePanel();     /* §9A.1: the screen replaces it */
       document.getElementById("deathTitle").textContent = want === "lost" ? "COMMANDER LOST" : "EJECTED";
-      deathBtn.textContent = want === "lost" ? "NEW COMMANDER" : "CONTINUE";
+      deathBtn.textContent = "CONTINUE";
     }
   }
   if(!want) return false;
@@ -8737,20 +8817,56 @@ function deathSync(now){
     if(touchesDown > 0 || mouseIsDown) deathLift = null;
     else {
       if(deathLift === null) deathLift = now;
-      if(now - deathLift >= DEATH_EXIT_MS){ deathBtnOn = true; deathBtn.style.visibility = "visible"; }
+      if(now - deathLift >= DEATH_EXIT_MS){
+        deathBtnOn = true;
+        deathBtn.style.visibility = "visible"; deathSlideEl.style.visibility = "visible";
+      }
     }
   }
   return true;
 }
-deathBtn.addEventListener("click", function(){
-  if(!deathBtnOn) return;
-  if(deathMode === "ejected"){ ejected = null; return; }       /* CONTINUE: it informs and gates nothing */
+/* 103a — the two screens of COMMANDER LOST. */
+function deathStageSet(stage){
+  deathStage = stage;
+  deathRecordEl.style.display = stage === "kill" ? "none" : "";
+  deathKillEl.style.display   = stage === "kill" ? ""     : "none";
+}
+function slideTravel(){ return Math.max(1, deathSlideEl.clientWidth - deathKnob.offsetWidth - 4); }
+function slideReset(){ slidePtr = null; slideFrac = 0; deathKnob.style.transform = ""; }
+deathKnob.addEventListener("pointerdown", function(e){
+  if(!deathBtnOn || deathMode !== "lost" || deathStage !== "record" || slidePtr !== null) return;
+  slidePtr = e.pointerId; slideX0 = e.clientX; slideFrac = 0;
+  if(deathKnob.setPointerCapture){ try{ deathKnob.setPointerCapture(e.pointerId); }catch(_){} }
+  e.preventDefault();
+});
+deathKnob.addEventListener("pointermove", function(e){
+  if(slidePtr === null || e.pointerId !== slidePtr) return;
+  slideFrac = Math.max(0, Math.min(1, (e.clientX - slideX0) / slideTravel()));
+  deathKnob.style.transform = "translateX(" + Math.round(slideFrac * slideTravel()) + "px)";
+});
+function slideEnd(e){
+  if(slidePtr === null || e.pointerId !== slidePtr) return;
+  const done = slideFrac >= DEATH_SLIDE_DONE;
+  slideReset();
+  if(done) deathStageSet("kill");                 /* the slide is the intent; the second screen asks once more */
+}
+deathKnob.addEventListener("pointerup", slideEnd);
+deathKnob.addEventListener("pointercancel", slideEnd);
+document.getElementById("killBack").addEventListener("click", function(){
   if(deathMode !== "lost") return;
-  /* NEW COMMANDER — wipe(), ARCH §3.4. Not undoable, no second tap
-     (§9A.3). The view follow-up is the TUNE wipe button's, to the line. */
+  deathStageSet("record");                        /* the record is his until he puts it down — constraint 6 */
+});
+document.getElementById("killBtn").addEventListener("click", function(){
+  if(!deathBtnOn || deathMode !== "lost" || deathStage !== "kill") return;
+  /* KILL — wipe(), ARCH §3.4. Not undoable. The view follow-up is the
+     TUNE wipe button's, to the line. */
   const r = wipe();
   if(r.ok){ chartSel = state.system; mktOpen = null; mktBuyQ = 0; mktSellQ = 0; mktCustoms = null; ejected = null; }
   syncUI();
+});
+deathBtn.addEventListener("click", function(){
+  if(!deathBtnOn) return;
+  if(deathMode === "ejected"){ ejected = null; return; }       /* CONTINUE: it informs and gates nothing */
 });
 
 /* ---------- go ---------- */
