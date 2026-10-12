@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 104b</title>
+<title>ELITE: THE CLONES — 105a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -2529,7 +2529,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 104b (104b: NO ACTION ADDED OR TOUCHED — three tidies, nothing in play: S326, the TUNE `death` string said *button drawn*, it is the slide (ruling 59); the slide's track text fades as the knob passes half-way so the knob does not sit on the words (PANEL §9A.3's cosmetic); S327, two comments said nothing repairs hull but the dev switch and REPAIR — the Market's hull repair row has since `102a`. 104a: NO ACTION ADDED OR TOUCHED — the low-hull warning, loop 122, ruling 60 ([DECISION], Ripley, 104): two stages on the console's HULL row, read in paintConsole() from `ship.hull` against the flown ship's `hullMax` and two new TUNING keys, `hullWarn` 50 and `hullCrit` 25 per cent, both [ASSUMED], both on TUNE sliders; at or under `hullWarn` the bar is amber, at or under `hullCrit` the bar and the label blink; presentation only, nothing written, nothing saved, `schema` stays 4; CONTROL v1.9 §3.5.3 is written with it. 103a: NO ACTION ADDED OR TOUCHED — the death screen's way out, loop 123, ruling 59: NEW COMMANDER is a slide-to-confirm and a second screen with a KILL button; KILL is wipe()'s one caller on that screen, as the button was; presentation only, nothing saved, `schema` stays 4. 102a: ONE ACTION ADDED — buyHull(), loop 121, ruling 58, EQUIPMENT §7.3: hull repair bought by the point at the Market's SERVICES block, the fuel row's shape (loop 83) to the byte — stepper, MAX, a `room` figure in points, the stop reason on the figure line; 5 tenths a point, whole points so nothing is lost; writes `ship.hull` UP only and saves once; `schema` stays 4. 101a: NO ACTION ADDED OR TOUCHED — HULL ON THE CONSOLE, loop 120, S250, CONTROL v1.8 §3.4 item 3a and §3.5: one gauge row under the shields, read from `ship.hull` and the flown ship's `hullMax` in paintConsole(); nothing writes, nothing saves, `schema` stays 4. 100b: NO ACTION ADDED OR TOUCHED — two strings: the report's `laser` line and the FIT PULSE LASER note gave ruling 1 as the only reason for an empty fore mount, and since 100a an ejection is another. 100a: TWO ACTIONS ADDED, die() AND ejectPod() — THE DEATH BUILD, loop 117, COMBAT §8, PANEL §9A, rulings 48, 55 and 56: the fatal hit saves once at hull 0 and the death screen is raised; with an escape pod fitted ejectPod() runs instead and the commander lives in a new ship; wipe() gains one line and one caller, the NEW COMMANDER tap; the save gains an OPTIONAL `cause` in `core.combat`'s bag and `schema` stays 4. 099a: NO ACTION ADDED OR TOUCHED — rulings 53 and 54: the market draws one line on the sold good's open row saying what customs did with the sale; the line is presentation, read from the roll customsRoll() already logs and from state either side of sell(); sell(), customsRoll() and the save are 098b's to the byte. 098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 105a (105a: ONE ACTION TOUCHED, NONE ADDED — ejectPod() caps the legal record at Offender on the way into the new ship, loop 125, ruling 61 ([DECISION], Ripley, 105, option a); one call to legalAdd() inside the action's own save; the EJECTED screen's Kept row and TUNE's `last ejection` line print the change. 104b: NO ACTION ADDED OR TOUCHED — three tidies, nothing in play: S326, the TUNE `death` string said *button drawn*, it is the slide (ruling 59); the slide's track text fades as the knob passes half-way so the knob does not sit on the words (PANEL §9A.3's cosmetic); S327, two comments said nothing repairs hull but the dev switch and REPAIR — the Market's hull repair row has since `102a`. 104a: NO ACTION ADDED OR TOUCHED — the low-hull warning, loop 122, ruling 60 ([DECISION], Ripley, 104): two stages on the console's HULL row, read in paintConsole() from `ship.hull` against the flown ship's `hullMax` and two new TUNING keys, `hullWarn` 50 and `hullCrit` 25 per cent, both [ASSUMED], both on TUNE sliders; at or under `hullWarn` the bar is amber, at or under `hullCrit` the bar and the label blink; presentation only, nothing written, nothing saved, `schema` stays 4; CONTROL v1.9 §3.5.3 is written with it. 103a: NO ACTION ADDED OR TOUCHED — the death screen's way out, loop 123, ruling 59: NEW COMMANDER is a slide-to-confirm and a second screen with a KILL button; KILL is wipe()'s one caller on that screen, as the button was; presentation only, nothing saved, `schema` stays 4. 102a: ONE ACTION ADDED — buyHull(), loop 121, ruling 58, EQUIPMENT §7.3: hull repair bought by the point at the Market's SERVICES block, the fuel row's shape (loop 83) to the byte — stepper, MAX, a `room` figure in points, the stop reason on the figure line; 5 tenths a point, whole points so nothing is lost; writes `ship.hull` UP only and saves once; `schema` stays 4. 101a: NO ACTION ADDED OR TOUCHED — HULL ON THE CONSOLE, loop 120, S250, CONTROL v1.8 §3.4 item 3a and §3.5: one gauge row under the shields, read from `ship.hull` and the flown ship's `hullMax` in paintConsole(); nothing writes, nothing saves, `schema` stays 4. 100b: NO ACTION ADDED OR TOUCHED — two strings: the report's `laser` line and the FIT PULSE LASER note gave ruling 1 as the only reason for an empty fore mount, and since 100a an ejection is another. 100a: TWO ACTIONS ADDED, die() AND ejectPod() — THE DEATH BUILD, loop 117, COMBAT §8, PANEL §9A, rulings 48, 55 and 56: the fatal hit saves once at hull 0 and the death screen is raised; with an escape pod fitted ejectPod() runs instead and the commander lives in a new ship; wipe() gains one line and one caller, the NEW COMMANDER tap; the save gains an OPTIONAL `cause` in `core.combat`'s bag and `schema` stays 4. 099a: NO ACTION ADDED OR TOUCHED — rulings 53 and 54: the market draws one line on the sold good's open row saying what customs did with the sale; the line is presentation, read from the roll customsRoll() already logs and from state either side of sell(); sell(), customsRoll() and the save are 098b's to the byte. 098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -4471,12 +4471,14 @@ const LEGAL_FUGITIVE   = 10;              /* §9.1 */
 const LEGAL_DECAY_JUMP = 1;               /* 096a, RULING 50: off the record on EVERY jump. The rule is his; the 1 is [ASSUMED], unflown. Replaces 094a's LEGAL_DECAY_DAYS (S283) */
 const WITNESS_TURN_IS_FREE = true;        /* 096a, ruling 49's EDGE. 097a, S295: RULING 51, [DECISION], Ripley, session 096 — no longer [ASSUMED]: police who turn because his shot landed on ANOTHER ship also count as having come at him. false = only the Fugitive's on-sight turn is free */
 const POLICE_SIGHT     = 1200;            /* [ASSUMED], this build's — decision 1 */
+const LEGAL_EJECT_CAP  = LEGAL_FUGITIVE - 1;   /* 105a, LOOP 125, RULING 61 — [DECISION], Ripley, session 105, option (a): AN EJECTION CAPS THE RECORD AT OFFENDER. A Fugitive who ejects is an Offender (9) in the new ship; an Offender or a Clean commander is untouched. Not a reset and not a halving (rejected: both — see COMBAT v1.2 §8). The cap is the top of the Offender band, so it moves if §9.1's ladder does */
 const LEGAL_LOG        = 6;
 const legalLog = [];                      /* runtime, TUNE's. Never saved */
 function legalBand(n){ return n >= LEGAL_FUGITIVE ? "Fugitive" : n >= LEGAL_OFFENDER ? "Offender" : "Clean"; }
 function policeExtra(n){ return n >= LEGAL_FUGITIVE ? 2 : n >= LEGAL_OFFENDER ? 1 : 0; }   /* §9.4 */
 /* THE ONE WRITER the three callers share (094b: FOUR — devSetLegal(),
-   the dev slider, which is not a game writer). Whole numbers, floor 0 —
+   the dev slider, which is not a game writer; 105a: FIVE — ejectPod(),
+   ruling 61's cap). Whole numbers, floor 0 —
    the loader refuses anything else. `saved` is what the caller does
    next: true inside an action's own save, false for the per-frame +2. */
 function legalAdd(d, why, saved){
@@ -4936,6 +4938,15 @@ function devFitLaser(){
    LOSES cargo, all other equipment and the ship; a new `shipWren` at
    "the nearest system with a station — [ASSUMED] the current system
    until stations exist". Saves once.
+   105a, LOOP 125, RULING 61: "KEEPS legal status" IS NOW "KEEPS IT,
+   CAPPED AT OFFENDER" — a Fugitive ejects into the new ship as an
+   Offender (LEGAL_EJECT_CAP, 9), written through legalAdd() inside this
+   action's one save; anyone under the cap is untouched. Decision 4's
+   last line below ("A FUGITIVE IS STILL ATTACKED ON SIGHT, and he is
+   now unarmed") was the trap: the pod kept the record and took the
+   laser, and the only way out was the dev legal slider. The EJECTED
+   screen's Kept row and TUNE's `last ejection` line both print the
+   change. COMBAT v1.2 §8 carries the ruling.
    WHAT §8 DID NOT SAY, DECIDED HERE AND NAMED — all [ASSUMED], mine:
    1. THE NEW SHIP IS FREE. COMBAT [DECISION] 2 is open and nothing
       sells a ship.
@@ -4991,11 +5002,19 @@ function ejectPod(){
                  fittings: Object.keys(state.equipment).filter(function(k){ return k !== "escapePod"; }),
                  by:    deathCause ? deathCause.by : null,
                  name:  state.system.name,
-                 day:   cm.gameDay };
+                 day:   cm.gameDay,
+                 legalWas: cm.legalStatus };            /* 105a: the record before the cap, for the Kept row and TUNE */
   state.ship      = freshShip(START_SHIP);
   state.cargo     = {};
   state.equipment = {};
   deathCause      = null;
+  /* 105a, RULING 61: the record is kept, capped at Offender. One call
+     to the one writer; a Fugitive's 14 becomes 9, an Offender's 7 and
+     a Clean 0 are untouched (legalAdd() logs nothing on a 0 change,
+     and this line does not reach it). Inside this action's save. */
+  if(cm.legalStatus > LEGAL_EJECT_CAP)
+    legalAdd(LEGAL_EJECT_CAP - cm.legalStatus, "ejection: capped at Offender, was "+legalBand(cm.legalStatus)+" (ruling 61)", true);
+  lost.legalNow = cm.legalStatus;
   inF = 0; inA = 0; rcE = 0; rcF = 0; rcA = 0;     /* the parts of a point belonged to the old ship */
   bump(arrivalPoint(cm.galaxy, cm.system, cm.gameDay));
   shipChanged();                         /* a Dray's three rates do not fly a Wren */
@@ -5041,8 +5060,12 @@ function deathLine(){
          "  ·  last ejection: "+(lastEject
             ? new Date(lastEject.t).toTimeString().slice(0,8)+", "+(lastEject.lost.by ? "by "+lastEject.lost.by : "no cause")+
               " at "+lastEject.lost.name+" day "+lastEject.lost.day+" — lost "+ID_NS+":"+lastEject.lost.ship+", "+lastEject.lost.cargo+" t, "+
-              (lastEject.lost.fittings.length ? lastEject.lost.fittings.map(function(k){ return ID_NS+":"+k; }).join(", ") : "no other fitting")
+              (lastEject.lost.fittings.length ? lastEject.lost.fittings.map(function(k){ return ID_NS+":"+k; }).join(", ") : "no other fitting")+
+              "; legal "+(lastEject.lost.legalNow < lastEject.lost.legalWas
+                 ? lastEject.lost.legalWas+" → "+lastEject.lost.legalNow+" (capped at Offender, ruling 61)"
+                 : lastEject.lost.legalWas+" unchanged")                     /* 105a */
             : "none this session")+
+         "  ·  ejection cap "+LEGAL_EJECT_CAP+" (ruling 61: a Fugitive ejects as an Offender)"+   /* 105a */
          "  ·  slide drawn "+DEATH_EXIT_MS+" ms after the last touch lifts, then skull screen, then KILL (ruling 59)  [ASSUMED]";   /* 104b, S326: said "button drawn" through 103a and 104a */
 }
 
@@ -6170,7 +6193,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 104b — settings\n"+
+    "ELITE: THE CLONES 105a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -8865,7 +8888,12 @@ function deathHtml(mode){
   const L = ejected;
   return (L.by ? '<div class="dsub">'+esc(DEATH_BY_WORDS[L.by])+'</div>' : '')+
     '<div class="dsub">'+esc(L.name)+'  ·  day '+L.day+'</div>'+
-    '<div class="dkl"><b>Kept</b><span>Credits '+cr(cm.credits)+' CR · Legal Status · Kills '+cm.kills+' · Chart record</span></div>'+
+    /* 105a, ruling 61: the Kept row names the band, read from state as
+       the Credits and Kills are; and when the cap moved it, says so from
+       the snapshot — "Legal Status Offender (capped, was Fugitive)". */
+    '<div class="dkl"><b>Kept</b><span>Credits '+cr(cm.credits)+' CR · Legal Status '+esc(legalBand(cm.legalStatus))+
+      (L.legalNow < L.legalWas ? ' (capped, was '+esc(legalBand(L.legalWas))+')' : '')+
+      ' · Kills '+cm.kills+' · Chart record</span></div>'+
     '<div class="dkl"><b>Lost</b><span>'+esc(ID_NS+":"+L.ship)+' · '+L.cargo+' t of cargo'+
       (L.fittings.length ? ' · '+esc(L.fittings.map(function(k){ return ID_NS+":"+k; }).join(" · ")) : '')+'</span></div>';
 }
