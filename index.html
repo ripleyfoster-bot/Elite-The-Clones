@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 105a</title>
+<title>ELITE: THE CLONES — 107a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -238,9 +238,13 @@
   /* ---- panels — PANEL LAYOUT SPEC.
      IN-FLIGHT MODE (§1): the panel takes the 3D view region ONLY. The
      console band and both thumb zones stay live and the ship keeps
-     flying. Docked mode (full screen) is not built — there is no
-     docking. Nav strip sits at the bottom edge of the panel region
-     (§2), which in flight is directly above the readout strip. ---- */
+     flying. DOCKED MODE (full screen) IS BUILT SINCE 107a — the
+     `body.docked #panel` rules at the end of this stylesheet lift this
+     same element over the whole screen while `state.ship.docked` is
+     true (through 105a: "is not built — there is no docking"). Nav
+     strip sits at the bottom edge of the panel region (§2), which in
+     flight is directly above the readout strip and in dock is the
+     bottom of the screen. ---- */
   #panel{
     position:absolute;inset:0;z-index:10;display:none;
     flex-direction:column;background:var(--band);
@@ -459,9 +463,13 @@
      `state.commander.fuel` at render time and says what a tank reaches,
      which is the question. The number says less and takes the space.
 
-     DOCKED MODE IS THE EXCEPTION AND IT IS NOT BUILT. Panel §1's docked
+     DOCKED MODE IS THE EXCEPTION, AND 107a BUILT IT. Panel §1's docked
      row hides the console band, so the header FUEL is the only fuel
-     reading there and must come back when docking exists. Logged.
+     reading there: both chart headers carry an `<i>` that dockHeaders()
+     fills with the tank while docked and empties in flight — PANEL §10
+     item 15, paid. In flight the band is live and the header stays
+     empty, as this note has always said. (Through 105a: "IT IS NOT
+     BUILT ... must come back when docking exists. Logged.")
 
      What this leaves: one item, left, nowhere near a corner button. */
   .chead{
@@ -726,6 +734,50 @@
   #killBack{border-color:var(--ink-faint);color:var(--ink-dim);font-size:10px;min-height:44px;}
   body.dead #tuneBtn{ z-index:26; }
   body.dead #sysBtn{ display:none; }
+  /* 107a — DOCKED MODE. PANEL §1's first row, filled by DOCKING §5.2:
+     full screen, flight controls hidden, there is no flying to do. The
+     panel element is the same one in-flight mode uses; while
+     `state.ship.docked` is true dockSync() puts `docked` on the body and
+     the panel is lifted out of the view region to cover the whole screen
+     — console band, strip and controls included — at z 22: above them,
+     below the death screen (25) and TUNE (30). The nav strip is then the
+     bottom edge of the screen, thumb-reachable (PANEL §2). TUNE stays
+     reachable, as on the death screen (§5.2's table). The PANEL corner
+     is not drawn: there is no view to return to. */
+  body.docked #panel{
+    position:fixed;inset:0;z-index:22;
+    padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);
+  }
+  body.docked #tuneBtn{ display:block; z-index:26; }
+  body.docked #sysBtn, body.docked #dockBtn{ display:none; }
+  /* 107a — THE MARKET LEAVES THE IN-FLIGHT STRIP. PANEL §1.3's condition
+     of session 017 — "available in flight for as long as there is no
+     docked mode, and docked-only the session docking lands" — is met by
+     this build, and this is the rule that pays it: MARKET is drawn only
+     while docked. FLY is not drawn in dock (PANEL §2.1: nothing to
+     return to); LAUNCH stands where it stood (DOCKING §5.2, §6). */
+  #navMkt{ display:none; }
+  body.docked #navMkt{ display:block; }
+  body.docked #navFly{ display:none; }
+  #navLaunch{ display:none; }
+  body.docked #navLaunch{ display:block; }
+  /* 107a — DOCK. The Docking Computer's one control (DOCKING §7, ruling
+     66). A THIRD corner button beside PANEL, drawn only while a computer
+     is fitted, the station is within DC_RANGE and no panel is open.
+     DOCKING §7 wrote it as a label on the PANEL button (ENGAGE's shape);
+     a separate button is built instead so the charts stay reachable
+     during an approach — PANEL §1's reason for in-flight panels. That
+     is a deviation from the filed spec and is recorded as such in
+     DOCKING v1.1 and CONTROL v1.10, [DECISION], Ripley's. */
+  #dockBtn{
+    position:fixed;top:calc(env(safe-area-inset-top) + 6px);right:138px;
+    background:rgba(0,0,0,.55);color:var(--warn);
+    border:1px solid var(--warn);border-radius:2px;
+    font:inherit;font-size:10px;letter-spacing:.12em;padding:5px 9px;
+    z-index:20;display:none;
+  }
+  #dockBtn.on{ display:block; }
+  body.panelon #dockBtn, body.dead #dockBtn{ display:none; }
 </style>
 </head>
 <body>
@@ -741,7 +793,7 @@
       <!-- §4. Fixed column: header, chart, selection strip, MUNGO line.
            The nav strip below is shared with every panel (§2). -->
       <div class="pbody chartbody" id="chartBody" style="display:none">
-        <div class="chead"><span>SHORT RANGE</span></div>
+        <div class="chead"><span>SHORT RANGE</span><i id="cFuel"></i></div>
         <div class="cwrap" id="chartWrap"><canvas id="chartCv"></canvas></div>
         <div class="csel">
           <div class="cinfo">
@@ -762,7 +814,7 @@
            frame edge pointing to either when it is off screen. Same dot
            conventions and the same selection strip as §4. -->
       <div class="pbody chartbody" id="galBody" style="display:none">
-        <div class="chead"><span>GALACTIC CHART</span><i id="gZoom">&times;1.0</i></div>
+        <div class="chead"><span>GALACTIC CHART</span><i id="gZoom">&times;1.0</i><i id="gFuel"></i></div>
         <!-- FAULT D: the search row is positioned against this wrapper
              rather than stacked in the column, so opening it cannot
              shorten the chart or clip the strip below. -->
@@ -817,7 +869,17 @@
 
            This note is here and not only in a table because session
            012 wrote the CHART -> SHORT rename here as a condition and
-           session 014 met it. A condition in a table is not one. -->
+           session 014 met it. A condition in a table is not one.
+
+           107a — THE MARKET CONDITION IS MET. PANEL §1.3, [DECISION],
+           Ripley, 017: "the Market is available in flight for as long
+           as there is no docked mode, and becomes docked-only the
+           session docking lands." This is that session. The MARKET
+           button is still in this strip and is DRAWN ONLY WHILE DOCKED
+           (the #navMkt rules in the stylesheet); in flight the strip is
+           SHORT · GALACTIC · SYS · FLY — four entries, as 014 drew it.
+           In dock it is MARKET · SHORT · GALACTIC · SYS · LAUNCH. The
+           seven-entry trigger above is unchanged: five is not seven. -->
       <div class="pnav">
         <button id="navMkt">MARKET</button>
         <button id="navChart">SHORT</button>
@@ -825,6 +887,9 @@
         <button id="navSys" class="on">SYS</button>
         <div class="spacer"></div>
         <button class="fly" id="navFly">FLY</button>
+        <!-- 107a, DOCKING §5.2, §6: the way out of dock. Drawn only while
+             docked (CSS above); issues launch(). -->
+        <button class="fly" id="navLaunch">LAUNCH</button>
       </div>
     </div>
   </div>
@@ -899,6 +964,9 @@
 
 <!-- Control §11 item 25, answered by building: shape 3, last-panel-reopens.
      One button, the nav strip switches once inside. See the panel router. -->
+<!-- 107a — DOCK: the Docking Computer's control, DOCKING §7, ruling 66.
+     See the #dockBtn note in the stylesheet for why it is its own button. -->
+<button id="dockBtn">DOCK</button>
 <button id="sysBtn">PANEL</button>
 <button id="tuneBtn">TUNE</button>
 
@@ -1087,6 +1155,30 @@
     <div class="note">The bar and the HULL label blink at or under this percent. <b>25 is your figure, [ASSUMED]</b> —
       Wren 25 pt, Dray 40. Must not be above the warn figure: if it is, both fly as the defaults and the report says so.</div>
   </div>
+  <!-- 107a, DOCKING §3.3 — the slot tolerance, CONTROL §8's first
+       mitigation, as two tuning keys; and §2.2's speed limit, RULING 65
+       ([DECISION], Ripley, 107, option b): speed IS in the pass test.
+       All three [ASSUMED]; the first dock moves them. -->
+  <div class="row">
+    <label>Slot roll tolerance <i><span id="vRt"></span>&deg;</i></label>
+    <input type="range" id="sRt" min="5" max="45" step="1">
+    <div class="note">How far your roll may be off the slot's as you pass through it. The slot
+      turns with the station, so this is the hard half on a pad. <b>20 is the touch default,
+      [ASSUMED]</b> (DOCKING §3.3; CONTROL §8: set it generously, tighten later). Out of 5–45 flies as 20.</div>
+  </div>
+  <div class="row">
+    <label>Slot heading tolerance <i><span id="vHt"></span>&deg;</i></label>
+    <input type="range" id="sHt" min="5" max="30" step="1">
+    <div class="note">How far your nose may be off the slot's axis. The still half. <b>15 is the touch
+      default, [ASSUMED]</b>. Out of 5–30 flies as 15.</div>
+  </div>
+  <div class="row">
+    <label>Slot speed limit <i><span id="vSl"></span>% of max</i></label>
+    <input type="range" id="sSl" min="5" max="100" step="5">
+    <div class="note"><b>Ruling 65, yours, 107:</b> faster than this through the slot is the wall, however
+      well lined up. <b>20 — one fifth — is the starting figure, [ASSUMED]</b>: 120 at your 600. The Docking
+      Computer flies at exactly this speed. Out of 5–100 flies as 20.</div>
+  </div>
   <div class="toggles">
     <button id="tRefill">SHIPS' SHIELDS REFILL</button>
     <button id="bPadFire">PAD FIRE</button>
@@ -1149,9 +1241,9 @@
 
   <!-- 100a, RULING 55 ([DECISION], Ripley, session 100, option a): THE
        DEATH BUILD INCLUDES THE ESCAPE POD. Nothing sells one — no
-       equipment panel, no dock (PANEL §9A.5 called the pod "unreachable"
-       for that reason) — so, as the laser above, a dev control hands it
-       over. ARCH §2.3's exception: NOT AN ACTION, NOT A PRICE (EQUIPMENT
+       equipment panel (107a: there IS a dock now, and still no shop;
+       PANEL §9A.5 called the pod "unreachable" for both reasons) — so,
+       as the laser above, a dev control hands it over. ARCH §2.3's exception: NOT AN ACTION, NOT A PRICE (EQUIPMENT
        §5.2 prices it at 1000.0 CR, minTech 6). devFitPod() carries the
        reasoning. -->
   <div class="row">
@@ -1163,6 +1255,22 @@
     the pod is used up: fit another here, and the laser above. <b>It cannot be fitted to a
     commander who is already lost</b> — REPAIR first. Every part of that is <b>[ASSUMED]</b>
     beyond COMBAT §8's own list.</div>
+  </div>
+
+  <!-- 107a, RULING 66 ([DECISION], Ripley, session 107, option a): THE
+       FIRST DOCKING BUILD FITS A DOCKING COMPUTER THROUGH TUNE. Nothing
+       sells one — no equipment panel — so, as the pod and the laser, a
+       dev control hands it over. ARCH §2.3's exception: NOT AN ACTION,
+       NOT A PRICE (EQUIPMENT prices it; minTech 10 in PANEL §8's
+       example). DOCKING §7. -->
+  <div class="row">
+    <div class="acts" style="margin-top:0"><button id="bDC">FIT DOCKING COMPUTER</button></div>
+    <div class="note">Dev control, not a purchase. Fits <b>one docking computer</b> and saves at once.
+    With one fitted, a <b>DOCK</b> button appears in the top corner whenever the station is within
+    600 units and no panel is open. Tap it and <b>the ship flies the approach itself</b> — to a point
+    600 out on the slot's axis, then in, roll matched, at the slot speed limit above — and docks.
+    Tap it again to take the ship back. <b>An ejection takes it with every other fitting.</b> One way;
+    nothing here unfits it. Every figure <b>[ASSUMED]</b>, DOCKING §7.</div>
   </div>
 
   <!-- 100a, PANEL §9A.4, [ASSUMED] 41: REPAIR. "Hull, both shields and
@@ -1390,6 +1498,12 @@ const SPEC = { dead:6, defl:55, exp:1.6,
                                             (amber) and then blinks. Both figures are his guesses, [ASSUMED], on TUNE
                                             sliders. NEW KEYS: a stored tuning from 103a has neither and reads these.
                                             CONTROL v1.9 §3.5.3, §11 items 40, 41. */
+               slotRollTol:20, slotHeadingTol:15, slotSpeedPct:20,
+                                         /* 107a, DOCKING §3.3 and §2.2, RULINGS 64/65. Degrees either side; per cent
+                                            of the flown ship's maxSpeed. The TOUCH defaults — DOCKING §3.3's keyboard
+                                            pair (12/10) is NOT applied: this build has no input class to choose by
+                                            (S334, [ASSUMED]). NEW KEYS: a stored tuning from 105a has none and reads
+                                            these. All three [ASSUMED]; slotTol() validates, the report says. */
                padFire:"double",         /* 092b, loop 65 (B) and the gesture decision (C): off | single | double */
                /* 092c. `tapGap` (092b, 200) IS RETIRED AND RENAMED, ON PURPOSE. A stored
                   tuning outranks a changed constant (S52's shape), and 092b stored 200 on
@@ -2505,9 +2619,16 @@ const SAVE_MODULES = [
    the one `ship` key that is not an integer, it has its own check, and
    it is read BEFORE these five because their ranges depend on it.
    `pose` likewise has its own pack and read (loop 105).
-   OMITTED DELIBERATELY: `speed` and `docked` are runtime — a save that
-   restores you at speed 200 is a save that restores a moment, not a
-   commander. `cargoUsed` is NOT STORED — WORLD MODEL §9.4 — and is
+   OMITTED DELIBERATELY: `speed` is runtime — a save that restores you
+   at speed 200 is a save that restores a moment, not a commander.
+   `docked` IS SAVED SINCE 107a — RULING 63 ([DECISION], Ripley, 106,
+   option a): a commander who closed the app at a station opens it at
+   the station. It is not in this list because it is a boolean, not an
+   integer in a class's range: saveGame() writes it beside these five
+   (always, spelled), and the loader reads it with its own check —
+   absent in every 105a-and-earlier file and loads as false; present
+   and not a boolean refuses. No `schema` bump: WORLD §9.3 and §9.5 owe
+   the line (DOCKING v1.1 [D] 3 paid; WORLD v1.26). `cargoUsed` is NOT STORED — WORLD MODEL §9.4 — and is
    recomputed from a walk of the cargo after load, below. Loop 81.
    S92, 045a: this said "`cargoUsed` is stored but is reconciled". */
 const SHIP_SAVED = ["hull","shieldFore","shieldAft","energy","holdTonnes"];
@@ -2529,7 +2650,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 105a (105a: ONE ACTION TOUCHED, NONE ADDED — ejectPod() caps the legal record at Offender on the way into the new ship, loop 125, ruling 61 ([DECISION], Ripley, 105, option a); one call to legalAdd() inside the action's own save; the EJECTED screen's Kept row and TUNE's `last ejection` line print the change. 104b: NO ACTION ADDED OR TOUCHED — three tidies, nothing in play: S326, the TUNE `death` string said *button drawn*, it is the slide (ruling 59); the slide's track text fades as the knob passes half-way so the knob does not sit on the words (PANEL §9A.3's cosmetic); S327, two comments said nothing repairs hull but the dev switch and REPAIR — the Market's hull repair row has since `102a`. 104a: NO ACTION ADDED OR TOUCHED — the low-hull warning, loop 122, ruling 60 ([DECISION], Ripley, 104): two stages on the console's HULL row, read in paintConsole() from `ship.hull` against the flown ship's `hullMax` and two new TUNING keys, `hullWarn` 50 and `hullCrit` 25 per cent, both [ASSUMED], both on TUNE sliders; at or under `hullWarn` the bar is amber, at or under `hullCrit` the bar and the label blink; presentation only, nothing written, nothing saved, `schema` stays 4; CONTROL v1.9 §3.5.3 is written with it. 103a: NO ACTION ADDED OR TOUCHED — the death screen's way out, loop 123, ruling 59: NEW COMMANDER is a slide-to-confirm and a second screen with a KILL button; KILL is wipe()'s one caller on that screen, as the button was; presentation only, nothing saved, `schema` stays 4. 102a: ONE ACTION ADDED — buyHull(), loop 121, ruling 58, EQUIPMENT §7.3: hull repair bought by the point at the Market's SERVICES block, the fuel row's shape (loop 83) to the byte — stepper, MAX, a `room` figure in points, the stop reason on the figure line; 5 tenths a point, whole points so nothing is lost; writes `ship.hull` UP only and saves once; `schema` stays 4. 101a: NO ACTION ADDED OR TOUCHED — HULL ON THE CONSOLE, loop 120, S250, CONTROL v1.8 §3.4 item 3a and §3.5: one gauge row under the shields, read from `ship.hull` and the flown ship's `hullMax` in paintConsole(); nothing writes, nothing saves, `schema` stays 4. 100b: NO ACTION ADDED OR TOUCHED — two strings: the report's `laser` line and the FIT PULSE LASER note gave ruling 1 as the only reason for an empty fore mount, and since 100a an ejection is another. 100a: TWO ACTIONS ADDED, die() AND ejectPod() — THE DEATH BUILD, loop 117, COMBAT §8, PANEL §9A, rulings 48, 55 and 56: the fatal hit saves once at hull 0 and the death screen is raised; with an escape pod fitted ejectPod() runs instead and the commander lives in a new ship; wipe() gains one line and one caller, the NEW COMMANDER tap; the save gains an OPTIONAL `cause` in `core.combat`'s bag and `schema` stays 4. 099a: NO ACTION ADDED OR TOUCHED — rulings 53 and 54: the market draws one line on the sold good's open row saying what customs did with the sale; the line is presentation, read from the roll customsRoll() already logs and from state either side of sell(); sell(), customsRoll() and the save are 098b's to the byte. 098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 107a (107a: TWO ACTIONS ADDED, dock() AND launch(), AND jump() TOUCHED — THE FIRST DOCKING BUILD, DOCKING MODEL SPEC v1.0 §10 step 1, rulings 62 to 66 ([DECISION], Ripley, 106 and 107): a station in every system with a slot in one face; a flown approach through it under a roll tolerance, a heading tolerance and a speed limit (three TUNE keys, [ASSUMED]); a missed slot is COMBAT §7's collision; dock() writes `ship.docked` true in one save and the game opens the Market full screen with LAUNCH for FLY; launch() writes it false and puts the ship 150 u outside the face; `ship.docked` IS SAVED — ruling 63 — as an optional boolean in `ship`, absent in older files and read as false, no `schema` bump; jump() clears it so ENGAGE from dock is one act; THE MARKET LEAVES THE IN-FLIGHT STRIP (PANEL §1.3's condition of 017, met); a Docking Computer fitted through TUNE (ruling 66) flies the approach from a DOCK corner button. 105a: ONE ACTION TOUCHED, NONE ADDED — ejectPod() caps the legal record at Offender on the way into the new ship, loop 125, ruling 61 ([DECISION], Ripley, 105, option a); one call to legalAdd() inside the action's own save; the EJECTED screen's Kept row and TUNE's `last ejection` line print the change. 104b: NO ACTION ADDED OR TOUCHED — three tidies, nothing in play: S326, the TUNE `death` string said *button drawn*, it is the slide (ruling 59); the slide's track text fades as the knob passes half-way so the knob does not sit on the words (PANEL §9A.3's cosmetic); S327, two comments said nothing repairs hull but the dev switch and REPAIR — the Market's hull repair row has since `102a`. 104a: NO ACTION ADDED OR TOUCHED — the low-hull warning, loop 122, ruling 60 ([DECISION], Ripley, 104): two stages on the console's HULL row, read in paintConsole() from `ship.hull` against the flown ship's `hullMax` and two new TUNING keys, `hullWarn` 50 and `hullCrit` 25 per cent, both [ASSUMED], both on TUNE sliders; at or under `hullWarn` the bar is amber, at or under `hullCrit` the bar and the label blink; presentation only, nothing written, nothing saved, `schema` stays 4; CONTROL v1.9 §3.5.3 is written with it. 103a: NO ACTION ADDED OR TOUCHED — the death screen's way out, loop 123, ruling 59: NEW COMMANDER is a slide-to-confirm and a second screen with a KILL button; KILL is wipe()'s one caller on that screen, as the button was; presentation only, nothing saved, `schema` stays 4. 102a: ONE ACTION ADDED — buyHull(), loop 121, ruling 58, EQUIPMENT §7.3: hull repair bought by the point at the Market's SERVICES block, the fuel row's shape (loop 83) to the byte — stepper, MAX, a `room` figure in points, the stop reason on the figure line; 5 tenths a point, whole points so nothing is lost; writes `ship.hull` UP only and saves once; `schema` stays 4. 101a: NO ACTION ADDED OR TOUCHED — HULL ON THE CONSOLE, loop 120, S250, CONTROL v1.8 §3.4 item 3a and §3.5: one gauge row under the shields, read from `ship.hull` and the flown ship's `hullMax` in paintConsole(); nothing writes, nothing saves, `schema` stays 4. 100b: NO ACTION ADDED OR TOUCHED — two strings: the report's `laser` line and the FIT PULSE LASER note gave ruling 1 as the only reason for an empty fore mount, and since 100a an ejection is another. 100a: TWO ACTIONS ADDED, die() AND ejectPod() — THE DEATH BUILD, loop 117, COMBAT §8, PANEL §9A, rulings 48, 55 and 56: the fatal hit saves once at hull 0 and the death screen is raised; with an escape pod fitted ejectPod() runs instead and the commander lives in a new ship; wipe() gains one line and one caller, the NEW COMMANDER tap; the save gains an OPTIONAL `cause` in `core.combat`'s bag and `schema` stays 4. 099a: NO ACTION ADDED OR TOUCHED — rulings 53 and 54: the market draws one line on the sold good's open row saying what customs did with the sale; the line is presentation, read from the roll customsRoll() already logs and from state either side of sell(); sell(), customsRoll() and the save are 098b's to the byte. 098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -2603,6 +2724,7 @@ function saveGame(){
     const ship = {};
     ship.class = ID_NS + ":" + sh.class;    /* LOOP 110, WORLD §9.3 — qualified on the way out, §9.6 */
     for(const k of SHIP_SAVED) ship[k] = sh[k];
+    ship.docked = !!sh.docked;              /* 107a, RULING 63 — always written, never omitted */
     ship.pose = posePack();                 /* LOOP 105, WORLD §9.3 */
     const obj = {
       schema:            SAVE_SCHEMA,
@@ -2851,6 +2973,17 @@ function loadFrom(raw){
     if(!ok){ saveStatus = "REFUSED — ship."+k+": "+v; return false; }
     ship[k] = v;
   }
+  /* ship.docked. 107a, RULING 63. OPTIONAL in a 4 file: every file
+     written before 107a lacks it and loads as false (the kill bag's
+     shape — absence is legal, no schema bump, [ASSUMED] pending WORLD
+     §9.3). Present and not a boolean refuses the file (§9.7: not
+     repaired). In a 2 or 3 file it is not read ([ASSUMED] 29's rule). */
+  let docked = false;
+  if(o.schema === 4 && o.ship.docked !== undefined){
+    if(typeof o.ship.docked !== "boolean"){
+      saveStatus = "REFUSED — ship.docked: "+o.ship.docked; return false; }
+    docked = o.ship.docked;
+  }
 
   /* ship.pose. LOOP 105, WORLD §9.5 and §9.7. In a 3 or a 4 file it is
      required and a bad one refuses the file. In a 2 file it is NOT READ
@@ -2985,6 +3118,7 @@ function loadFrom(raw){
 
   state.ship.class = shipClass;                         /* LOOP 110 — before the five, as it was read */
   for(const k of SHIP_SAVED) state.ship[k] = ship[k];   /* LOOP 97 */
+  state.ship.docked = docked;                           /* 107a, ruling 63 */
   /* LOOP 105, ORDERING RULE 2. This runs at SAVE_LOADED, after `q` and
      `pos` were given the start pose at their declarations and before
      frame() first runs; nothing after this line resets them. */
@@ -3020,6 +3154,7 @@ function loadFrom(raw){
                state.visited.length+" visited, market counter "+
                (trade ? Object.keys(trade.by).length+" entr(ies)" : "none")+
                htNote+reconciled+
+               (docked ? "  (DOCKED — ruling 63: opens in dock)" : "")+     /* 107a */
                /* LOOP 110. What the load SUPPLIED is said in words, per
                   schema — the migration is readable off this line. */
                (o.schema === 4
@@ -3055,7 +3190,9 @@ function saveFileLine(){
      next save the two differ — and after a full close and reopen this
      is the figure that says whether damage survived (WORLD [A] 21). */
   const fh = o.ship ? o.ship.hull : undefined;
+  const fd = o.ship ? o.ship.docked : undefined;        /* 107a: docked AS THE FILE HOLDS IT */
   return raw.length+" bytes  ·  schema "+o.schema+"  ·  g"+c.galaxy+" s"+c.system+
+         "  docked "+(fd === undefined ? "KEY ABSENT" : String(fd))+
          "  day "+c.gameDay+"  "+c.credits+" tenths CR  fuel "+c.fuel+
          "  target "+(t===null ? "null" : t===undefined ? "KEY ABSENT"
                                         : "g"+t.galaxy+" i"+t.index)+
@@ -3219,7 +3356,8 @@ shipChanged();
    §6.1 — repair is a docked service, Not yet defined), THIS SWITCH IS
    THE ONLY WAY TO GET A HULL BACK (100a: REPAIR IS THE OTHER, and keeps
    the ship). That makes a dev control the repair
-   shop until docking exists. Named, not fixed; loop 89's shape.
+   shop until docking exists (107a: docking exists; the Shipwright does
+   not — DOCKING §12). Named, not fixed; loop 89's shape.
    104b, S327: NO LONGER SO SINCE 102a — the Market's hull repair row,
    buyHull(), EQUIPMENT §7.3, is the game's own mend. The two dev
    controls are the dev ones. The lines above are the 090a–101a record.
@@ -3372,10 +3510,101 @@ function fieldObjects(galaxy, system){
   }
   return out;
 }
+
+/* ==================================================================
+   107a — THE STATION. DOCKING MODEL SPEC v1.0 §2, RULING 62 ([DECISION],
+   Ripley, 106, option a: docking is a FLOWN approach — a slot, a
+   tolerance, a Docking Computer). ONE STATION PER SYSTEM, fixed, seeded
+   from (WORLD_SEED, galaxy, system, STATION_TAG) — a 4-arg hash with its
+   own tag, so the field's stream (SCENE_TAG) and the stars' (SCENE_TAG+1)
+   are untouched: the universe cannot move. It is NOT in `objects`:
+   collide() tests a sphere and a station is a box with a hole in one
+   face, so it has its own test, stationCollide(), below the flight
+   model. Presentation plus one runtime angle; nothing here is saved.
+   WHAT IS SEEDED: a direction from the field's origin (STATION_DIST
+   along it), the slot's axis, and the station's up vector at angle 0.
+   WHAT IS RUNTIME: the angle, which advances at STATION_RATE while the
+   world runs and holds when it holds (TUNE, death, dock).
+   CLEARANCE FROM THE FIELD [ASSUMED], this build's: the seeded centre
+   is tried up to STATION_DRAWS times and the first that is at least
+   STATION_HALF + o.r + 100 from every object wins; none clear, the
+   best margin — arrivalPoint()'s shape. DOCKING [A] 1–6 carry the
+   numbers; S333: §2.1's "six times the Wren's collision radius" was
+   arithmetic on a radius that does not exist (ruling 64 — the ship is
+   a point, as collide() has always had it).
+   ================================================================== */
+const STATION_TAG   = 0x5354544E;          /* "STTN" */
+const STATION_DIST  = 1500;                /* [ASSUMED] DOCKING [A] 2 — outside radar range from most arrivals */
+const STATION_HALF  = 100;                 /* [ASSUMED] [A] 6 — 200 u across the face */
+const STATION_RATE  = 0.15;                /* rad/s about the slot's axis. [ASSUMED] [A] 4 */
+const SLOT_HALF_W   = 30;                  /* [ASSUMED] [A] 7 — 60 u wide */
+const SLOT_HALF_H   = 10;                  /* [ASSUMED] [A] 8 — 20 u high; three to one is what makes roll matter */
+const SLOT_DEPTH    = 40;                  /* [ASSUMED] [A] 9 — docked when the centre is this far through the face */
+const STATION_ARRIVE_CLEAR = 600;          /* [ASSUMED] [A] 3 — the arrival point is never nearer than this */
+const STATION_DRAWS = 8;                   /* [ASSUMED], this build's — ARRIVE_DRAWS's figure */
+const STATION_PUSH  = 100;                 /* [ASSUMED] [A] 18 — a wall hit is pushed this far clear of the face */
+const LAUNCH_CLEAR  = 150;                 /* [ASSUMED] DOCKING §6 — launched this far clear of the face, facing away */
+const DC_RANGE      = 600;                 /* [ASSUMED] DOCKING §7 — DOCK is offered inside this */
+const DC_CORRIDOR   = 20;                  /* [ASSUMED], this build's — the computer counts itself "on the axis" inside this */
+const station = { g:-1, s:-1, p:[0,0,0], a:[0,0,1], u0:[0,1,0], r0:[1,0,0], angle:0, draw:0, clear:true, margin:0 };
+function v3cross(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+function v3dot(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+function v3norm(a){ const l=Math.hypot(a[0],a[1],a[2])||1; return [a[0]/l,a[1]/l,a[2]/l]; }
+function v3add(a,b,k){ k = k === undefined ? 1 : k; return [a[0]+b[0]*k, a[1]+b[1]*k, a[2]+b[2]*k]; }
+function unitFrom(r){ const u=r()*2-1, th=r()*6.283, sq=Math.sqrt(Math.max(0,1-u*u)); return [sq*Math.cos(th), sq*Math.sin(th), u]; }
+/* Pure: the station for (galaxy, system), from the seed and the field.
+   `fld` is fieldObjects()'s array (passed in so arrivalPoint() and
+   buildScene() each use the one they already have). */
+function stationFor(galaxy, system, fld){
+  const r = rng(hash32(WORLD_SEED, galaxy, system, STATION_TAG));
+  let best = null, bestMargin = -Infinity, bestDraw = 0;
+  for(let d=1; d<=STATION_DRAWS; d++){
+    const dir = unitFrom(r);
+    const p = [dir[0]*STATION_DIST, dir[1]*STATION_DIST, dir[2]*STATION_DIST];
+    const a = unitFrom(r);
+    let margin = Infinity;
+    for(const o of fld){
+      const dist = Math.hypot(wrap(o.p[0]-p[0]), wrap(o.p[1]-p[1]), wrap(o.p[2]-p[2]));
+      const m = dist - (STATION_HALF + o.r + 100);
+      if(m < margin) margin = m;
+    }
+    const cand = { p:p, a:a, draw:d, margin:margin };
+    if(margin > bestMargin){ bestMargin = margin; best = cand; }
+    if(margin >= 0){ cand.clear = true; return cand; }
+  }
+  best.clear = false; return best;
+}
+function buildStation(galaxy, system, fld){
+  const c = stationFor(galaxy, system, fld);
+  station.g = galaxy; station.s = system; station.p = c.p; station.a = c.a;
+  station.draw = c.draw; station.clear = c.clear; station.margin = c.margin;
+  /* up at angle 0: any unit vector perpendicular to the axis */
+  const seed = Math.abs(c.a[0]) < 0.9 ? [1,0,0] : [0,1,0];
+  station.u0 = v3norm(v3cross(c.a, seed));
+  station.r0 = v3norm(v3cross(station.u0, c.a));     /* right = up × axis */
+  station.angle = 0;
+}
+/* The frame at the current angle: right, up, axis (out of the slot face). */
+function stationFrame(){
+  const ca = Math.cos(station.angle), sa = Math.sin(station.angle);
+  const u = [station.u0[0]*ca + station.r0[0]*sa, station.u0[1]*ca + station.r0[1]*sa, station.u0[2]*ca + station.r0[2]*sa];
+  const rgt = v3norm(v3cross(u, station.a));
+  return { r:rgt, u:u, a:station.a };
+}
+/* The ship (or any point) in station-local coordinates: x along right,
+   y along up, z along the axis; the slot face is the plane z = +HALF. */
+function stationLocal(P){
+  const f = stationFrame();
+  const rel = [wrap(P[0]-station.p[0]), wrap(P[1]-station.p[1]), wrap(P[2]-station.p[2])];
+  return { x:v3dot(rel,f.r), y:v3dot(rel,f.u), z:v3dot(rel,f.a), f:f, d:Math.hypot(rel[0],rel[1],rel[2]) };
+}
+function stationFaceCentre(){ return v3add(station.p, station.a, STATION_HALF); }
+function stationStep(dt){ station.angle = (station.angle + STATION_RATE*dt) % (Math.PI*2); }
 function buildScene(galaxy, system){
   sceneG = galaxy; sceneS = system;
   objects.length = 0; stars.length = 0;
   for(const o of fieldObjects(galaxy, system)) objects.push(o);
+  buildStation(galaxy, system, objects);   /* 107a — the same field, no new draw from the scene's stream */
   const rs = rng(hash32(WORLD_SEED, galaxy, system, SCENE_TAG+1));
   for(let i=0;i<260;i++){
     const u=rs()*2-1, th=rs()*6.283, sq=Math.sqrt(1-u*u);
@@ -3399,6 +3628,10 @@ onStateChanged(function(name){
      again round the new ship: `pos` is already the arrival point
      (ejectPod() sets it before it signals, as jump() does). */
   if(name === "ejectPod") spawnContacts("after an ejection (the day's arrival point)");
+  /* 107a, DOCKING §6, [A] 23: a launch is a fresh draw of the day's
+     ships round the launch point; the kill list stands (ruling 47 is
+     keyed to a jump). Same system, same day: the scene is not rebuilt. */
+  if(name === "launch") spawnContacts("after a launch (the launch point)");
 });
 
 /* LOOP 106b, session 082 — HYPERSPACE ARRIVAL, FLIGHT §5.1 and §5.2.
@@ -3444,6 +3677,12 @@ let arriveLast = null;                     /* TUNE: last arrival this session */
 function arrivalPoint(galaxy, system, gameDay){
   const r   = rng(hash32(WORLD_SEED, galaxy, system, gameDay, ARRIVE_TAG));
   const fld = fieldObjects(galaxy, system);
+  /* 107a, DOCKING [A] 3: the station is one more object the arrival
+     must clear, by STATION_ARRIVE_CLEAR rather than CLEARANCE — arriving
+     inside it is a death with no input. The draws are the same stream
+     as 105a's; WHICH draw wins can differ where 105a's winner was within
+     600 u of the station, so some arrival points move. [ASSUMED]. */
+  const stp = stationFor(galaxy, system, fld).p;
   let best = null, bestMargin = -Infinity, bestDraw = 0;
   for(let d=1; d<=ARRIVE_DRAWS; d++){
     const p = [(r()-.5)*2*CELL, (r()-.5)*2*CELL, (r()-.5)*2*CELL];
@@ -3454,6 +3693,10 @@ function arrivalPoint(galaxy, system, gameDay){
       const m = dist - (CLEARANCE + o.r);
       if(m < margin) margin = m;
     }
+    { const sd = Math.hypot(wrap(stp[0]-p[0]), wrap(stp[1]-p[1]), wrap(stp[2]-p[2]));
+      if(sd < nearest) nearest = sd;
+      const sm = sd - STATION_ARRIVE_CLEAR;
+      if(sm < margin) margin = sm; }
     if(margin > bestMargin){ bestMargin = margin; best = p; bestDraw = d; }
     if(margin >= 0){
       arriveLast = { day:gameDay, draw:d, clear:true, nearest:nearest };
@@ -4163,6 +4406,7 @@ function collide(){
    Then playerDown(): the pod if one is fitted, otherwise die(). */
 function combatStep(dt){
   collide();
+  stationCollide();                        /* 107a: the box, the slot, the pass test — DOCKING §2.2, §4 */
   if(state.ship.hull > 0){
     contactsStep(dt);
     playerFire(dt);
@@ -5051,6 +5295,262 @@ function devRepair(){
   saveGame();
   return true;
 }
+/* ==================================================================
+   107a — DOCKING. DOCKING MODEL SPEC v1.0 §2.2 (the pass test), §4 (a
+   missed slot), §5 (dock), §6 (launch), §7 (the Docking Computer).
+   RULINGS: 62 flown approach (106) · 63 `ship.docked` is saved (106) ·
+   64 the ship is a point — the slot is not shrunk (107, [D] 5) · 65
+   speed is in the pass test (107, [D] 2) · 66 the computer is fitted
+   through TUNE (107, [D] 4). [D] 1 (`stationTypeRaw`) stays open and
+   the field is ignored, as every build has.
+   THE PASS TEST, every frame the ship's centre is inside the box:
+     in the slot column (|x| <= SLOT_HALF_W, |y| <= SLOT_HALF_H, z from
+     the face down to the face minus SLOT_DEPTH): roll within
+     slotRollTol of the slot's up (either way up — the slot is a
+     rectangle, so 180 deg is also a fit, [ASSUMED] S335), heading
+     within slotHeadingTol of the axis pointing in, speed at or under
+     the limit (ruling 65). All three true at the bottom of the passage
+     -> dock(). Any one false, anywhere in the box, or the centre in the
+     box outside the column -> THE WALL: COMBAT §7's loss at the ship's
+     speed, hull 0 is a death like any other, and the ship is put
+     STATION_PUSH clear of the face along the axis at speed 0 ([A] 18).
+   WHAT dock() WRITES — one save, ARCH §2.3's shape: `ship.docked` true,
+   the pose as it is (inside the slot), speed 0. Nothing else: no fee,
+   no repair, no legal consequence (§5.3). launch() writes it false and
+   the launch pose. Both signal; the launch listener redraws the ships.
+   THE COMPUTER (§7): tap DOCK within DC_RANGE and autoDockStep() flies
+   to a point DC_RANGE out on the axis, turns to face in with the slot's
+   up, and closes at the slot speed limit. It writes `q`, `pos` and
+   `speed` directly — an autopilot IS the pilot — and the pass test
+   above docks it like any other ship, so it cannot cheat the test.
+   A collision on the way (the field is not cleared for it) or a tap
+   on DOCK again hands the ship back.
+   ================================================================== */
+let autoDock = false, autoPhase = "";
+let dockCount = 0, launchCount = 0, wallCount = 0;
+let lastApproach = null;                 /* TUNE's `last approach` — runtime only, lost on a reopen (S330's shape) */
+function dcFitted(){ const e = state.equipment.dockingComputer; return !!(e && e.qty > 0); }
+function slotTol(){
+  const r = T.slotRollTol, h = T.slotHeadingTol, s = T.slotSpeedPct;
+  const ok = (v,lo,hi) => typeof v === "number" && v >= lo && v <= hi;
+  const roll = ok(r,5,45) ? r : SPEC.slotRollTol;
+  const head = ok(h,5,30) ? h : SPEC.slotHeadingTol;
+  const spd  = ok(s,5,100) ? s : SPEC.slotSpeedPct;
+  return { roll:roll, head:head, spdPct:spd, valid: roll===r && head===h && spd===s };
+}
+function slotSpeedMax(){ return T.maxSpeed * slotTol().spdPct / 100; }
+function angDeg(a, b){ return Math.acos(Math.max(-1, Math.min(1, v3dot(a,b)))) * 180/Math.PI; }
+/* The three readings at the ship's pose, in the station frame f. */
+function approachReadings(f){
+  const fwd = qrot(q,[0,0,1]), up = qrot(q,[0,1,0]);
+  const rollErr = Math.min(angDeg(up, f.u), 180 - angDeg(up, f.u));          /* either way up, S335 */
+  const headErr = angDeg(fwd, [-f.a[0], -f.a[1], -f.a[2]]);                   /* pointing IN */
+  return { roll:rollErr, head:headErr, speed:Math.abs(speed) };
+}
+function stationCollide(){
+  if(state.ship.docked) return;
+  const L = stationLocal(pos);
+  const H = STATION_HALF;
+  if(Math.abs(L.x) >= H || Math.abs(L.y) >= H || Math.abs(L.z) >= H) return;   /* outside the box: nothing */
+  const inColumn = Math.abs(L.x) <= SLOT_HALF_W && Math.abs(L.y) <= SLOT_HALF_H && L.z >= H - SLOT_DEPTH;
+  const past     = Math.abs(L.x) <= SLOT_HALF_W && Math.abs(L.y) <= SLOT_HALF_H && L.z <  H - SLOT_DEPTH;
+  const t = slotTol(), rd = approachReadings(L.f);
+  let failed = "";
+  if(!inColumn && !past) failed = "outside the slot";
+  else if(rd.roll > t.roll)       failed = "roll";
+  else if(rd.head > t.head)       failed = "heading";
+  else if(rd.speed > slotSpeedMax()) failed = "speed";
+  lastApproach = { t:Date.now(), x:L.x, y:L.y, z:L.z, roll:rd.roll, head:rd.head, speed:rd.speed,
+                   limit:slotSpeedMax(), tol:t, failed:failed, result: failed ? "WALL — "+failed : (past ? "DOCKED" : "in the slot") };
+  if(!failed){
+    if(past) dock();
+    return;
+  }
+  /* the wall — COMBAT §7 at the ship's speed, bypassing shields */
+  const sh = state.ship, row = SHIPS[sh.class];
+  const ratio = Math.min(1, Math.abs(speed) / Math.max(1, T.maxSpeed));
+  const loss = Math.round(row.hullMax * ratio * ratio);
+  const was = sh.hull;
+  sh.hull = Math.max(0, sh.hull - loss);
+  if(was > 0 && sh.hull <= 0) deathCause = { by:"collision" };
+  touchCount++; wallCount++;
+  if(loss > 0){
+    hitCount++;
+    hits.unshift({ loss:loss, speed:Math.abs(speed), max:T.maxSpeed, r:"station", was:was, now:sh.hull, t:Date.now() });
+    if(hits.length > HIT_LOG) hits.length = HIT_LOG;
+  }
+  autoDock = false;
+  const f = L.f;
+  const clear = v3add(v3add(v3add(station.p, f.r, L.x), f.u, L.y), f.a, H + STATION_PUSH);
+  bump(clear);
+}
+/* ACTIONS */
+function dock(){
+  noCascade();
+  if(state.ship.docked) return fail(["docked"]);
+  if(state.ship.hull <= 0) return fail(["dead"]);
+  state.ship.docked = true;
+  speed = 0; state.ship.speed = 0;
+  autoDock = false; autoPhase = "";
+  dockCount++;
+  saveGame();
+  stateChanged("dock");
+  return { ok:true };
+}
+function launch(){
+  noCascade();
+  if(!state.ship.docked) return fail(["notDocked"]);
+  const f = stationFrame();
+  /* outside the face, LAUNCH_CLEAR along the axis, facing AWAY, the slot's up as the ship's up */
+  const P = v3add(stationFaceCentre(), f.a, LAUNCH_CLEAR);
+  q = quatFromFrame(f.a, f.u);
+  bump(P);
+  state.ship.docked = false;
+  launchCount++;
+  saveGame();
+  stateChanged("launch");
+  return { ok:true };
+}
+/* dev control, ruling 66 — ARCH §2.3's exception, as the pod's */
+function devFitDC(){
+  if(dcFitted() || state.ship.hull <= 0) return false;
+  state.equipment.dockingComputer = { qty:1 };
+  saveGame();
+  return true;
+}
+/* A quaternion whose forward (+z) is `fwd` and up (+y) is `up` (made
+   perpendicular here). Right-handed: x = up × fwd. */
+function quatFromFrame(fwd, up){
+  const f = v3norm(fwd);
+  let u = v3add(up, f, -v3dot(up,f)); u = v3norm(u);
+  const r = v3cross(u, f);
+  const m00=r[0], m01=u[0], m02=f[0], m10=r[1], m11=u[1], m12=f[1], m20=r[2], m21=u[2], m22=f[2];
+  const tr = m00+m11+m22;
+  let w,x,y,z;
+  if(tr > 0){ const s=Math.sqrt(tr+1)*2; w=0.25*s; x=(m21-m12)/s; y=(m02-m20)/s; z=(m10-m01)/s; }
+  else if(m00 > m11 && m00 > m22){ const s=Math.sqrt(1+m00-m11-m22)*2; w=(m21-m12)/s; x=0.25*s; y=(m01+m10)/s; z=(m02+m20)/s; }
+  else if(m11 > m22){ const s=Math.sqrt(1+m11-m00-m22)*2; w=(m02-m20)/s; x=(m01+m10)/s; y=0.25*s; z=(m12+m21)/s; }
+  else { const s=Math.sqrt(1+m22-m00-m11)*2; w=(m10-m01)/s; x=(m02+m20)/s; y=(m12+m21)/s; z=0.25*s; }
+  return qnorm([w,x,y,z]);
+}
+function stationRange(){ return stationLocal(pos).d; }
+function dcAvailable(){
+  return dcFitted() && !state.ship.docked && state.ship.hull > 0 && stationRange() <= DC_RANGE;
+}
+function autoDockToggle(){
+  if(autoDock){ autoDock = false; autoPhase = ""; return; }
+  if(!dcAvailable()) return;
+  autoDock = true; autoPhase = "to the axis";
+}
+/* The computer's step: writes q, pos, speed. Phase 1: fly to the point
+   DC_RANGE out on the axis (straight line, nose along the way, the
+   slot's up as up). Phase 2: on the corridor, face in and close at the
+   slot speed limit; the slot's up is matched every frame, so the roll
+   follows the station. stationCollide() then docks it. */
+function autoDockStep(dt){
+  if(!(dcFitted() && state.ship.hull > 0) || state.ship.docked){ autoDock = false; return; }
+  const f = stationFrame(), L = stationLocal(pos);
+  const v = slotSpeedMax();
+  const H = STATION_HALF;
+  /* on the axis, to a unit or two, outside the face and inside the approach: close */
+  /* ...and on through the passage: the test docks it before z reaches H - SLOT_DEPTH */
+  const onCorridor = Math.abs(L.x) <= 2 && Math.abs(L.y) <= 2 && L.z > H - SLOT_DEPTH - 5 && L.z <= H + DC_RANGE + 2;
+  if(onCorridor){
+    autoPhase = "closing";
+    const dir = [-f.a[0], -f.a[1], -f.a[2]];
+    q = quatFromFrame(dir, f.u);                         /* roll follows the slot every frame */
+    speed = v;
+    pos = [pos[0]+dir[0]*v*dt, pos[1]+dir[1]*v*dt, pos[2]+dir[2]*v*dt];
+    return;
+  }
+  /* to the approach point, DC_RANGE out on the axis. A straight line,
+     bent round anything in the way: the field (collide() is not
+     switched off for the computer — an instrument that stops reading
+     is constraint 2's fault) and the station's own body. The bend is a
+     push away from each object's centre that grows as the ship nears
+     it, [ASSUMED], this build's; the harness flies it past a rock. */
+  autoPhase = "to the axis";
+  const P = v3add(stationFaceCentre(), f.a, DC_RANGE);
+  const rel = [wrap(P[0]-pos[0]), wrap(P[1]-pos[1]), wrap(P[2]-pos[2])];
+  const d = Math.hypot(rel[0],rel[1],rel[2]);
+  if(d < 0.5){ pos = [P[0], P[1], P[2]]; q = quatFromFrame([-f.a[0],-f.a[1],-f.a[2]], f.u); speed = v; return; }
+  let dir = [rel[0]/d, rel[1]/d, rel[2]/d];
+  const avoid = function(c, r){
+    const away = [wrap(pos[0]-c[0]), wrap(pos[1]-c[1]), wrap(pos[2]-c[2])];
+    const ad = Math.hypot(away[0],away[1],away[2]);
+    const reach = r + 120;
+    if(ad >= reach || ad < 1e-6) return;
+    /* only things roughly ahead bend the path; something behind is left behind */
+    const ahead = -(away[0]*dir[0]+away[1]*dir[1]+away[2]*dir[2]) / ad;
+    if(ahead < -0.3) return;
+    const k = (reach - ad) / reach * 2.5;
+    dir = [dir[0]+away[0]/ad*k, dir[1]+away[1]/ad*k, dir[2]+away[2]/ad*k];
+  };
+  for(const o of objects) avoid(o.p, o.r);
+  if(d > DC_RANGE*0.25) avoid(station.p, STATION_HALF*1.75);   /* not when nearly at P, which is 700 from the centre anyway */
+  dir = v3norm(dir);
+  q = quatFromFrame(dir, f.u);
+  const step = Math.min(v*dt, d);
+  speed = v;
+  pos = [pos[0]+dir[0]*step, pos[1]+dir[1]*step, pos[2]+dir[2]*step];
+}
+/* Presentation: docked mode on and off, from state. */
+let dockedShown = false;
+function dockSync(){
+  const d = !!state.ship.docked;
+  if(d !== dockedShown){
+    dockedShown = d;
+    document.body.classList.toggle("docked", d);
+    if(d){ autoDock = false; panelCur = "mkt"; openPanel(); }
+    else {
+      if(panelCur === "mkt") panelCur = "sys";          /* the PANEL button must not reopen the Market in flight */
+      if(panelEl.classList.contains("open")) closePanel();
+    }
+  }
+  return d;
+}
+/* PANEL §10 item 15: fuel in the chart headers IN DOCK ONLY — the band
+   is hidden there and nothing else carries the tank. Empty in flight:
+   instrument 5 is live behind the panel and a second copy is the
+   duplicate constraint 2 forbids. Read from state at render. */
+function dockHeaders(){
+  const t = state.ship.docked ? "FUEL "+(state.commander.fuel/10).toFixed(1)+" LY" : "";
+  document.getElementById("cFuel").textContent = t;
+  document.getElementById("gFuel").textContent = t;
+}
+const dockBtnEl = document.getElementById("dockBtn");
+function paintDock(){
+  const on = !tuner.classList.contains("open") && (autoDock || dcAvailable());
+  dockBtnEl.classList.toggle("on", on);
+  if(on) dockBtnEl.textContent = autoDock ? "DOCKING — TAP TO ABORT" : "DOCK";
+}
+dockBtnEl.addEventListener("click", autoDockToggle);
+/* TUNE */
+function stationLine(){
+  const L = stationLocal(pos);
+  return "g"+station.g+" s"+station.s+"  at "+station.p.map(function(v){ return v.toFixed(0); }).join(",")+
+         "  (draw "+station.draw+(station.clear ? "" : ", NOT CLEAR of the field, margin "+station.margin.toFixed(0))+")"+
+         "  ·  range "+L.d.toFixed(0)+" u  ·  local x "+L.x.toFixed(0)+" y "+L.y.toFixed(0)+" z "+L.z.toFixed(0)+
+         "  ·  box "+(2*STATION_HALF)+" u, slot "+(2*SLOT_HALF_W)+"x"+(2*SLOT_HALF_H)+"x"+SLOT_DEPTH+" u, turns "+STATION_RATE+" rad/s  [ASSUMED]";
+}
+function slotTolLine(){
+  const t = slotTol();
+  return "roll "+t.roll+" deg · heading "+t.head+" deg · speed "+t.spdPct+"% of max = "+slotSpeedMax().toFixed(0)+
+         "  [ASSUMED; touch defaults — no keyboard class, S334]"+(t.valid ? "" : "  ·  STORED VALUE OUT OF RANGE, flying the spec for it");
+}
+function dockingLine(){
+  return "docked "+state.ship.docked+"  ·  this session: docked "+dockCount+", launched "+launchCount+", hit the station "+wallCount+
+         "  ·  computer "+(dcFitted() ? "FITTED" : "not fitted")+(autoDock ? ", flying ("+autoPhase+")" : "")+
+         (dcFitted() && !state.ship.docked ? ", DOCK "+(dcAvailable() ? "offered" : "out of range (>"+DC_RANGE+")") : "");
+}
+function approachLine(){
+  const a = lastApproach;
+  if(!a) return "none this session";
+  return a.result+"  ·  at x "+a.x.toFixed(0)+" y "+a.y.toFixed(0)+" z "+a.z.toFixed(0)+
+         "  ·  roll err "+a.roll.toFixed(1)+" (tol "+a.tol.roll+")  heading err "+a.head.toFixed(1)+" (tol "+a.tol.head+")"+
+         "  speed "+a.speed.toFixed(0)+" (limit "+a.limit.toFixed(0)+")  ·  "+new Date(a.t).toTimeString().slice(0,8);
+}
+
 function deathLine(){
   const dead = state.ship.hull <= 0;
   return (dead ? "COMMANDER LOST — "+(deathCause ? "by "+deathCause.by : "no cause on file")+
@@ -5547,6 +6047,41 @@ function killRows(){
 const NEAR=1.2;
 function wrap(v){ const m=((v+CELL)%(2*CELL)+2*CELL)%(2*CELL)-CELL; return m; }
 
+/* 107a — the station's wireframe: the 12 box edges in the field's ink
+   and the slot rectangle at full ink on the slot face. Verts are built
+   each frame from the station frame (it turns). */
+function drawStation(cq, hw, hh){
+  const rel=[wrap(station.p[0]-pos[0]), wrap(station.p[1]-pos[1]), wrap(station.p[2]-pos[2])];
+  const c=qrot(cq,rel);
+  const d=Math.hypot(c[0],c[1],c[2]);
+  if(d>CELL*1.35) return;
+  if(c[2] < -STATION_HALF*2) return;
+  const f = stationFrame(), H = STATION_HALF;
+  const P = function(x,y,z){ return qrot(cq,[rel[0]+f.r[0]*x+f.u[0]*y+f.a[0]*z, rel[1]+f.r[1]*x+f.u[1]*y+f.a[1]*z, rel[2]+f.r[2]*x+f.u[2]*y+f.a[2]*z]); };
+  const seg = function(A,B){
+    if(A[2]<NEAR && B[2]<NEAR) return;
+    if(A[2]<NEAR||B[2]<NEAR){
+      const t=(NEAR-A[2])/(B[2]-A[2]);
+      const M=[A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t, NEAR];
+      if(A[2]<NEAR) A=M; else B=M;
+    }
+    ctx.moveTo(hw+F*A[0]/A[2], hh-F*A[1]/A[2]);
+    ctx.lineTo(hw+F*B[0]/B[2], hh-F*B[1]/B[2]);
+  };
+  const a=Math.max(0.10, Math.min(1, 1-d/(CELL*1.2)));
+  ctx.strokeStyle="rgba(143,227,176,"+a.toFixed(2)+")";
+  ctx.beginPath();
+  const v=[]; for(let i=0;i<8;i++) v.push(P((i&1?H:-H),(i&2?H:-H),(i&4?H:-H)));
+  const e=[[0,1],[1,3],[3,2],[2,0],[4,5],[5,7],[7,6],[6,4],[0,4],[1,5],[2,6],[3,7]];
+  for(const x of e) seg(v[x[0]], v[x[1]]);
+  ctx.stroke();
+  /* the slot, on the +z face, and the passage's far rectangle */
+  ctx.strokeStyle="rgba(255,255,255,"+Math.min(1,a+0.3).toFixed(2)+")";
+  ctx.beginPath();
+  const s=[P(-SLOT_HALF_W,-SLOT_HALF_H,H),P(SLOT_HALF_W,-SLOT_HALF_H,H),P(SLOT_HALF_W,SLOT_HALF_H,H),P(-SLOT_HALF_W,SLOT_HALF_H,H)];
+  for(let i=0;i<4;i++) seg(s[i], s[(i+1)%4]);
+  ctx.stroke();
+}
 function render(){
   ctx.fillStyle="#000"; ctx.fillRect(0,0,W,H);
   const cq=qconj(q), hw=W/2, hh=H/2;
@@ -5588,6 +6123,12 @@ function render(){
     }
     ctx.stroke();
   }
+
+  // 107a, DOCKING §2.3: THE STATION — a wireframe box turned by the
+  // runtime angle, and THE SLOT FACE drawn distinguishably: the slot
+  // rectangle itself, at full ink, on the one face that has it ([A] 12).
+  // Same range fade and near-plane clip as the field; that loop is untouched.
+  drawStation(cq, hw, hh);
 
   // 091a, COMBAT §3.3: the ships. One shape, turned by the contact's own
   // `q`, drawn at HULL_RADIUS in the role's colour (S260). Same range
@@ -5756,6 +6297,23 @@ function drawRadar(){
     rctx.fillStyle="#8fe3b0";
     rctx.fillRect(x-b/2, y+st-b/2, b, b);
   }
+  /* 107a, DOCKING §2.3: the station's blip — HOLLOW, so it is told from a
+     ship or a rock, and ALWAYS DRAWN: outside the range it is clamped to
+     the ellipse's rim in its true direction ([A] 11; constraint 6 — a
+     station's bearing is navigation, not gated knowledge). Uses a radar
+     classification CONTROL §12 has not ruled; CONTROL v1.10 records it. */
+  { const rel=[wrap(station.p[0]-pos[0]), wrap(station.p[1]-pos[1]), wrap(station.p[2]-pos[2])];
+    const d=Math.hypot(rel[0],rel[1],rel[2]);
+    const c=qrot(cq,rel);
+    const k = d > R ? R/d : 1;                  /* rim-clamp: scale the vector down to the range */
+    const x=ox2 + (c[0]*k/R)*ea;
+    const y=oy2 - (c[2]*k/R)*eb;
+    const st=Math.max(-sMax, Math.min(sMax, -(c[1]*k/R)*sMax*2));
+    const hb=b+3;
+    rctx.strokeStyle="rgba(143,227,176,0.45)";
+    rctx.beginPath(); rctx.moveTo(x,y); rctx.lineTo(x,y+st); rctx.stroke();
+    rctx.strokeStyle= d > R ? "rgba(143,227,176,0.7)" : "#8fe3b0";
+    rctx.strokeRect(x-hb/2+0.5, y+st-hb/2+0.5, hb-1, hb-1); }
   const bs=b+2;                              /* S260: a ship is bigger than a rock */
   for(const s of contacts){
     const rel=[wrap(s.pos[0]-pos[0]), wrap(s.pos[1]-pos[1]), wrap(s.pos[2]-pos[2])];
@@ -5860,7 +6418,13 @@ function frame(now){
      either is up. Read BEFORE the step: the frame he dies in runs to
      its end, and the next frame is the first held one. */
   const down = deathSync(now);
-  const held = tuner.classList.contains("open") || down;
+  /* 107a, DOCKING §5.2: IN DOCK THE WORLD HOLDS — no flight, no
+     contacts, no recharge, no drift, and the station does not turn.
+     dockSync() shows or hides docked mode from `state.ship.docked` and
+     says whether it is up — read from state every frame, as the death
+     screen is (constraint 2's shape: nothing held between frames). */
+  const docked = dockSync();
+  const held = tuner.classList.contains("open") || down || docked;
   let input = makeFlightInput(0, 0, throttle), rates = { wx:0, wz:0 };
   if(!held){
   const kb=keyAxes(dt);
@@ -5870,7 +6434,12 @@ function frame(now){
   const r = padLive ? rollIn  : kb[1];
 
   input = makeFlightInput(p, r, throttle);
-  rates = integrate(input, dt);
+  /* 107a, ruling 66: while the Docking Computer has the ship the pad
+     and the keys are not read — autoDockStep() moves the pose itself.
+     The strip shows zero input and the throttle as the lever stands. */
+  if(autoDock){ input = makeFlightInput(0, 0, throttle); autoDockStep(dt); }
+  else rates = integrate(input, dt);
+  stationStep(dt);                       /* 107a: the station turns while the world runs */
 
   // 090a, COMBAT §11: the per-frame effects — collision, then recharge.
   // They write state.ship.hull, .shieldFore, .shieldAft and .energy
@@ -5897,6 +6466,7 @@ function frame(now){
   drawRadar();
   paintConsole();
   paintFire();
+  paintDock();                           /* 107a: the DOCK corner, from state and range */
 
   rPitch.textContent=sgn(input.pitch);
   rRoll.textContent=sgn(input.roll);
@@ -5921,6 +6491,7 @@ const map=[["sDead","vDead","dead",0],["sDefl","vDefl","defl",0],["sExp","vExp",
            ["sCone2","vCone2","pirateCone",0],["sTap","vTap","tapMs",0],
            ["sDmg","vDmg","theirDamage",0],                       /* 097a */
            ["sHw","vHw","hullWarn",0],["sHc","vHc","hullCrit",0], /* 104a, loop 122, ruling 60 */
+           ["sRt","vRt","slotRollTol",0],["sHt","vHt","slotHeadingTol",0],["sSl","vSl","slotSpeedPct",0], /* 107a, DOCKING §3.3, ruling 65 */
            ["sGrace","vGrace","grace",0],                         /* 092b */
            ["sMove","vMove","tapMove",0]];                        /* 092c */
 
@@ -5987,6 +6558,10 @@ function syncDev(){
     : (state.ship.hull <= 0 ? "FIT ESCAPE POD — NOT ON A LOST COMMANDER: REPAIR FIRST" : "FIT ESCAPE POD");
   document.getElementById("bRepair").textContent =
     "REPAIR — HULL "+state.ship.hull+" OF "+row.hullMax+(state.ship.hull <= 0 ? " · COMMANDER LOST: THIS UNDOES IT" : "");
+  /* 107a, ruling 66. Read from state, as the pod's is. */
+  document.getElementById("bDC").textContent = dcFitted()
+    ? "DOCKING COMPUTER: "+ID_NS+":dockingComputer — FITTED"
+    : (state.ship.hull <= 0 ? "FIT DOCKING COMPUTER — NOT ON A LOST COMMANDER: REPAIR FIRST" : "FIT DOCKING COMPUTER");
   document.getElementById("bsPr").textContent = row.pitchRate;
   document.getElementById("bsRr").textContent = row.rollRate;
   document.getElementById("bsSp").textContent = row.maxSpeed;
@@ -6117,6 +6692,11 @@ document.getElementById("bRepair").addEventListener("click",function(){
   devRepair();
   syncUI();
 });
+/* 107a, ruling 66. The dev computer. Saves; the repaint is here. */
+document.getElementById("bDC").addEventListener("click",function(){
+  devFitDC();
+  syncUI();
+});
 /* LOOP 87: two taps, the label is the confirmation. 042b: the repaint belongs here.
 
    LOOP 113, 088a — S239. AN ARMED WIPE NOW STANDS DOWN.
@@ -6193,7 +6773,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 105a — settings\n"+
+    "ELITE: THE CLONES 107a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -6266,6 +6846,14 @@ function writeReport(){
     "charge        "+chargeLine()+"\n"+
     "recharge      energy +"+RECHARGE_ENERGY+"/s · shields +"+RECHARGE_SHIELD+"/s each from energy, off below "+SHIELD_ENERGY_FLOOR+"  [ASSUMED]\n"+
     "collisions    "+hitsLine()+"\n"+
+    /* 107a, DOCKING §3.3's report: both tolerances, the limit, the
+       station, and the last approach's three readings at the face and
+       which test failed, if one did. `last approach` is runtime only:
+       copy it BEFORE a reopen (S330). */
+    "station       "+stationLine()+"\n"+
+    "slot tol      "+slotTolLine()+"\n"+
+    "docking       "+dockingLine()+"\n"+
+    "last approach "+approachLine()+"\n"+
     /* 091a, COMBAT step 2. `danger` is read from state.system — the
        field's first print. `contacts` is what the last draw made and
        what it was drawn for; the rows under it are the live ships,
@@ -7119,6 +7707,10 @@ function jump(){
      BEFORE saveGame(): `pos` from the arrival day, clear of the arrival
      system's field. `q`, speed and throttle are not touched. The scene
      listener runs after the save; arrivalPoint() does not depend on it. */
+  /* 107a, DOCKING [A] 22: ENGAGE from dock launches you into the jump —
+     one act. The field is cleared before the save, inside the action. */
+  state.ship.docked = false;
+  autoDock = false;
   setArrival(arrivalPoint(o.galaxy, o.index, state.commander.gameDay));
   saveGame();   /* LOOP 87 */
   stateChanged("jump");
@@ -7865,13 +8457,17 @@ gFindIn.addEventListener("blur", resetPageZoom);
    complement rather than the figure. If a later panel wants to print
    the tank itself, that is §4.1's question again and not this one.
 
-   THIS BREACHES EQUIPMENT §7's DOCKED-ONLY RULE, DELIBERATELY AND
-   TEMPORARILY. All four services there are docked-only and docked
-   mode does not exist, which is the same position the Market itself
-   was in at session 017. The condition is written here as it is
-   written beside the nav strip: THE FUEL ROW MOVES TO PANEL §8 THE
-   SESSION DOCKED MODE LANDS. EQUIPMENT §7.1 and WORLD §7 are both
-   owed a revision saying so — recorded, not fixed, one chat one job.
+   THIS BREACHED EQUIPMENT §7's DOCKED-ONLY RULE, DELIBERATELY AND
+   TEMPORARILY — through 105a. All four services there are docked-only
+   and docked mode did not exist, the same position the Market itself
+   was in at session 017. 107a, S338: DOCKED MODE LANDED AND THE MARKET
+   IS DOCKED-ONLY, so these rows are docked-only with it and the breach
+   is closed by the panel that carries them. The condition written here
+   said "THE FUEL ROW MOVES TO PANEL §8 THE SESSION DOCKED MODE LANDS";
+   it has NOT moved — PANEL §8 (the Equipment panel) is unbuilt and a
+   row cannot move to a panel that does not exist. The rows stay on
+   the Market until §8 is built; PANEL v1.14 records the condition as
+   half-met. EQUIPMENT §7.1 and WORLD §7 are still owed the sentence.
 
    `svcFuelLast` IS NOT SAVED. It is module-local diagnostic state, a
    receipt, and dies with the page; §9 does not carry it. The tank and
@@ -8733,6 +9329,7 @@ function showPanel(id){
     document.getElementById(PANELS[k].nav).classList.toggle("on", on);
   }
   PANELS[id].render();
+  dockHeaders();                                   /* 107a, PANEL §10 item 15 */
 }
 function openPanel(){
   panelEl.classList.add("open");
@@ -8750,6 +9347,7 @@ document.getElementById("sysBtn").addEventListener("click", function(){
   if(panelEl.classList.contains("open")) closePanel(); else openPanel();
 });
 document.getElementById("navFly").addEventListener("click", closePanel);
+document.getElementById("navLaunch").addEventListener("click", function(){ launch(); });   /* 107a */
 document.getElementById("navSys").addEventListener("click", function(){ showPanel("sys"); });
 document.getElementById("navMkt").addEventListener("click", function(){ showPanel("mkt"); });
 document.getElementById("navChart").addEventListener("click", function(){ showPanel("chart"); });
