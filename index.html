@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 108a</title>
+<title>ELITE: THE CLONES — 108b</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -492,7 +492,14 @@
     display:flex;align-items:stretch;justify-content:center;
   }
   .cwrap canvas{display:block;touch-action:none;
-                border:1px solid var(--ink-faint);}
+                border:1px solid var(--ink-faint);
+                /* 108b — S344, seen on device 17 Oct: in dock the canvas was
+                   565 px tall inside a 550 px wrap (measured) and its lower
+                   edge sat on NO SELECTION. The canvas took its height from
+                   a wrap that then shrank round the strip, and a sized canvas
+                   does not shrink back. Taken out of the flow: the wrap's
+                   height is the flex column's alone, the canvas fills it. */
+                position:absolute;top:0;left:50%;transform:translateX(-50%);}
   /* FAULT 4, session 012, found on device. Exempting the whole chart
      panel from §6.3's 560px cap was too broad. On iPad it reproduced
      exactly the fault §6.3 exists to prevent: YAKACAEN at the far left
@@ -749,6 +756,11 @@
     padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);
   }
   body.docked #tuneBtn{ display:block; z-index:26; }
+  /* 108b — S343, seen on device 17 Oct: in dock the panel is the whole
+     screen and the Market header's credits ran under the TUNE corner
+     (header to x 388, TUNE from x 345 at 402 px — measured). The header
+     keeps the corner's width clear while docked. */
+  body.docked .mhead{ padding-right:64px; }
   body.docked #sysBtn, body.docked #dockBtn{ display:none; }
   /* 107a — THE MARKET LEAVES THE IN-FLIGHT STRIP. PANEL §1.3's condition
      of session 017 — "available in flight for as long as there is no
@@ -2676,7 +2688,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 108a (108a: NO ACTION ADDED OR TOUCHED — dock() and launch() are 107a's to the byte; what changed is WHEN they are issued: the pass test now starts a fly-through transition and dock() runs when it ends, and the LAUNCH tap starts the iris and launch() runs when it ends — loop 126, ruling 67 ([DECISION], Ripley, 108). The transition is runtime only, the world holds through it, `docked` flips once at the end. AND THE SAVE ENVELOPE MOVES: `schema` 5, `ship.docked` REQUIRED — S339/S341, the correction the first copy of 107a did not carry; WORLD v1.26 §9.5's migration, a 4 file loads with `docked` false and the next save writes 5. 107a: TWO ACTIONS ADDED, dock() AND launch(), AND jump() TOUCHED — THE FIRST DOCKING BUILD, DOCKING MODEL SPEC v1.0 §10 step 1, rulings 62 to 66 ([DECISION], Ripley, 106 and 107): a station in every system with a slot in one face; a flown approach through it under a roll tolerance, a heading tolerance and a speed limit (three TUNE keys, [ASSUMED]); a missed slot is COMBAT §7's collision; dock() writes `ship.docked` true in one save and the game opens the Market full screen with LAUNCH for FLY; launch() writes it false and puts the ship 150 u outside the face; `ship.docked` IS SAVED — ruling 63 — as an optional boolean in `ship`, absent in older files and read as false, no `schema` bump; jump() clears it so ENGAGE from dock is one act; THE MARKET LEAVES THE IN-FLIGHT STRIP (PANEL §1.3's condition of 017, met); a Docking Computer fitted through TUNE (ruling 66) flies the approach from a DOCK corner button. 105a: ONE ACTION TOUCHED, NONE ADDED — ejectPod() caps the legal record at Offender on the way into the new ship, loop 125, ruling 61 ([DECISION], Ripley, 105, option a); one call to legalAdd() inside the action's own save; the EJECTED screen's Kept row and TUNE's `last ejection` line print the change. 104b: NO ACTION ADDED OR TOUCHED — three tidies, nothing in play: S326, the TUNE `death` string said *button drawn*, it is the slide (ruling 59); the slide's track text fades as the knob passes half-way so the knob does not sit on the words (PANEL §9A.3's cosmetic); S327, two comments said nothing repairs hull but the dev switch and REPAIR — the Market's hull repair row has since `102a`. 104a: NO ACTION ADDED OR TOUCHED — the low-hull warning, loop 122, ruling 60 ([DECISION], Ripley, 104): two stages on the console's HULL row, read in paintConsole() from `ship.hull` against the flown ship's `hullMax` and two new TUNING keys, `hullWarn` 50 and `hullCrit` 25 per cent, both [ASSUMED], both on TUNE sliders; at or under `hullWarn` the bar is amber, at or under `hullCrit` the bar and the label blink; presentation only, nothing written, nothing saved, `schema` stays 4; CONTROL v1.9 §3.5.3 is written with it. 103a: NO ACTION ADDED OR TOUCHED — the death screen's way out, loop 123, ruling 59: NEW COMMANDER is a slide-to-confirm and a second screen with a KILL button; KILL is wipe()'s one caller on that screen, as the button was; presentation only, nothing saved, `schema` stays 4. 102a: ONE ACTION ADDED — buyHull(), loop 121, ruling 58, EQUIPMENT §7.3: hull repair bought by the point at the Market's SERVICES block, the fuel row's shape (loop 83) to the byte — stepper, MAX, a `room` figure in points, the stop reason on the figure line; 5 tenths a point, whole points so nothing is lost; writes `ship.hull` UP only and saves once; `schema` stays 4. 101a: NO ACTION ADDED OR TOUCHED — HULL ON THE CONSOLE, loop 120, S250, CONTROL v1.8 §3.4 item 3a and §3.5: one gauge row under the shields, read from `ship.hull` and the flown ship's `hullMax` in paintConsole(); nothing writes, nothing saves, `schema` stays 4. 100b: NO ACTION ADDED OR TOUCHED — two strings: the report's `laser` line and the FIT PULSE LASER note gave ruling 1 as the only reason for an empty fore mount, and since 100a an ejection is another. 100a: TWO ACTIONS ADDED, die() AND ejectPod() — THE DEATH BUILD, loop 117, COMBAT §8, PANEL §9A, rulings 48, 55 and 56: the fatal hit saves once at hull 0 and the death screen is raised; with an escape pod fitted ejectPod() runs instead and the commander lives in a new ship; wipe() gains one line and one caller, the NEW COMMANDER tap; the save gains an OPTIONAL `cause` in `core.combat`'s bag and `schema` stays 4. 099a: NO ACTION ADDED OR TOUCHED — rulings 53 and 54: the market draws one line on the sold good's open row saying what customs did with the sale; the line is presentation, read from the roll customsRoll() already logs and from state either side of sell(); sell(), customsRoll() and the save are 098b's to the byte. 098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 108b (108b: NO ACTION ADDED OR TOUCHED — presentation only: the station is SOLID, ruling 68 ([DECISION], Ripley, 108, option a) — six faces filled, the slot a hole, the iris two plates; the field and the ships drawn either side of it by distance; and two docked-mode stylesheet tidies, S343 (the Market header clears TUNE) and S344 (the chart canvas cannot grow past its wrap). Nothing saved, nothing in play, `schema` stays 5. 108a: NO ACTION ADDED OR TOUCHED — dock() and launch() are 107a's to the byte; what changed is WHEN they are issued: the pass test now starts a fly-through transition and dock() runs when it ends, and the LAUNCH tap starts the iris and launch() runs when it ends — loop 126, ruling 67 ([DECISION], Ripley, 108). The transition is runtime only, the world holds through it, `docked` flips once at the end. AND THE SAVE ENVELOPE MOVES: `schema` 5, `ship.docked` REQUIRED — S339/S341, the correction the first copy of 107a did not carry; WORLD v1.26 §9.5's migration, a 4 file loads with `docked` false and the next save writes 5. 107a: TWO ACTIONS ADDED, dock() AND launch(), AND jump() TOUCHED — THE FIRST DOCKING BUILD, DOCKING MODEL SPEC v1.0 §10 step 1, rulings 62 to 66 ([DECISION], Ripley, 106 and 107): a station in every system with a slot in one face; a flown approach through it under a roll tolerance, a heading tolerance and a speed limit (three TUNE keys, [ASSUMED]); a missed slot is COMBAT §7's collision; dock() writes `ship.docked` true in one save and the game opens the Market full screen with LAUNCH for FLY; launch() writes it false and puts the ship 150 u outside the face; `ship.docked` IS SAVED — ruling 63 — as an optional boolean in `ship`, absent in older files and read as false, no `schema` bump; jump() clears it so ENGAGE from dock is one act; THE MARKET LEAVES THE IN-FLIGHT STRIP (PANEL §1.3's condition of 017, met); a Docking Computer fitted through TUNE (ruling 66) flies the approach from a DOCK corner button. 105a: ONE ACTION TOUCHED, NONE ADDED — ejectPod() caps the legal record at Offender on the way into the new ship, loop 125, ruling 61 ([DECISION], Ripley, 105, option a); one call to legalAdd() inside the action's own save; the EJECTED screen's Kept row and TUNE's `last ejection` line print the change. 104b: NO ACTION ADDED OR TOUCHED — three tidies, nothing in play: S326, the TUNE `death` string said *button drawn*, it is the slide (ruling 59); the slide's track text fades as the knob passes half-way so the knob does not sit on the words (PANEL §9A.3's cosmetic); S327, two comments said nothing repairs hull but the dev switch and REPAIR — the Market's hull repair row has since `102a`. 104a: NO ACTION ADDED OR TOUCHED — the low-hull warning, loop 122, ruling 60 ([DECISION], Ripley, 104): two stages on the console's HULL row, read in paintConsole() from `ship.hull` against the flown ship's `hullMax` and two new TUNING keys, `hullWarn` 50 and `hullCrit` 25 per cent, both [ASSUMED], both on TUNE sliders; at or under `hullWarn` the bar is amber, at or under `hullCrit` the bar and the label blink; presentation only, nothing written, nothing saved, `schema` stays 4; CONTROL v1.9 §3.5.3 is written with it. 103a: NO ACTION ADDED OR TOUCHED — the death screen's way out, loop 123, ruling 59: NEW COMMANDER is a slide-to-confirm and a second screen with a KILL button; KILL is wipe()'s one caller on that screen, as the button was; presentation only, nothing saved, `schema` stays 4. 102a: ONE ACTION ADDED — buyHull(), loop 121, ruling 58, EQUIPMENT §7.3: hull repair bought by the point at the Market's SERVICES block, the fuel row's shape (loop 83) to the byte — stepper, MAX, a `room` figure in points, the stop reason on the figure line; 5 tenths a point, whole points so nothing is lost; writes `ship.hull` UP only and saves once; `schema` stays 4. 101a: NO ACTION ADDED OR TOUCHED — HULL ON THE CONSOLE, loop 120, S250, CONTROL v1.8 §3.4 item 3a and §3.5: one gauge row under the shields, read from `ship.hull` and the flown ship's `hullMax` in paintConsole(); nothing writes, nothing saves, `schema` stays 4. 100b: NO ACTION ADDED OR TOUCHED — two strings: the report's `laser` line and the FIT PULSE LASER note gave ruling 1 as the only reason for an empty fore mount, and since 100a an ejection is another. 100a: TWO ACTIONS ADDED, die() AND ejectPod() — THE DEATH BUILD, loop 117, COMBAT §8, PANEL §9A, rulings 48, 55 and 56: the fatal hit saves once at hull 0 and the death screen is raised; with an escape pod fitted ejectPod() runs instead and the commander lives in a new ship; wipe() gains one line and one caller, the NEW COMMANDER tap; the save gains an OPTIONAL `cause` in `core.combat`'s bag and `schema` stays 4. 099a: NO ACTION ADDED OR TOUCHED — rulings 53 and 54: the market draws one line on the sold good's open row saying what customs did with the sale; the line is presentation, read from the roll customsRoll() already logs and from state either side of sell(); sell(), customsRoll() and the save are 098b's to the byte. 098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -6174,16 +6186,51 @@ function drawStation(cq, hw, hh){
     ctx.lineTo(hw+F*B[0]/B[2], hh-F*B[1]/B[2]);
   };
   const a=Math.max(0.10, Math.min(1, 1-d/(CELL*1.2)));
-  ctx.strokeStyle="rgba(143,227,176,"+a.toFixed(2)+")";
-  ctx.beginPath();
   const v=[]; for(let i=0;i<8;i++) v.push(P((i&1?H:-H),(i&2?H:-H),(i&4?H:-H)));
   const e=[[0,1],[1,3],[3,2],[2,0],[4,5],[5,7],[7,6],[6,4],[0,4],[1,5],[2,6],[3,7]];
+  const s=[P(-SLOT_HALF_W,-SLOT_HALF_H,H),P(SLOT_HALF_W,-SLOT_HALF_H,H),P(SLOT_HALF_W,SLOT_HALF_H,H),P(-SLOT_HALF_W,SLOT_HALF_H,H)];
+  /* 108b, RULING 68 — THE FACES. A polygon clipped to the near plane
+     (Sutherland–Hodgman against z = NEAR, one plane) and filled black;
+     every face, farthest first, so from outside the slot shows the
+     black interior and from inside the walls hide the field. The slot
+     face takes the slot as a HOLE (even-odd fill: face ring + slot
+     ring), so the opening is the one place the outside shows. */
+  const clipPoly = function(pts){
+    const out=[];
+    for(let i=0;i<pts.length;i++){
+      const A=pts[i], B=pts[(i+1)%pts.length];
+      const aIn=A[2]>=NEAR, bIn=B[2]>=NEAR;
+      if(aIn) out.push(A);
+      if(aIn!==bIn){ const t=(NEAR-A[2])/(B[2]-A[2]); out.push([A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t, NEAR]); }
+    }
+    return out;
+  };
+  const ring = function(pts){
+    const c=clipPoly(pts); if(c.length<3) return false;
+    ctx.moveTo(hw+F*c[0][0]/c[0][2], hh-F*c[0][1]/c[0][2]);
+    for(let i=1;i<c.length;i++) ctx.lineTo(hw+F*c[i][0]/c[i][2], hh-F*c[i][1]/c[i][2]);
+    ctx.closePath(); return true;
+  };
+  /* the six faces by vertex index; the +z face (index 4..7) carries the slot */
+  const faces=[[0,1,3,2],[4,5,7,6],[0,1,5,4],[2,3,7,6],[0,2,6,4],[1,3,7,5]];
+  const depth = function(f){ return (v[f[0]][2]+v[f[1]][2]+v[f[2]][2]+v[f[3]][2])/4; };
+  faces.sort(function(p,q){ return depth(q)-depth(p); });          /* farthest first */
+  ctx.fillStyle="#000";
+  for(const f of faces){
+    const isSlotFace = f.indexOf(4)>=0 && f.indexOf(5)>=0 && f.indexOf(6)>=0 && f.indexOf(7)>=0;
+    ctx.beginPath();
+    if(!ring([v[f[0]],v[f[1]],v[f[2]],v[f[3]]])) continue;
+    if(isSlotFace) ring(s);
+    ctx.fill(isSlotFace ? "evenodd" : "nonzero");
+  }
+  /* the edges, over the faces, with the range fade as before */
+  ctx.strokeStyle="rgba(143,227,176,"+a.toFixed(2)+")";
+  ctx.beginPath();
   for(const x of e) seg(v[x[0]], v[x[1]]);
   ctx.stroke();
-  /* the slot, on the +z face, and the passage's far rectangle */
+  /* the slot, on the +z face */
   ctx.strokeStyle="rgba(255,255,255,"+Math.min(1,a+0.3).toFixed(2)+")";
   ctx.beginPath();
-  const s=[P(-SLOT_HALF_W,-SLOT_HALF_H,H),P(SLOT_HALF_W,-SLOT_HALF_H,H),P(SLOT_HALF_W,SLOT_HALF_H,H),P(-SLOT_HALF_W,SLOT_HALF_H,H)];
   for(let i=0;i<4;i++) seg(s[i], s[(i+1)%4]);
   ctx.stroke();
   /* 108a, loop 126, ruling 67: THE IRIS — two amber shutters across the
@@ -6200,7 +6247,17 @@ function drawStation(cq, hw, hh){
     ctx.stroke();
   }
   if(transit && transit.kind === "launch" && transit.iris < 1){
+    /* 108b: the shutters are SOLID — two black plates closing the hole
+       from its long sides, amber-edged — so the outside is revealed as
+       they open and not before (ruling 68, his words). */
     const y = SLOT_HALF_H * (1 - transit.iris);
+    ctx.fillStyle="#000";
+    ctx.beginPath();
+    ring([P(-SLOT_HALF_W,-SLOT_HALF_H,H),P(SLOT_HALF_W,-SLOT_HALF_H,H),P(SLOT_HALF_W,-SLOT_HALF_H+y,H),P(-SLOT_HALF_W,-SLOT_HALF_H+y,H)]);
+    ctx.fill();
+    ctx.beginPath();
+    ring([P(-SLOT_HALF_W, SLOT_HALF_H-y,H),P(SLOT_HALF_W, SLOT_HALF_H-y,H),P(SLOT_HALF_W, SLOT_HALF_H,H),P(-SLOT_HALF_W, SLOT_HALF_H,H)]);
+    ctx.fill();
     ctx.strokeStyle="rgba(255,176,0,0.9)"; ctx.lineWidth=1.5;
     ctx.beginPath();
     seg(P(-SLOT_HALF_W,-SLOT_HALF_H+y,H), P(SLOT_HALF_W,-SLOT_HALF_H+y,H));
@@ -6222,13 +6279,16 @@ function render(){
     ctx.fillRect(x,y,1,1);
   }
 
-  // wireframe field
+  // wireframe field — 108b: in two passes either side of the station
+  // (ruling 68); the body is the field loop as it has been since 079a.
   ctx.lineWidth=1;
+  function drawField(far){
   for(const o of objects){
     const rel=[wrap(o.p[0]-pos[0]), wrap(o.p[1]-pos[1]), wrap(o.p[2]-pos[2])];
     const c=qrot(cq,rel);
     const d=Math.hypot(c[0],c[1],c[2]);
     if(d>CELL*1.35) continue;
+    if(isNear(d) === far) continue;      /* 108b */
     if(c[2] < -o.r*2) continue;
     const a=Math.max(0.10, Math.min(1, 1-d/(CELL*1.2)));
     ctx.strokeStyle="rgba(143,227,176,"+a.toFixed(2)+")";
@@ -6249,21 +6309,48 @@ function render(){
     }
     ctx.stroke();
   }
+  }                                      /* end drawField — 108b */
 
-  // 107a, DOCKING §2.3: THE STATION — a wireframe box turned by the
-  // runtime angle, and THE SLOT FACE drawn distinguishably: the slot
-  // rectangle itself, at full ink, on the one face that has it ([A] 12).
-  // Same range fade and near-plane clip as the field; that loop is untouched.
+  // 108b, RULING 68 ([DECISION], Ripley, 108, option a): THE STATION IS
+  // SOLID, ALWAYS. Its six faces are filled black behind their edges and
+  // the slot is cut out of the face that has it, so the field, the stars
+  // and the ships show through the opening and nowhere else — which is
+  // what the iris is for. The renderer has no depth buffer; the order is
+  // the painter's: things FARTHER than the station are drawn before it
+  // (above and in drawField), the station over them, things NEARER after
+  // it. Near and far are by centre distance against the station's centre
+  // — [ASSUMED] 33: a rock whose centre is just beyond the station's but
+  // whose near edge is in front of a wall draws behind it. The field is
+  // sparse (one object per ~1,100 u, FLIGHT §5.2) and the station 200 u;
+  // nothing has been seen to straddle. With the camera INSIDE the box
+  // nothing outside is nearer, so everything draws behind the walls.
+  const stRel=[wrap(station.p[0]-pos[0]), wrap(station.p[1]-pos[1]), wrap(station.p[2]-pos[2])];
+  const stDist=Math.hypot(stRel[0],stRel[1],stRel[2]);
+  const stL=stationLocal(pos);
+  const camInside = Math.abs(stL.x) < STATION_HALF && Math.abs(stL.y) < STATION_HALF && Math.abs(stL.z) < STATION_HALF;
+  const isNear = function(d){ return !camInside && d < stDist; };
+
+  // 107a, DOCKING §2.3: THE STATION — a box turned by the runtime angle,
+  // and THE SLOT FACE drawn distinguishably: the slot rectangle itself,
+  // at full ink, on the one face that has it ([A] 12). 108b: solid.
+  drawField(true);                       /* 108b: the field objects FARTHER than the station, before it */
+  drawShips(true);
   drawStation(cq, hw, hh);
+  drawField(false);                      /* and the NEARER ones over it */
+  drawShips(false);
 
   // 091a, COMBAT §3.3: the ships. One shape, turned by the contact's own
   // `q`, drawn at HULL_RADIUS in the role's colour (S260). Same range
   // fade and near-plane clip as the field above; that loop is untouched.
+  // 108b: wrapped as drawShips(far) so the station can be drawn between
+  // the far ships and the near ones; the body is 107a's.
+  function drawShips(far){
   for(const c of contacts){
     const rel=[wrap(c.pos[0]-pos[0]), wrap(c.pos[1]-pos[1]), wrap(c.pos[2]-pos[2])];
     const cc=qrot(cq,rel);
     const d=Math.hypot(cc[0],cc[1],cc[2]);
     if(d>CELL*1.35) continue;
+    if(isNear(d) === far) continue;      /* 108b: this pass is the other side of the station */
     if(cc[2] < -HULL_RADIUS*2) continue;
     const a=Math.max(0.10, Math.min(1, 1-d/(CELL*1.2)));
     /* 092a: a ship the player's laser struck is drawn WHITE for HIT_SHOW
@@ -6289,6 +6376,7 @@ function render(){
     }
     ctx.stroke();
   }
+  }                                      /* end drawShips — 108b */
 
   // 092b: wreckage. Each piece is one small triangle, turned by its own
   // `q`, drawn white for its first 0.2 s and then in the dead ship's
@@ -6909,7 +6997,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 108a — settings\n"+
+    "ELITE: THE CLONES 108b — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -7571,6 +7659,21 @@ function drawChart(){
   const s = state.system;                          /* CORE API §3.1 */
   if(!s) return;
   const r = chartWrap.getBoundingClientRect();
+  /* 108b — S344. The wrap is measured on the frame the panel opens, and
+     on that frame the strip below it may not have its text yet, so the
+     wrap reads taller than it will be; a canvas sized to that reading
+     overlapped NO SELECTION by 15 px on device (17 Oct, measured). Two
+     guards: a degenerate wrap (the panel mid-layout) draws nothing and
+     asks for the next frame; a wrap that has moved since the canvas was
+     sized redraws once more next frame. The canvas is out of the flow
+     (stylesheet), so the wrap's height is the column's, never the canvas's. */
+  if(r.height < 40 || r.width < 40){ requestAnimationFrame(drawChart); return; }
+  if(chartCv.__h !== undefined && Math.round(r.height) !== chartCv.__h) requestAnimationFrame(drawChart);
+  chartCv.__h = Math.round(r.height);
+  if(!chartCv.__ro && typeof ResizeObserver === "function"){   /* 108b — see drawGal() */
+    chartCv.__ro = new ResizeObserver(() => { if(chartCv.__h !== undefined && Math.round(chartWrap.getBoundingClientRect().height) !== chartCv.__h) drawChart(); });
+    chartCv.__ro.observe(chartWrap);
+  }
   /* FAULT 3: the box is capped at CHART.ASPECT and centred by the flex
      parent. The scale below still fits the short side, so the fuel
      circle keeps its relative size — it is the frame that is bounded,
@@ -8024,6 +8127,18 @@ function drawGal(){
   const s = state.system;                          /* CORE API §3.1 */
   if(!s) return;
   const r = galWrap.getBoundingClientRect();
+  /* 108b — S344, the same two guards as drawChart() */
+  if(r.height < 40 || r.width < 40){ requestAnimationFrame(drawGal); return; }
+  if(galCv.__h !== undefined && Math.round(r.height) !== galCv.__h) requestAnimationFrame(drawGal);
+  galCv.__h = Math.round(r.height);
+  /* 108b — the wrap settles AFTER the open-frame (the strip below takes
+     its text, the dock header changes the column), and nothing called
+     drawGal() again, so the first guard alone left the canvas 15 px
+     long. A ResizeObserver on the wrap redraws whenever it moves. */
+  if(!galCv.__ro && typeof ResizeObserver === "function"){
+    galCv.__ro = new ResizeObserver(() => { if(galCv.__h !== undefined && Math.round(galWrap.getBoundingClientRect().height) !== galCv.__h) drawGal(); });
+    galCv.__ro.observe(galWrap);
+  }
   const h = Math.max(1, Math.round(r.height));
   const w = Math.max(1, Math.round(Math.min(r.width, h * CHART.ASPECT)));
   galCv.style.width = w + "px";
