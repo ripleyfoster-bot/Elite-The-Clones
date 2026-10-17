@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 107a</title>
+<title>ELITE: THE CLONES — 108a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -1179,6 +1179,14 @@
       well lined up. <b>20 — one fifth — is the starting figure, [ASSUMED]</b>: 120 at your 600. The Docking
       Computer flies at exactly this speed. Out of 5–100 flies as 20.</div>
   </div>
+  <!-- 108a, LOOP 126, RULING 67 ([DECISION], Ripley, 108): the dock and
+       launch transitions' length. His figure, from the mock. -->
+  <div class="row">
+    <label>Transition <i><span id="vTr"></span> s</i></label>
+    <input type="range" id="sTr" min="0.5" max="4" step="0.1">
+    <div class="note">How long the fly-through into the station and the iris out of it take.
+      <b>3.1 is your figure, ruling 67</b> — read off the mock, not the game. Out of 0.5–4 flies as 3.1.</div>
+  </div>
   <div class="toggles">
     <button id="tRefill">SHIPS' SHIELDS REFILL</button>
     <button id="bPadFire">PAD FIRE</button>
@@ -1504,6 +1512,11 @@ const SPEC = { dead:6, defl:55, exp:1.6,
                                             pair (12/10) is NOT applied: this build has no input class to choose by
                                             (S334, [ASSUMED]). NEW KEYS: a stored tuning from 105a has none and reads
                                             these. All three [ASSUMED]; slotTol() validates, the report says. */
+               transitionSec:3.1,        /* 108a, LOOP 126, RULING 67 ([DECISION], Ripley, 108): the length of the
+                                            dock and launch transitions, seconds. HIS FIGURE, read off the mock
+                                            (sim_loop126) on his phone; still a guess about the game, on a TUNE
+                                            slider. transitionSec() validates 0.5–4; out of range flies as this.
+                                            NEW KEY: a stored tuning from 107a has none and reads this. */
                padFire:"double",         /* 092b, loop 65 (B) and the gesture decision (C): off | single | double */
                /* 092c. `tapGap` (092b, 200) IS RETIRED AND RENAMED, ON PURPOSE. A stored
                   tuning outranks a changed constant (S52's shape), and 092b stored 200 on
@@ -2546,8 +2559,21 @@ const SAVE_KEY = "elite.clones.save";
    file refuses on 082b and everything older. 065a onward keeps a copy
    of a refused file; nothing before 065a does — DO NOT ROLL BACK PAST
    065a. */
-const SAVE_SCHEMA = 4;                    /* WORLD MODEL §9.5 — what this build WRITES */
-const SAVE_SCHEMA_READS = [2, 3, 4];      /* WORLD MODEL §9.5 — what it READS */
+/* RULING 63, session 106; built 107a, CORRECTED 108a. SCHEMA 4 -> 5, THE
+   FOURTH BUMP AND THE THIRD MIGRATION. WORLD MODEL v1.26 §9.3, §9.5;
+   DOCKING v1.1 §5.1. `ship.docked` is a REQUIRED boolean in 5. A 4 file
+   — every file before this build, his included — loads with `docked`
+   supplied as false and the next save writes 5; a 5 file without it, or
+   with a non-boolean, refuses. S339 / S341: the first copy of 107a made
+   `docked` an OPTIONAL key under 4 on the kill list's precedent; WORLD
+   §9.5's own rejected row — *an optional field's absence means two
+   things* — forbids that for the envelope. The corrected 107a card was
+   never on a device and never reached 108; this is the correction,
+   applied to the first copy. A 4 file carrying the first copy's optional
+   `docked: true` is NOT read for it: it loads as false, outside the
+   face — one push-out at no cost (S340; the handover's §6 test). */
+const SAVE_SCHEMA = 5;                    /* WORLD MODEL §9.5 — what this build WRITES */
+const SAVE_SCHEMA_READS = [2, 3, 4, 5];   /* WORLD MODEL §9.5 — what it READS */
 /* LOOP 105. The refused-file copy. WORLD §13 [DECISION] 31, Ripley, 064;
    recorded in WORLD §9.7 since v1.20 — S192 PAID there. (Until 084a this
    said "NOT YET RECORDED IN WORLD"; S225, sweep check 10.) A refusal
@@ -2650,7 +2676,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 107a (107a: TWO ACTIONS ADDED, dock() AND launch(), AND jump() TOUCHED — THE FIRST DOCKING BUILD, DOCKING MODEL SPEC v1.0 §10 step 1, rulings 62 to 66 ([DECISION], Ripley, 106 and 107): a station in every system with a slot in one face; a flown approach through it under a roll tolerance, a heading tolerance and a speed limit (three TUNE keys, [ASSUMED]); a missed slot is COMBAT §7's collision; dock() writes `ship.docked` true in one save and the game opens the Market full screen with LAUNCH for FLY; launch() writes it false and puts the ship 150 u outside the face; `ship.docked` IS SAVED — ruling 63 — as an optional boolean in `ship`, absent in older files and read as false, no `schema` bump; jump() clears it so ENGAGE from dock is one act; THE MARKET LEAVES THE IN-FLIGHT STRIP (PANEL §1.3's condition of 017, met); a Docking Computer fitted through TUNE (ruling 66) flies the approach from a DOCK corner button. 105a: ONE ACTION TOUCHED, NONE ADDED — ejectPod() caps the legal record at Offender on the way into the new ship, loop 125, ruling 61 ([DECISION], Ripley, 105, option a); one call to legalAdd() inside the action's own save; the EJECTED screen's Kept row and TUNE's `last ejection` line print the change. 104b: NO ACTION ADDED OR TOUCHED — three tidies, nothing in play: S326, the TUNE `death` string said *button drawn*, it is the slide (ruling 59); the slide's track text fades as the knob passes half-way so the knob does not sit on the words (PANEL §9A.3's cosmetic); S327, two comments said nothing repairs hull but the dev switch and REPAIR — the Market's hull repair row has since `102a`. 104a: NO ACTION ADDED OR TOUCHED — the low-hull warning, loop 122, ruling 60 ([DECISION], Ripley, 104): two stages on the console's HULL row, read in paintConsole() from `ship.hull` against the flown ship's `hullMax` and two new TUNING keys, `hullWarn` 50 and `hullCrit` 25 per cent, both [ASSUMED], both on TUNE sliders; at or under `hullWarn` the bar is amber, at or under `hullCrit` the bar and the label blink; presentation only, nothing written, nothing saved, `schema` stays 4; CONTROL v1.9 §3.5.3 is written with it. 103a: NO ACTION ADDED OR TOUCHED — the death screen's way out, loop 123, ruling 59: NEW COMMANDER is a slide-to-confirm and a second screen with a KILL button; KILL is wipe()'s one caller on that screen, as the button was; presentation only, nothing saved, `schema` stays 4. 102a: ONE ACTION ADDED — buyHull(), loop 121, ruling 58, EQUIPMENT §7.3: hull repair bought by the point at the Market's SERVICES block, the fuel row's shape (loop 83) to the byte — stepper, MAX, a `room` figure in points, the stop reason on the figure line; 5 tenths a point, whole points so nothing is lost; writes `ship.hull` UP only and saves once; `schema` stays 4. 101a: NO ACTION ADDED OR TOUCHED — HULL ON THE CONSOLE, loop 120, S250, CONTROL v1.8 §3.4 item 3a and §3.5: one gauge row under the shields, read from `ship.hull` and the flown ship's `hullMax` in paintConsole(); nothing writes, nothing saves, `schema` stays 4. 100b: NO ACTION ADDED OR TOUCHED — two strings: the report's `laser` line and the FIT PULSE LASER note gave ruling 1 as the only reason for an empty fore mount, and since 100a an ejection is another. 100a: TWO ACTIONS ADDED, die() AND ejectPod() — THE DEATH BUILD, loop 117, COMBAT §8, PANEL §9A, rulings 48, 55 and 56: the fatal hit saves once at hull 0 and the death screen is raised; with an escape pod fitted ejectPod() runs instead and the commander lives in a new ship; wipe() gains one line and one caller, the NEW COMMANDER tap; the save gains an OPTIONAL `cause` in `core.combat`'s bag and `schema` stays 4. 099a: NO ACTION ADDED OR TOUCHED — rulings 53 and 54: the market draws one line on the sold good's open row saying what customs did with the sale; the line is presentation, read from the roll customsRoll() already logs and from state either side of sell(); sell(), customsRoll() and the save are 098b's to the byte. 098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 108a (108a: NO ACTION ADDED OR TOUCHED — dock() and launch() are 107a's to the byte; what changed is WHEN they are issued: the pass test now starts a fly-through transition and dock() runs when it ends, and the LAUNCH tap starts the iris and launch() runs when it ends — loop 126, ruling 67 ([DECISION], Ripley, 108). The transition is runtime only, the world holds through it, `docked` flips once at the end. AND THE SAVE ENVELOPE MOVES: `schema` 5, `ship.docked` REQUIRED — S339/S341, the correction the first copy of 107a did not carry; WORLD v1.26 §9.5's migration, a 4 file loads with `docked` false and the next save writes 5. 107a: TWO ACTIONS ADDED, dock() AND launch(), AND jump() TOUCHED — THE FIRST DOCKING BUILD, DOCKING MODEL SPEC v1.0 §10 step 1, rulings 62 to 66 ([DECISION], Ripley, 106 and 107): a station in every system with a slot in one face; a flown approach through it under a roll tolerance, a heading tolerance and a speed limit (three TUNE keys, [ASSUMED]); a missed slot is COMBAT §7's collision; dock() writes `ship.docked` true in one save and the game opens the Market full screen with LAUNCH for FLY; launch() writes it false and puts the ship 150 u outside the face; `ship.docked` IS SAVED — ruling 63 — as an optional boolean in `ship`, absent in older files and read as false, no `schema` bump; jump() clears it so ENGAGE from dock is one act; THE MARKET LEAVES THE IN-FLIGHT STRIP (PANEL §1.3's condition of 017, met); a Docking Computer fitted through TUNE (ruling 66) flies the approach from a DOCK corner button. 105a: ONE ACTION TOUCHED, NONE ADDED — ejectPod() caps the legal record at Offender on the way into the new ship, loop 125, ruling 61 ([DECISION], Ripley, 105, option a); one call to legalAdd() inside the action's own save; the EJECTED screen's Kept row and TUNE's `last ejection` line print the change. 104b: NO ACTION ADDED OR TOUCHED — three tidies, nothing in play: S326, the TUNE `death` string said *button drawn*, it is the slide (ruling 59); the slide's track text fades as the knob passes half-way so the knob does not sit on the words (PANEL §9A.3's cosmetic); S327, two comments said nothing repairs hull but the dev switch and REPAIR — the Market's hull repair row has since `102a`. 104a: NO ACTION ADDED OR TOUCHED — the low-hull warning, loop 122, ruling 60 ([DECISION], Ripley, 104): two stages on the console's HULL row, read in paintConsole() from `ship.hull` against the flown ship's `hullMax` and two new TUNING keys, `hullWarn` 50 and `hullCrit` 25 per cent, both [ASSUMED], both on TUNE sliders; at or under `hullWarn` the bar is amber, at or under `hullCrit` the bar and the label blink; presentation only, nothing written, nothing saved, `schema` stays 4; CONTROL v1.9 §3.5.3 is written with it. 103a: NO ACTION ADDED OR TOUCHED — the death screen's way out, loop 123, ruling 59: NEW COMMANDER is a slide-to-confirm and a second screen with a KILL button; KILL is wipe()'s one caller on that screen, as the button was; presentation only, nothing saved, `schema` stays 4. 102a: ONE ACTION ADDED — buyHull(), loop 121, ruling 58, EQUIPMENT §7.3: hull repair bought by the point at the Market's SERVICES block, the fuel row's shape (loop 83) to the byte — stepper, MAX, a `room` figure in points, the stop reason on the figure line; 5 tenths a point, whole points so nothing is lost; writes `ship.hull` UP only and saves once; `schema` stays 4. 101a: NO ACTION ADDED OR TOUCHED — HULL ON THE CONSOLE, loop 120, S250, CONTROL v1.8 §3.4 item 3a and §3.5: one gauge row under the shields, read from `ship.hull` and the flown ship's `hullMax` in paintConsole(); nothing writes, nothing saves, `schema` stays 4. 100b: NO ACTION ADDED OR TOUCHED — two strings: the report's `laser` line and the FIT PULSE LASER note gave ruling 1 as the only reason for an empty fore mount, and since 100a an ejection is another. 100a: TWO ACTIONS ADDED, die() AND ejectPod() — THE DEATH BUILD, loop 117, COMBAT §8, PANEL §9A, rulings 48, 55 and 56: the fatal hit saves once at hull 0 and the death screen is raised; with an escape pod fitted ejectPod() runs instead and the commander lives in a new ship; wipe() gains one line and one caller, the NEW COMMANDER tap; the save gains an OPTIONAL `cause` in `core.combat`'s bag and `schema` stays 4. 099a: NO ACTION ADDED OR TOUCHED — rulings 53 and 54: the market draws one line on the sold good's open row saying what customs did with the sale; the line is presentation, read from the roll customsRoll() already logs and from state either side of sell(); sell(), customsRoll() and the save are 098b's to the byte. 098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -2724,7 +2750,7 @@ function saveGame(){
     const ship = {};
     ship.class = ID_NS + ":" + sh.class;    /* LOOP 110, WORLD §9.3 — qualified on the way out, §9.6 */
     for(const k of SHIP_SAVED) ship[k] = sh[k];
-    ship.docked = !!sh.docked;              /* 107a, RULING 63 — always written, never omitted */
+    ship.docked = !!sh.docked;              /* RULING 63 — always written, never omitted; REQUIRED in schema 5 (108a) */
     ship.pose = posePack();                 /* LOOP 105, WORLD §9.3 */
     const obj = {
       schema:            SAVE_SCHEMA,
@@ -2861,7 +2887,7 @@ function loadFrom(raw){
      file it is NOT READ — no build writes one there, and a hand-edited
      one is ignored, not refused ([ASSUMED] 29's rule); it loads as 0. */
   let cunningPlans = 0;
-  if(o.schema === 4){
+  if(o.schema >= 4){                      /* 108a: 4 and 5 */
     if(!Number.isInteger(c.cunningPlans) || c.cunningPlans < 0){
       saveStatus = "REFUSED — cunningPlans: "+c.cunningPlans; return false; }
     cunningPlans = c.cunningPlans;
@@ -2951,7 +2977,7 @@ function loadFrom(raw){
   if(!o.ship || typeof o.ship !== "object" || Array.isArray(o.ship)){
     saveStatus = "REFUSED — ship is missing or not an object"; return false; }
   let shipClass = START_SHIP;
-  if(o.schema === 4){
+  if(o.schema >= 4){                      /* 108a: 4 and 5 */
     const rawClass = o.ship.class;
     if(typeof rawClass !== "string"){
       saveStatus = "REFUSED — ship.class: "+rawClass; return false; }
@@ -2973,13 +2999,14 @@ function loadFrom(raw){
     if(!ok){ saveStatus = "REFUSED — ship."+k+": "+v; return false; }
     ship[k] = v;
   }
-  /* ship.docked. 107a, RULING 63. OPTIONAL in a 4 file: every file
-     written before 107a lacks it and loads as false (the kill bag's
-     shape — absence is legal, no schema bump, [ASSUMED] pending WORLD
-     §9.3). Present and not a boolean refuses the file (§9.7: not
-     repaired). In a 2 or 3 file it is not read ([ASSUMED] 29's rule). */
+  /* ship.docked. RULING 63; 108a, SCHEMA 5 (S339/S341 — see SAVE_SCHEMA).
+     REQUIRED in a 5 file: a missing or non-boolean key refuses the file
+     (WORLD §9.7: not repaired). In a 4 file it is NOT READ — supplied as
+     false, the migration's default, as `class` and `cunningPlans` were in
+     a 3 file; the first-copy 107a's optional key is ignored, not honoured.
+     In a 2 or 3 file likewise ([ASSUMED] 29's rule). */
   let docked = false;
-  if(o.schema === 4 && o.ship.docked !== undefined){
+  if(o.schema >= 5){
     if(typeof o.ship.docked !== "boolean"){
       saveStatus = "REFUSED — ship.docked: "+o.ship.docked; return false; }
     docked = o.ship.docked;
@@ -3157,13 +3184,16 @@ function loadFrom(raw){
                (docked ? "  (DOCKED — ruling 63: opens in dock)" : "")+     /* 107a */
                /* LOOP 110. What the load SUPPLIED is said in words, per
                   schema — the migration is readable off this line. */
-               (o.schema === 4
-                  ? "  (schema 4, pose loaded, class "+ID_NS+":"+shipClass+", cunningPlans "+cunningPlans+")"
+               (o.schema === 5
+                  ? "  (schema 5, pose loaded, class "+ID_NS+":"+shipClass+", cunningPlans "+cunningPlans+", docked "+docked+")"
+                : o.schema === 4
+                  ? "  (schema 4 -> 5: pose loaded; class "+ID_NS+":"+shipClass+"; cunningPlans "+cunningPlans+
+                    "; docked absent — false; next save writes 5)"
                 : o.schema === 3
-                  ? "  (schema 3 -> 4: pose loaded; class absent — "+ID_NS+":"+START_SHIP+
-                    "; cunningPlans absent — 0; next save writes 4)"
-                  : "  (schema 2 -> 4: no pose — start pose; class absent — "+ID_NS+":"+START_SHIP+
-                    "; cunningPlans absent — 0; next save writes 4)");
+                  ? "  (schema 3 -> 5: pose loaded; class absent — "+ID_NS+":"+START_SHIP+
+                    "; cunningPlans absent — 0; docked absent — false; next save writes 5)"
+                  : "  (schema 2 -> 5: no pose — start pose; class absent — "+ID_NS+":"+START_SHIP+
+                    "; cunningPlans absent — 0; docked absent — false; next save writes 5)");
   return true;
 }
 
@@ -5329,6 +5359,77 @@ function devRepair(){
 let autoDock = false, autoPhase = "";
 let dockCount = 0, launchCount = 0, wallCount = 0;
 let lastApproach = null;                 /* TUNE's `last approach` — runtime only, lost on a reopen (S330's shape) */
+/* 108a, LOOP 126 — THE DOCK AND LAUNCH TRANSITIONS. RULING 67 ([DECISION],
+   Ripley, 108, chosen on the mock sim_loop126 from three of each):
+   docking is FLY-THROUGH — the view carries on along the slot's axis into
+   the box and darkens, then the Market; launch is IRIS — the slot's
+   aperture opens from both long sides, then the view flies out along the
+   axis to LAUNCH_CLEAR. Rejected, offered on the mock: bay lights, clamps
+   (docking); fly-out, catapult (launch). THE RULES, s107 §2a: the world
+   HOLDS through it, as in dock; INSTRUMENTS SHOW STATE, NOT THE ANIMATION
+   — `docked` flips once, at the end, when dock() or launch() runs its one
+   save; one TUNE slider for its length. `transit` is RUNTIME ONLY — never
+   saved, never in `state`; a reload mid-transition opens wherever the last
+   save put the ship, which is where it was before the transition began
+   ([ASSUMED] 31: acceptable — nothing is owed). Not interruptible: TUNE
+   pauses it (frames are not stepped), nothing aborts it. */
+let transit = null;                      /* { kind:"dock"|"launch", t, dur, from, to, fade, iris } */
+let lastTransit = "";                    /* TUNE's `transition` line, runtime only */
+function transitionSec(){
+  const v = T.transitionSec;
+  const ok = typeof v === "number" && v >= 0.5 && v <= 4;
+  return { sec: ok ? v : SPEC.transitionSec, valid: ok };
+}
+function easeInOut(u){ return u < 0.5 ? 2*u*u : 1 - Math.pow(-2*u + 2, 2) / 2; }
+function beginDockTransit(){
+  if(transit || state.ship.docked) return;
+  autoDock = false; autoPhase = "";
+  speed = 0; state.ship.speed = 0;
+  /* THE FLY-THROUGH REPLAYS THE PASSAGE: from 80 u outside the face, on
+     the axis at the ship's own (x, y) in the slot, through the slot and
+     into the box to its centre. It cannot start where the pass test
+     passed: that is 40 u inside, where a 200 u box is all round the
+     camera and nothing of it is on a 402 px screen (measured 108 — the
+     far wall's corners project 60 px off the canvas). The slot has to
+     be in front of the camera to be flown through, so the view steps
+     back to where it was about a second earlier. [ASSUMED] 32 that the
+     step is not seen as one. */
+  const f = stationFrame(), L = stationLocal(pos);
+  const from = v3add(v3add(v3add(station.p, f.r, L.x), f.u, L.y), f.a, STATION_HALF + 80);
+  bump(from);
+  transit = { kind:"dock", t:0, dur:transitionSec().sec, from:from,
+              to:[station.p[0],station.p[1],station.p[2]], fade:0, iris:1 };
+}
+function beginLaunchTransit(){
+  if(transit || !state.ship.docked) return;
+  const f = stationFrame();
+  /* inside the box on the axis, 90 u behind the face, facing OUT with the slot's up; the iris is shut */
+  const start = v3add(station.p, f.a, STATION_HALF - 90);
+  q = quatFromFrame(f.a, f.u);
+  bump(start);
+  transit = { kind:"launch", t:0, dur:transitionSec().sec, from:start,
+              to:v3add(stationFaceCentre(), f.a, LAUNCH_CLEAR), fade:1, iris:0 };
+}
+function transitStep(dt){
+  if(!transit) return;
+  const x = transit;
+  x.t += dt;
+  const u = Math.min(1, x.t / x.dur);
+  const lerp = function(e){ return [x.from[0]+(x.to[0]-x.from[0])*e, x.from[1]+(x.to[1]-x.from[1])*e, x.from[2]+(x.to[2]-x.from[2])*e]; };
+  if(x.kind === "dock"){
+    bump(lerp(easeInOut(u)));
+    x.fade = Math.max(0, (u - 0.7) / 0.3);          /* the last 30 % darkens */
+  } else {
+    x.fade = Math.max(0, 1 - u / 0.12);               /* from black */
+    x.iris = Math.min(1, u / 0.5);                    /* the iris opens over the first half */
+    bump(u < 0.5 ? x.from : lerp(easeInOut((u - 0.5) / 0.5)));
+  }
+  if(u >= 1){
+    const k = x.kind; transit = null;
+    lastTransit = k+" "+x.dur.toFixed(1)+" s, ended "+new Date().toLocaleTimeString();
+    if(k === "dock") dock(); else launch();           /* the one save; `docked` flips here and only here */
+  }
+}
 function dcFitted(){ const e = state.equipment.dockingComputer; return !!(e && e.qty > 0); }
 function slotTol(){
   const r = T.slotRollTol, h = T.slotHeadingTol, s = T.slotSpeedPct;
@@ -5363,7 +5464,7 @@ function stationCollide(){
   lastApproach = { t:Date.now(), x:L.x, y:L.y, z:L.z, roll:rd.roll, head:rd.head, speed:rd.speed,
                    limit:slotSpeedMax(), tol:t, failed:failed, result: failed ? "WALL — "+failed : (past ? "DOCKED" : "in the slot") };
   if(!failed){
-    if(past) dock();
+    if(past) beginDockTransit();                     /* 108a, loop 126: dock() runs when the fly-through ends */
     return;
   }
   /* the wall — COMBAT §7 at the ship's speed, bypassing shields */
@@ -5497,7 +5598,11 @@ function autoDockStep(dt){
 /* Presentation: docked mode on and off, from state. */
 let dockedShown = false;
 function dockSync(){
-  const d = !!state.ship.docked;
+  /* 108a, loop 126: during the launch transition `docked` is still true
+     in state (launch() has not run) but the view is the flight view with
+     the iris on it; docked mode stands down for its length. The strip's
+     `docked` line reads state, not this. */
+  const d = !!state.ship.docked && !(transit && transit.kind === "launch");
   if(d !== dockedShown){
     dockedShown = d;
     document.body.classList.toggle("docked", d);
@@ -5520,7 +5625,7 @@ function dockHeaders(){
 }
 const dockBtnEl = document.getElementById("dockBtn");
 function paintDock(){
-  const on = !tuner.classList.contains("open") && (autoDock || dcAvailable());
+  const on = !tuner.classList.contains("open") && !transit && (autoDock || dcAvailable());   /* 108a: not during a transition */
   dockBtnEl.classList.toggle("on", on);
   if(on) dockBtnEl.textContent = autoDock ? "DOCKING — TAP TO ABORT" : "DOCK";
 }
@@ -6081,6 +6186,27 @@ function drawStation(cq, hw, hh){
   const s=[P(-SLOT_HALF_W,-SLOT_HALF_H,H),P(SLOT_HALF_W,-SLOT_HALF_H,H),P(SLOT_HALF_W,SLOT_HALF_H,H),P(-SLOT_HALF_W,SLOT_HALF_H,H)];
   for(let i=0;i<4;i++) seg(s[i], s[(i+1)%4]);
   ctx.stroke();
+  /* 108a, loop 126, ruling 67: THE IRIS — two amber shutters across the
+     slot, closing in from its long sides; `iris` 0 is shut, 1 is open.
+     Drawn only while a launch transition plays. Presentation. */
+  /* 108a, loop 126: THE PASSAGE'S RAILS — four lines from the slot's
+     corners SLOT_DEPTH into the box, so the fly-through has something to
+     fly through. Drawn only while a dock transition plays; 107a's picture
+     of the station in flight is untouched. Presentation. */
+  if(transit && transit.kind === "dock"){
+    ctx.beginPath();
+    for(let i=0;i<4;i++){ const c=[[-SLOT_HALF_W,-SLOT_HALF_H],[SLOT_HALF_W,-SLOT_HALF_H],[SLOT_HALF_W,SLOT_HALF_H],[-SLOT_HALF_W,SLOT_HALF_H]][i];
+      seg(P(c[0],c[1],H), P(c[0],c[1],H-SLOT_DEPTH)); }
+    ctx.stroke();
+  }
+  if(transit && transit.kind === "launch" && transit.iris < 1){
+    const y = SLOT_HALF_H * (1 - transit.iris);
+    ctx.strokeStyle="rgba(255,176,0,0.9)"; ctx.lineWidth=1.5;
+    ctx.beginPath();
+    seg(P(-SLOT_HALF_W,-SLOT_HALF_H+y,H), P(SLOT_HALF_W,-SLOT_HALF_H+y,H));
+    seg(P(-SLOT_HALF_W, SLOT_HALF_H-y,H), P(SLOT_HALF_W, SLOT_HALF_H-y,H));
+    ctx.stroke(); ctx.lineWidth=1;
+  }
 }
 function render(){
   ctx.fillStyle="#000"; ctx.fillRect(0,0,W,H);
@@ -6244,6 +6370,11 @@ function render(){
   ctx.moveTo(hw,hh-9); ctx.lineTo(hw,hh-3);
   ctx.moveTo(hw,hh+3); ctx.lineTo(hw,hh+9);
   ctx.stroke();
+  /* 108a, loop 126: the transition's darkness — the fly-through's last
+     30 %, the iris's first 12 % — drawn over the view and nothing else.
+     The band, the strip and the console are untouched: instruments show
+     state, not the animation. */
+  if(transit && transit.fade > 0){ ctx.fillStyle="rgba(0,0,0,"+transit.fade.toFixed(3)+")"; ctx.fillRect(0,0,W,H); }
 }
 
 /* ---------- radar ----------
@@ -6424,7 +6555,11 @@ function frame(now){
      says whether it is up — read from state every frame, as the death
      screen is (constraint 2's shape: nothing held between frames). */
   const docked = dockSync();
-  const held = tuner.classList.contains("open") || down || docked;
+  /* 108a, loop 126: THE WORLD HOLDS THROUGH A TRANSITION, as it does in
+     dock — no flight, no contacts, no recharge, the station does not
+     turn. transitStep() moves the pose on its own clock; TUNE pauses it. */
+  const held = tuner.classList.contains("open") || down || docked || !!transit;
+  if(transit && !tuner.classList.contains("open")) transitStep(dt);
   let input = makeFlightInput(0, 0, throttle), rates = { wx:0, wz:0 };
   if(!held){
   const kb=keyAxes(dt);
@@ -6492,6 +6627,7 @@ const map=[["sDead","vDead","dead",0],["sDefl","vDefl","defl",0],["sExp","vExp",
            ["sDmg","vDmg","theirDamage",0],                       /* 097a */
            ["sHw","vHw","hullWarn",0],["sHc","vHc","hullCrit",0], /* 104a, loop 122, ruling 60 */
            ["sRt","vRt","slotRollTol",0],["sHt","vHt","slotHeadingTol",0],["sSl","vSl","slotSpeedPct",0], /* 107a, DOCKING §3.3, ruling 65 */
+           ["sTr","vTr","transitionSec",1],                     /* 108a, loop 126, ruling 67 */
            ["sGrace","vGrace","grace",0],                         /* 092b */
            ["sMove","vMove","tapMove",0]];                        /* 092c */
 
@@ -6773,7 +6909,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 107a — settings\n"+
+    "ELITE: THE CLONES 108a — settings\n"+
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -6852,6 +6988,10 @@ function writeReport(){
        copy it BEFORE a reopen (S330). */
     "station       "+stationLine()+"\n"+
     "slot tol      "+slotTolLine()+"\n"+
+    "transition    "+transitionSec().sec.toFixed(1)+" s  (ruling 67, his figure)"+     /* 108a, loop 126 */
+                     (transitionSec().valid ? "" : "  ·  STORED VALUE INVALID, flying the spec")+
+                     "  ·  last: "+(lastTransit || "none this session")+
+                     (transit ? "  ·  IN PROGRESS: "+transit.kind : "")+"\n"+
     "docking       "+dockingLine()+"\n"+
     "last approach "+approachLine()+"\n"+
     /* 091a, COMBAT step 2. `danger` is read from state.system — the
@@ -9347,7 +9487,7 @@ document.getElementById("sysBtn").addEventListener("click", function(){
   if(panelEl.classList.contains("open")) closePanel(); else openPanel();
 });
 document.getElementById("navFly").addEventListener("click", closePanel);
-document.getElementById("navLaunch").addEventListener("click", function(){ launch(); });   /* 107a */
+document.getElementById("navLaunch").addEventListener("click", function(){ beginLaunchTransit(); });   /* 107a; 108a: the iris first, launch() at its end */
 document.getElementById("navSys").addEventListener("click", function(){ showPanel("sys"); });
 document.getElementById("navMkt").addEventListener("click", function(){ showPanel("mkt"); });
 document.getElementById("navChart").addEventListener("click", function(){ showPanel("chart"); });
