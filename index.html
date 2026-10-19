@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<title>ELITE: THE CLONES — 109c</title>
+<title>ELITE: THE CLONES — 110a</title>
 <!-- S71, session 039. THREE BUILDS WERE PUBLISHED THIS SESSION READING
      037e. 039a, 039b and 039c each changed the report function and none
      bumped either marker, so S57's arrival check — read the header in
@@ -208,6 +208,23 @@
   }
   .toggles button.on{border-color:var(--ink);color:var(--ink);background:rgba(143,227,176,.10);}
   .acts{display:flex;gap:8px;margin-top:6px;}
+  /* 110a, loop 124. The name field is the FIND input's (16px — the iOS
+     zoom threshold, do not lower); a slot row is a label and one button. */
+  .cmdrsave{display:flex;gap:8px;margin:4px 0 6px;}
+  .cmdrsave input{
+    flex:1;min-width:0;min-height:44px;background:#000;border:1px solid var(--ink-dim);
+    border-radius:2px;color:var(--ink);font-family:inherit;font-size:16px;
+    letter-spacing:.04em;padding:6px 8px;
+  }
+  .cmdrsave button,.cmdrslot button{
+    flex:0 0 auto;background:transparent;border:1px solid var(--ink-dim);color:var(--ink);
+    font:inherit;font-size:11px;padding:11px 14px;border-radius:2px;letter-spacing:.08em;
+  }
+  .cmdrslot{display:flex;align-items:center;gap:8px;margin-top:6px;}
+  .cmdrslot span{flex:1;min-width:0;font-size:10px;color:var(--ink-dim);letter-spacing:.04em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cmdrslot span.live{color:var(--ink);}
+  .cmdrslot button:disabled{opacity:.35;}
   .acts button{
     flex:1;background:transparent;border:1px solid var(--ink-dim);color:var(--ink);
     font:inherit;font-size:11px;padding:11px;border-radius:2px;letter-spacing:.08em;
@@ -1327,6 +1344,37 @@
     and you are back in the same ship, in the same place — <b>with whatever was shooting at you
     still there</b>. Nothing in the game repairs a hull yet (COMBAT §6.1: a docked service, Not yet
     defined).</div>
+  </div>
+
+  <!-- 110a, LOOP 124, RULING 70 ([DECISION], Ripley, session 110, option b
+       of two): NAMED COMMANDERS, SAVED TO AND LOADED FROM TUNE, in a
+       CAPPED number of slots. Option (a), numbered slots with no name,
+       was offered and not chosen; an uncapped name-keyed store was NOT
+       offered — WORLD §9.7's rejected row (a growing store on a phone's
+       localStorage with no pruning rule). RULING 71 (option a of two):
+       LOAD REFUSES until the live commander is in a slot — nothing is
+       lost by a tap; the other option, a slide-guarded replace, was
+       offered and not chosen. Dev controls, ARCH §2.3's exception: not
+       actions. cmdrSave()/cmdrLoad() in the script carry the rules. -->
+  <div class="row">
+    <div class="note" style="margin-top:0;margin-bottom:6px"><b>COMMANDERS — four slots.</b> Type a
+    name and SAVE: the name goes into the live file as <code>commander.name</code> and the file is
+    copied to a slot. A name already in a slot is refused <b>unless it is this commander's own</b>,
+    which updates that slot. <b>LOAD refuses until the live file is byte-identical to one of the
+    slots</b> — so after flying, SAVE under your own name first. LOAD then swaps the file in and
+    reloads the app. <b>A slot at hull 0 loads onto the death screen</b> (ruling 48). Nothing here
+    clears a slot — four full is a [DECISION]. Every figure <b>[ASSUMED]</b>, this build's.</div>
+    <div class="cmdrsave">
+      <input id="cmdrName" type="text" inputmode="text" autocomplete="off"
+             autocorrect="off" autocapitalize="characters" spellcheck="false"
+             maxlength="16" placeholder="COMMANDER NAME">
+      <button id="bCmdrSave">SAVE</button>
+    </div>
+    <div class="cmdrslot"><span id="cmdrSlot1">1 · empty</span><button id="bCmdrLoad1">LOAD</button></div>
+    <div class="cmdrslot"><span id="cmdrSlot2">2 · empty</span><button id="bCmdrLoad2">LOAD</button></div>
+    <div class="cmdrslot"><span id="cmdrSlot3">3 · empty</span><button id="bCmdrLoad3">LOAD</button></div>
+    <div class="cmdrslot"><span id="cmdrSlot4">4 · empty</span><button id="bCmdrLoad4">LOAD</button></div>
+    <div class="note" id="cmdrNote"></div>
   </div>
 
   <div class="sep"></div>
@@ -2614,6 +2662,124 @@ const SAVE_SCHEMA_READS = [2, 3, 4, 5];   /* WORLD MODEL §9.5 — what it READS
 const SAVE_REFUSED_KEY = SAVE_KEY + ".refused";
 const WORLD_MODEL_VERSION = "1.2.0";      /* WORLD MODEL §9.5 */
 
+/* ==================================================================
+   110a — NAMED COMMANDERS, LOOP 124. RULING 70 ([DECISION], Ripley,
+   session 110, option b): a commander is keyed by A NAME HE TYPES, into
+   a CAPPED number of slots. RULING 71 (option a): LOAD REFUSES until the
+   live commander is in a slot.
+   WHAT A SLOT IS: the live file's raw text, copied verbatim — the
+   `.refused` copy's shape (WORLD §9.7). Nothing is repaired, nothing is
+   read into it; a slot is loaded by writing it back over SAVE_KEY and
+   reloading, so the ONE loader (loadGame at boot) is the only reader.
+   Four keys beside the live one; the cap is the answer to WORLD §9.7's
+   rejected row (a growing store with no pruning rule). [ASSUMED] the
+   count, the name limit, and that a full store is a [DECISION], not a
+   control: nothing here clears a slot, because clearing is a loss and
+   a loss wants ruling 59's slide, not a tap.
+   DEV CONTROLS — ARCH §2.3's exception: not actions, no reason codes,
+   TUNE only. The name IS game state: `commander.name` is written into
+   the file by saveGame() (WORLD §9.2's line, paid) and read by the
+   loader; it is the only part of this that outlives TUNE.
+================================================================== */
+const CMDR_SLOTS   = 4;                                   /* [ASSUMED] */
+const CMDR_SLOT_KEY = SAVE_KEY.replace(/save$/, "cmdr.");  /* elite.clones.cmdr.1 … .4 */
+const CMDR_NAME_MAX = 16;                                 /* [ASSUMED]; the input's maxlength */
+let cmdrSwapping = false;                                 /* set by cmdrLoad(); saveGame() stands down */
+let cmdrNote = "";                                        /* the last SAVE/LOAD outcome, for TUNE */
+function cmdrNameOk(s){
+  return typeof s === "string" && s.length > 0 && s.length <= CMDR_NAME_MAX && s.trim() === s;
+}
+/* One slot, read off disk every time it is asked for — never cached. */
+function cmdrSlot(n){
+  let raw;
+  try{ raw = localStorage.getItem(CMDR_SLOT_KEY + n); }
+  catch(e){ return { n:n, raw:null, bad:"UNREADABLE — "+(e&&e.name||"unknown") }; }
+  if(raw === null) return { n:n, raw:null };
+  let o; try{ o = JSON.parse(raw); }catch(e){ return { n:n, raw:raw, bad:"NOT PARSEABLE" }; }
+  const c = o && o.commander;
+  if(!c || typeof c !== "object") return { n:n, raw:raw, bad:"no commander" };
+  return { n:n, raw:raw, name:c.name, galaxy:c.galaxy, system:c.system, day:c.gameDay,
+           credits:c.credits, kills:c.kills, hull:o.ship ? o.ship.hull : undefined,
+           schema:o.schema, bytes:raw.length };
+}
+function cmdrSlots(){ const a=[]; for(let i=1;i<=CMDR_SLOTS;i++) a.push(cmdrSlot(i)); return a; }
+function cmdrLiveRaw(){ try{ return localStorage.getItem(SAVE_KEY); }catch(e){ return null; } }
+/* The slot the live FILE is in, byte for byte, or 0. Read off disk both
+   sides — not what saveGame() believes it wrote (loop 87's rule). */
+function cmdrLiveSlot(){
+  const live = cmdrLiveRaw();
+  if(!live) return 0;
+  for(const s of cmdrSlots()) if(s.raw !== null && s.raw === live) return s.n;
+  return 0;
+}
+/* SAVE. The name goes into the live commander, the live file is written,
+   and the file is copied to a slot: this commander's own slot if a slot
+   already carries this name, else the first empty one. A name carried by
+   a slot that is NOT this commander's is refused — no slot is ever
+   overwritten by a tap. A full store with a new name is refused and named
+   as a [DECISION]. Saving a commander at hull 0 is allowed: the file is
+   the fact (ruling 48) and the slot loads onto the death screen. */
+function cmdrSave(nameIn){
+  const name = String(nameIn || "").trim().toUpperCase();
+  if(!cmdrNameOk(name)){ cmdrNote = "SAVE refused — a name of 1 to "+CMDR_NAME_MAX+" characters"; return false; }
+  const slots = cmdrSlots();
+  const own   = state.commander.name;
+  let target  = slots.find(s => s.raw !== null && s.name === name);
+  if(target && own !== name){
+    cmdrNote = "SAVE refused — "+name+" is slot "+target.n+" and is not this commander: load it, or pick another name";
+    return false;
+  }
+  if(!target) target = slots.find(s => s.raw === null);
+  if(!target){
+    cmdrNote = "SAVE refused — all "+CMDR_SLOTS+" slots are full and none can be cleared in this build ([DECISION])";
+    return false;
+  }
+  state.commander.name = name;
+  if(!saveGame()){ cmdrNote = "SAVE refused — the live file did not write: "+saveStatus; return false; }
+  const raw = cmdrLiveRaw();
+  if(!raw){ cmdrNote = "SAVE refused — the live file is absent after a write"; return false; }
+  try{ localStorage.setItem(CMDR_SLOT_KEY + target.n, raw); }
+  catch(e){ cmdrNote = "SAVE FAILED — "+(e&&e.name||"unknown")+" — the name is in the live file, the slot is not written"; return false; }
+  cmdrNote = "SAVED "+name+" to slot "+target.n+" — "+raw.length+" bytes, "+new Date().toLocaleTimeString();
+  return true;
+}
+/* LOAD — RULING 71. Refused unless the live FILE is byte-identical to a
+   slot (after a write of the live state, so the pose is current). Then
+   the chosen slot's text goes over SAVE_KEY and the app reloads; the
+   boot loader reads it as it reads any file — a refused slot is a
+   refusal like any other, and S192's copy rule applies to it. During
+   the reload NOTHING saves (cmdrSwapping). */
+function cmdrLoad(n){
+  const s = cmdrSlot(n);
+  if(s.raw === null){ cmdrNote = "LOAD refused — slot "+n+" is empty"; return false; }
+  if(s.bad){ cmdrNote = "LOAD refused — slot "+n+" "+s.bad; return false; }
+  if(state.ship.hull > 0) saveGame();              /* the live file catches up with the flight; a lost commander's is already the fact */
+  const inSlot = cmdrLiveSlot();
+  if(!inSlot){
+    cmdrNote = "LOAD refused — "+(state.commander.name ? state.commander.name : "this commander")+
+               " is not in a slot: SAVE first (its own name updates its slot)";
+    return false;
+  }
+  if(inSlot === n){ cmdrNote = "LOAD — slot "+n+" is the live file already; nothing to do"; return false; }
+  cmdrSwapping = true;
+  try{ localStorage.setItem(SAVE_KEY, s.raw); }
+  catch(e){ cmdrSwapping = false; cmdrNote = "LOAD FAILED — "+(e&&e.name||"unknown")+" — the live file is as it was"; return false; }
+  cmdrNote = "LOADING slot "+n+" — reloading";
+  location.reload();
+  return true;
+}
+function cmdrSlotLabel(s){
+  if(s.raw === null) return s.n+" · empty";
+  if(s.bad) return s.n+" · "+s.bad+" · "+(s.raw ? s.raw.length+" bytes" : "");
+  const sys = (isIdx(s.galaxy,7) && isIdx(s.system,255) && World.isBuilt && World.isBuilt(s.galaxy))
+              ? World.system(s.galaxy, s.system).name : "g"+s.galaxy+" s"+s.system;
+  /* hull first after the name — on a 402 px row the tail is cut, and
+     LOST is the one word that must not be. Credits are tenths on disk. */
+  return s.n+" · "+(s.name || "(unnamed)")+" · hull "+s.hull+(s.hull === 0 ? " LOST" : "")+
+         " · day "+s.day+" · "+(Number.isInteger(s.credits) ? (s.credits/10).toFixed(1) : s.credits)+" CR"+
+         " · "+sys+" · kills "+s.kills;
+}
+
 /* ------------------------------------------------------------------
    LOOP 95, session 043. SAVE-FILE IDs ARE QUALIFIED.
    WORLD MODEL §13 [DECISION] 22, Ripley, session 027, and §9.6:
@@ -2708,7 +2874,7 @@ let saveLast   = null;                          /* ms timestamp, display only */
 
 function isIdx(v, hi){ return Number.isInteger(v) && v >= 0 && v <= hi; }
 
-/* ACTIONS — ARCHITECTURE AND MODULES §3, build 109c (109c: NO ACTION ADDED OR TOUCHED — two strings in the `galactic` report line, S355: before the chart has been drawn this boot it printed the canvas placeholder `1x1 px` as a figure and `untouched since dock` with no dock behind it; it now says `not drawn yet`. 109b: NO ACTION ADDED OR TOUCHED — one string, S353: the TUNE report's title said 108f in 109a; the report line is the second marker a build carries and it was not moved. Nothing else touched. 109a: NO ACTION ADDED OR TOUCHED — presentation only, loop 127, his design (s108 S345): IN DOCK ONLY the Galactic Chart opens filling the wrap's height — the galaxy's 51 LY fitted to the canvas height, which at 402x812 is zoom 2.64 in Chromium (canvas 382x500) against the width-fit zoom 1 — the device's figure is the TUNE report's `galactic` line — and a horizontal scroll strip under the canvas, a short solid green thumb centred by default, scrolls the map left and right to its extremities. FIT keeps its meaning (zoom 1, the whole galaxy, width-fit). In flight nothing changes: the strip is not drawn and the chart is 014's. Nothing saved, `schema` stays 5. 108f: NO ACTION ADDED OR TOUCHED — presentation only, S350: the station's faces carry a dark tint so the near face reads as a surface and the slot as a hole in it. Nothing saved, `schema` stays 5. 108e: NO ACTION ADDED OR TOUCHED — presentation only, S349: the tube's rung gradient reversed, open at the mouth and close deep. Nothing saved, `schema` stays 5. 108d: NO ACTION ADDED OR TOUCHED — presentation only, S348: the tube is seen through the slot from outside at all times; the dock run is a cubic ease-out to 40 u past the centre (a catch); rung pitch grows with depth. Nothing saved, `schema` stays 5. 108c: NO ACTION ADDED OR TOUCHED — presentation only: the docking TUBE (slot section, face to centre, rungs every 10 u) drawn through both transitions, S347; and the dock fly-through starts where the pass test passed instead of 80 u outside the face, S346 — [A] 32 withdrawn. Nothing saved, `schema` stays 5. 108b: NO ACTION ADDED OR TOUCHED — presentation only: the station is SOLID, ruling 68 ([DECISION], Ripley, 108, option a) — six faces filled, the slot a hole, the iris two plates; the field and the ships drawn either side of it by distance; and two docked-mode stylesheet tidies, S343 (the Market header clears TUNE) and S344 (the chart canvas cannot grow past its wrap). Nothing saved, nothing in play, `schema` stays 5. 108a: NO ACTION ADDED OR TOUCHED — dock() and launch() are 107a's to the byte; what changed is WHEN they are issued: the pass test now starts a fly-through transition and dock() runs when it ends, and the LAUNCH tap starts the iris and launch() runs when it ends — loop 126, ruling 67 ([DECISION], Ripley, 108). The transition is runtime only, the world holds through it, `docked` flips once at the end. AND THE SAVE ENVELOPE MOVES: `schema` 5, `ship.docked` REQUIRED — S339/S341, the correction the first copy of 107a did not carry; WORLD v1.26 §9.5's migration, a 4 file loads with `docked` false and the next save writes 5. 107a: TWO ACTIONS ADDED, dock() AND launch(), AND jump() TOUCHED — THE FIRST DOCKING BUILD, DOCKING MODEL SPEC v1.0 §10 step 1, rulings 62 to 66 ([DECISION], Ripley, 106 and 107): a station in every system with a slot in one face; a flown approach through it under a roll tolerance, a heading tolerance and a speed limit (three TUNE keys, [ASSUMED]); a missed slot is COMBAT §7's collision; dock() writes `ship.docked` true in one save and the game opens the Market full screen with LAUNCH for FLY; launch() writes it false and puts the ship 150 u outside the face; `ship.docked` IS SAVED — ruling 63 — as an optional boolean in `ship`, absent in older files and read as false, no `schema` bump; jump() clears it so ENGAGE from dock is one act; THE MARKET LEAVES THE IN-FLIGHT STRIP (PANEL §1.3's condition of 017, met); a Docking Computer fitted through TUNE (ruling 66) flies the approach from a DOCK corner button. 105a: ONE ACTION TOUCHED, NONE ADDED — ejectPod() caps the legal record at Offender on the way into the new ship, loop 125, ruling 61 ([DECISION], Ripley, 105, option a); one call to legalAdd() inside the action's own save; the EJECTED screen's Kept row and TUNE's `last ejection` line print the change. 104b: NO ACTION ADDED OR TOUCHED — three tidies, nothing in play: S326, the TUNE `death` string said *button drawn*, it is the slide (ruling 59); the slide's track text fades as the knob passes half-way so the knob does not sit on the words (PANEL §9A.3's cosmetic); S327, two comments said nothing repairs hull but the dev switch and REPAIR — the Market's hull repair row has since `102a`. 104a: NO ACTION ADDED OR TOUCHED — the low-hull warning, loop 122, ruling 60 ([DECISION], Ripley, 104): two stages on the console's HULL row, read in paintConsole() from `ship.hull` against the flown ship's `hullMax` and two new TUNING keys, `hullWarn` 50 and `hullCrit` 25 per cent, both [ASSUMED], both on TUNE sliders; at or under `hullWarn` the bar is amber, at or under `hullCrit` the bar and the label blink; presentation only, nothing written, nothing saved, `schema` stays 4; CONTROL v1.9 §3.5.3 is written with it. 103a: NO ACTION ADDED OR TOUCHED — the death screen's way out, loop 123, ruling 59: NEW COMMANDER is a slide-to-confirm and a second screen with a KILL button; KILL is wipe()'s one caller on that screen, as the button was; presentation only, nothing saved, `schema` stays 4. 102a: ONE ACTION ADDED — buyHull(), loop 121, ruling 58, EQUIPMENT §7.3: hull repair bought by the point at the Market's SERVICES block, the fuel row's shape (loop 83) to the byte — stepper, MAX, a `room` figure in points, the stop reason on the figure line; 5 tenths a point, whole points so nothing is lost; writes `ship.hull` UP only and saves once; `schema` stays 4. 101a: NO ACTION ADDED OR TOUCHED — HULL ON THE CONSOLE, loop 120, S250, CONTROL v1.8 §3.4 item 3a and §3.5: one gauge row under the shields, read from `ship.hull` and the flown ship's `hullMax` in paintConsole(); nothing writes, nothing saves, `schema` stays 4. 100b: NO ACTION ADDED OR TOUCHED — two strings: the report's `laser` line and the FIT PULSE LASER note gave ruling 1 as the only reason for an empty fore mount, and since 100a an ejection is another. 100a: TWO ACTIONS ADDED, die() AND ejectPod() — THE DEATH BUILD, loop 117, COMBAT §8, PANEL §9A, rulings 48, 55 and 56: the fatal hit saves once at hull 0 and the death screen is raised; with an escape pod fitted ejectPod() runs instead and the commander lives in a new ship; wipe() gains one line and one caller, the NEW COMMANDER tap; the save gains an OPTIONAL `cause` in `core.combat`'s bag and `schema` stays 4. 099a: NO ACTION ADDED OR TOUCHED — rulings 53 and 54: the market draws one line on the sold good's open row saying what customs did with the sale; the line is presentation, read from the roll customsRoll() already logs and from state either side of sell(); sell(), customsRoll() and the save are 098b's to the byte. 098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
+/* ACTIONS — ARCHITECTURE AND MODULES §3, build 110a (110a: NO ACTION ADDED OR TOUCHED — loop 124, rulings 70 and 71 ([DECISION], Ripley, 110): NAMED COMMANDERS in four TUNE slots, dev controls under ARCH §2.3's exception — cmdrSave() names the live commander and copies the live file verbatim to a slot key `elite.clones.cmdr.N`; cmdrLoad() refuses until the live file is byte-identical to a slot, then writes the slot over the live key and reloads. saveGame() writes `commander.name` when one exists (WORLD §9.2's owed line, paid; absent when unnamed) and the loader validates it; `schema` stays 5 — §9.2 ruled absence the empty value. 109c: NO ACTION ADDED OR TOUCHED — two strings in the `galactic` report line, S355: before the chart has been drawn this boot it printed the canvas placeholder `1x1 px` as a figure and `untouched since dock` with no dock behind it; it now says `not drawn yet`. 109b: NO ACTION ADDED OR TOUCHED — one string, S353: the TUNE report's title said 108f in 109a; the report line is the second marker a build carries and it was not moved. Nothing else touched. 109a: NO ACTION ADDED OR TOUCHED — presentation only, loop 127, his design (s108 S345): IN DOCK ONLY the Galactic Chart opens filling the wrap's height — the galaxy's 51 LY fitted to the canvas height, which at 402x812 is zoom 2.64 in Chromium (canvas 382x500) against the width-fit zoom 1 — the device's figure is the TUNE report's `galactic` line — and a horizontal scroll strip under the canvas, a short solid green thumb centred by default, scrolls the map left and right to its extremities. FIT keeps its meaning (zoom 1, the whole galaxy, width-fit). In flight nothing changes: the strip is not drawn and the chart is 014's. Nothing saved, `schema` stays 5. 108f: NO ACTION ADDED OR TOUCHED — presentation only, S350: the station's faces carry a dark tint so the near face reads as a surface and the slot as a hole in it. Nothing saved, `schema` stays 5. 108e: NO ACTION ADDED OR TOUCHED — presentation only, S349: the tube's rung gradient reversed, open at the mouth and close deep. Nothing saved, `schema` stays 5. 108d: NO ACTION ADDED OR TOUCHED — presentation only, S348: the tube is seen through the slot from outside at all times; the dock run is a cubic ease-out to 40 u past the centre (a catch); rung pitch grows with depth. Nothing saved, `schema` stays 5. 108c: NO ACTION ADDED OR TOUCHED — presentation only: the docking TUBE (slot section, face to centre, rungs every 10 u) drawn through both transitions, S347; and the dock fly-through starts where the pass test passed instead of 80 u outside the face, S346 — [A] 32 withdrawn. Nothing saved, `schema` stays 5. 108b: NO ACTION ADDED OR TOUCHED — presentation only: the station is SOLID, ruling 68 ([DECISION], Ripley, 108, option a) — six faces filled, the slot a hole, the iris two plates; the field and the ships drawn either side of it by distance; and two docked-mode stylesheet tidies, S343 (the Market header clears TUNE) and S344 (the chart canvas cannot grow past its wrap). Nothing saved, nothing in play, `schema` stays 5. 108a: NO ACTION ADDED OR TOUCHED — dock() and launch() are 107a's to the byte; what changed is WHEN they are issued: the pass test now starts a fly-through transition and dock() runs when it ends, and the LAUNCH tap starts the iris and launch() runs when it ends — loop 126, ruling 67 ([DECISION], Ripley, 108). The transition is runtime only, the world holds through it, `docked` flips once at the end. AND THE SAVE ENVELOPE MOVES: `schema` 5, `ship.docked` REQUIRED — S339/S341, the correction the first copy of 107a did not carry; WORLD v1.26 §9.5's migration, a 4 file loads with `docked` false and the next save writes 5. 107a: TWO ACTIONS ADDED, dock() AND launch(), AND jump() TOUCHED — THE FIRST DOCKING BUILD, DOCKING MODEL SPEC v1.0 §10 step 1, rulings 62 to 66 ([DECISION], Ripley, 106 and 107): a station in every system with a slot in one face; a flown approach through it under a roll tolerance, a heading tolerance and a speed limit (three TUNE keys, [ASSUMED]); a missed slot is COMBAT §7's collision; dock() writes `ship.docked` true in one save and the game opens the Market full screen with LAUNCH for FLY; launch() writes it false and puts the ship 150 u outside the face; `ship.docked` IS SAVED — ruling 63 — as an optional boolean in `ship`, absent in older files and read as false, no `schema` bump; jump() clears it so ENGAGE from dock is one act; THE MARKET LEAVES THE IN-FLIGHT STRIP (PANEL §1.3's condition of 017, met); a Docking Computer fitted through TUNE (ruling 66) flies the approach from a DOCK corner button. 105a: ONE ACTION TOUCHED, NONE ADDED — ejectPod() caps the legal record at Offender on the way into the new ship, loop 125, ruling 61 ([DECISION], Ripley, 105, option a); one call to legalAdd() inside the action's own save; the EJECTED screen's Kept row and TUNE's `last ejection` line print the change. 104b: NO ACTION ADDED OR TOUCHED — three tidies, nothing in play: S326, the TUNE `death` string said *button drawn*, it is the slide (ruling 59); the slide's track text fades as the knob passes half-way so the knob does not sit on the words (PANEL §9A.3's cosmetic); S327, two comments said nothing repairs hull but the dev switch and REPAIR — the Market's hull repair row has since `102a`. 104a: NO ACTION ADDED OR TOUCHED — the low-hull warning, loop 122, ruling 60 ([DECISION], Ripley, 104): two stages on the console's HULL row, read in paintConsole() from `ship.hull` against the flown ship's `hullMax` and two new TUNING keys, `hullWarn` 50 and `hullCrit` 25 per cent, both [ASSUMED], both on TUNE sliders; at or under `hullWarn` the bar is amber, at or under `hullCrit` the bar and the label blink; presentation only, nothing written, nothing saved, `schema` stays 4; CONTROL v1.9 §3.5.3 is written with it. 103a: NO ACTION ADDED OR TOUCHED — the death screen's way out, loop 123, ruling 59: NEW COMMANDER is a slide-to-confirm and a second screen with a KILL button; KILL is wipe()'s one caller on that screen, as the button was; presentation only, nothing saved, `schema` stays 4. 102a: ONE ACTION ADDED — buyHull(), loop 121, ruling 58, EQUIPMENT §7.3: hull repair bought by the point at the Market's SERVICES block, the fuel row's shape (loop 83) to the byte — stepper, MAX, a `room` figure in points, the stop reason on the figure line; 5 tenths a point, whole points so nothing is lost; writes `ship.hull` UP only and saves once; `schema` stays 4. 101a: NO ACTION ADDED OR TOUCHED — HULL ON THE CONSOLE, loop 120, S250, CONTROL v1.8 §3.4 item 3a and §3.5: one gauge row under the shields, read from `ship.hull` and the flown ship's `hullMax` in paintConsole(); nothing writes, nothing saves, `schema` stays 4. 100b: NO ACTION ADDED OR TOUCHED — two strings: the report's `laser` line and the FIT PULSE LASER note gave ruling 1 as the only reason for an empty fore mount, and since 100a an ejection is another. 100a: TWO ACTIONS ADDED, die() AND ejectPod() — THE DEATH BUILD, loop 117, COMBAT §8, PANEL §9A, rulings 48, 55 and 56: the fatal hit saves once at hull 0 and the death screen is raised; with an escape pod fitted ejectPod() runs instead and the commander lives in a new ship; wipe() gains one line and one caller, the NEW COMMANDER tap; the save gains an OPTIONAL `cause` in `core.combat`'s bag and `schema` stays 4. 099a: NO ACTION ADDED OR TOUCHED — rulings 53 and 54: the market draws one line on the sold good's open row saying what customs did with the sale; the line is presentation, read from the roll customsRoll() already logs and from state either side of sell(); sell(), customsRoll() and the save are 098b's to the byte. 098b: sell() TOUCHED, NO ACTION ADDED — RULING 52: the customs roll's seed also carries the good and what has already been traded of it at this market today, so every sale is its own roll; one line in customsSeed(), one read in sell(), two report strings; the save's shape is 098a's. 098a: sell() TOUCHED, NO ACTION ADDED — it grows the customs roll, WORLD §7.3 / COMBAT §9.3, loop 110b: one seeded roll on a sale of a good that is not legal here; caught is a 25% fine and +1 on the record per tonne, inside the sale's own save; no new saved field. 097a: NO ACTION ADDED OR TOUCHED — one tuning key, `theirDamage`, a scale on a contact's laser in pirateFire() (per-frame), one TUNE slider, two report strings and comments. 096a: jump() AND recordKill() TOUCHED, NO ACTION ADDED — jump's decay is -1 on EVERY jump, ruling 50, in the place the every-tenth-day rule stood; recordKill writes NO legal change for a police ship that came at him first, ruling 49; the save's shape is 094b's. 094b: NO ACTION ADDED OR TOUCHED — a contact's laser (per-frame), a dev slider under ARCH §2.3's exception, one report string and comments; jump() IS NOT TOUCHED, S284 withdrawn against WORLD §9.8. 094a: recordKill() AND jump() TOUCHED — recordKill writes the legal change and jump runs its decay, COMBAT §9; NO ACTION ADDED. 093b: recordKill() TOUCHED — it writes the kill list, ruling 47; NO ACTION ADDED. 093a: NO ACTION TOUCHED — ruling 41 on the pad's tap, the touch log and seven stale texts. 092c: NO ACTION TOUCHED — the pad's fire rule only. 092b: NO ACTION ADDED OR TOUCHED — tuning switches, the pad's tap and hold, the wreckage and the hold under TUNE are presentation or per-frame; recordKill() is as 092a built it. 092a: ONE ACTION ADDED — recordKill(), COMBAT §11, the first since 061a; issued from the frame loop when the player's laser destroys a contact, never from a listener; wipe() now reads the starting fit from freshEquipment(); no other action touched. BEFORE 092a: actions unchanged since 061a; 079a adds one listener; 082a: jump() calls setArrival(), loop 106b; 084a: wipe() calls shipChanged(), loop 110 — no action added, the dev ship switch is not one; 086a: strings and comments only, no action touched; 088a: presentation only — the wipe BUTTON's disarm, loop 113; wipe() itself untouched, no action touched; 090a: NO ACTION ADDED — combat step 1 is per-frame, COMBAT §11's right column, and it neither saves nor signals; no action touched; 091a: NO ACTION ADDED — contacts are runtime and per-frame, and the one listener now draws the system's contacts after it rebuilds the scene; no action touched). Each action:
    validate → write state → saveGame() once → stateChanged(name) →
    return { ok } or { ok:false, reasons }. Reasons are codes (§3.3);
    presentation maps them to words and does its own view follow-up.
@@ -2777,6 +2943,11 @@ function poseRead(p){
 }
 
 function saveGame(){
+  /* 110a, loop 124. While a slot is being swapped in, NOTHING saves —
+     the reload's own `pagehide` would otherwise write the commander
+     being left over the one just loaded (S190's shape, one key over).
+     cmdrLoad() sets it and reloads; it never clears. */
+  if(cmdrSwapping) return false;
   try{
     const p = state.commander, sh = state.ship;
     const ship = {};
@@ -2790,13 +2961,20 @@ function saveGame(){
       worldSeed:         WORLD_SEED,
       seedSource:        "canonical",
       modules:           SAVE_MODULES,
-      commander: {
+      commander: Object.assign(
         /* §9 carries `name` and marks it Not yet defined, §11. THIS
            BUILD HAS NO COMMANDER NAME and the key is OMITTED rather
            than written as a placeholder. Writing "JAMESON" is what §9
            spent six sessions removing; writing "" invents an empty
            name the player chose. An absent key is the honest spelling
-           of a field the project has not decided. */
+           of a field the project has not decided.
+           110a, LOOP 124, RULING 70: THE NAMING FLOW HAS ARRIVED —
+           cmdrSave() in TUNE is it. A commander the player has named
+           writes `name` FIRST, as WORLD §9 draws it; one he has not
+           still omits the key, exactly as above (§9.2: absence is the
+           empty value). Never "" — cmdrSave() refuses an empty name. */
+        (typeof p.name === "string" && p.name.length) ? { name: p.name } : {},
+        {
         credits:          p.credits,
         legalStatus:      p.legalStatus,
         fuel:             p.fuel,
@@ -2808,7 +2986,7 @@ function saveGame(){
            spelling and it is a value. */
         hyperspaceTarget: p.hyperspaceTarget,
         cunningPlans:     p.cunningPlans     /* LOOP 110, WORLD §9.2 */
-      },
+        }),
       ship:        ship,
       /* LOOP 95. Qualified on the way out, stripped on the way in.
          The two calls are the whole boundary. */
@@ -2914,6 +3092,15 @@ function loadFrom(raw){
   if(!Number.isInteger(c.gameDay)     || c.gameDay     < 0){ saveStatus="REFUSED — gameDay: "+c.gameDay; return false; }
   if(!Number.isInteger(c.kills)       || c.kills       < 0){ saveStatus="REFUSED — kills: "+c.kills; return false; }
   if(!Number.isInteger(c.legalStatus) || c.legalStatus < 0){ saveStatus="REFUSED — legalStatus: "+c.legalStatus; return false; }
+  /* 110a, LOOP 124. `commander.name` — WORLD §9.2's owed line, paid:
+     ABSENT is unnamed and is normal, not broken. PRESENT must be a
+     non-empty string within cmdrSave()'s own limit, or the file refuses
+     — present-and-malformed refuses, §9.7's rule reaching this key.
+     No schema bump: §9.2 ruled absence the empty value, so an optional
+     key here does not mean two things (contrast `docked`, S339). */
+  if(c.name !== undefined &&
+     (typeof c.name !== "string" || !cmdrNameOk(c.name))){
+    saveStatus = "REFUSED — name malformed: "+JSON.stringify(c.name); return false; }
   /* commander.cunningPlans. LOOP 110, WORLD §9.5 and §9.7. Required in a
      4 file: a non-negative integer, or the file refuses. In a 2 or 3
      file it is NOT READ — no build writes one there, and a hand-edited
@@ -3174,6 +3361,8 @@ function loadFrom(raw){
   state.commander.kills            = c.kills;
   state.commander.hyperspaceTarget = ht;
   state.commander.cunningPlans     = cunningPlans;      /* LOOP 110 */
+  if(c.name !== undefined) state.commander.name = c.name;   /* 110a, loop 124 — validated above */
+  else delete state.commander.name;                         /* unnamed: no key, §9.2 */
 
   state.ship.class = shipClass;                         /* LOOP 110 — before the five, as it was read */
   for(const k of SHIP_SAVED) state.ship[k] = ship[k];   /* LOOP 97 */
@@ -6896,6 +7085,21 @@ function syncDev(){
   document.getElementById("bsRadSp").textContent = row.maxSpeed;
   document.getElementById("bsRadR").textContent  = SPEC.radarRange;
   document.getElementById("bsRadT").textContent  = (SPEC.radarRange/row.maxSpeed).toFixed(1);
+  /* 110a, loop 124. The slot labels, read off disk; the one holding the
+     live file byte for byte is lit and its LOAD is disabled. The SAVE
+     label names the live commander. */
+  const liveSlot = cmdrLiveSlot();
+  for(const s of cmdrSlots()){
+    const el = document.getElementById("cmdrSlot"+s.n), b = document.getElementById("bCmdrLoad"+s.n);
+    el.textContent = cmdrSlotLabel(s) + (s.n === liveSlot ? " · = LIVE" : "");
+    el.classList.toggle("live", s.n === liveSlot);
+    b.disabled = (s.raw === null) || !!s.bad || s.n === liveSlot;
+  }
+  document.getElementById("bCmdrSave").textContent =
+    state.commander.name ? "SAVE "+state.commander.name : "SAVE";
+  document.getElementById("cmdrNote").textContent =
+    (state.commander.name ? "Live commander: "+state.commander.name : "Live commander: unnamed")+
+    (liveSlot ? " — in slot "+liveSlot : " — not in a slot")+(cmdrNote ? "  ·  "+cmdrNote : "");
 }
 for(const [sid,vid,grp,key] of devMap){
   document.getElementById(sid).addEventListener("input",function(){
@@ -7020,6 +7224,20 @@ document.getElementById("bDC").addEventListener("click",function(){
   devFitDC();
   syncUI();
 });
+/* 110a, loop 124, rulings 70 and 71. SAVE and the four LOADs. Each
+   outcome is one line in `cmdrNote`, printed under the slots and in
+   the report; the labels are read off disk by syncDev(). */
+document.getElementById("bCmdrSave").addEventListener("click",function(){
+  cmdrSave(document.getElementById("cmdrName").value);
+  document.getElementById("cmdrName").blur();
+  syncUI();
+});
+for(let i=1;i<=CMDR_SLOTS;i++){
+  document.getElementById("bCmdrLoad"+i).addEventListener("click",function(){
+    cmdrLoad(i);           /* a refusal returns; a load reloads the app */
+    syncUI();
+  });
+}
 /* LOOP 87: two taps, the label is the confirmation. 042b: the repaint belongs here.
 
    LOOP 113, 088a — S239. AN ARMED WIPE NOW STANDS DOWN.
@@ -7096,7 +7314,7 @@ function overrideLine(){
 }
 function writeReport(){
   lastReport =
-    "ELITE: THE CLONES 109c — settings\n"+   /* 109b, S353: this line read 108f in 109a — the one marker the title tag did not move */
+    "ELITE: THE CLONES 110a — settings\n"+   /* 109b, S353: this line read 108f in 109a — the one marker the title tag did not move. 110a: both markers grepped before export (s110 §0) */
     "deadzone      "+T.dead+" px  (spec 6)\n"+
     "deflection    "+T.defl+" px  (spec 55)\n"+
     "exponent      "+T.exp.toFixed(1)+"     (spec 1.6)\n"+
@@ -7229,6 +7447,13 @@ function writeReport(){
     "pose on disk  "+poseDiskLine()+"\n"+
     "pose guard    "+(poseGuard || "not fired this session")+"\n"+
     "refused copy  "+refusedFileLine()+(refusedNote ? "  ·  "+refusedNote : "")+"\n"+
+    /* 110a, loop 124, rulings 70/71. The live name AS STATE HOLDS IT, the
+       slot the live FILE is in (byte-identical, read off disk), the four
+       slots off disk, and the last SAVE/LOAD outcome. */
+    "commander     "+(state.commander.name ? state.commander.name : "unnamed — no `name` key is written (§9.2)")+
+      "  ·  live file in slot "+(cmdrLiveSlot() || "none")+
+      "  ·  keys "+CMDR_SLOT_KEY+"1-"+CMDR_SLOTS+(cmdrNote ? "  ·  "+cmdrNote : "")+"\n"+
+    cmdrSlots().map(function(s){ return "  "+cmdrSlotLabel(s)+(s.raw !== null && !s.bad ? "  ·  "+s.bytes+" bytes, schema "+s.schema : "")+"\n"; }).join("")+
     /* LOOP 106a, 079. Which system the drawn scene was built for. A
        reader compares it with `here`: they must agree, or the listener
        did not fire. */
